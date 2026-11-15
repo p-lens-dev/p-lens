@@ -156,7 +156,7 @@ export function BreakdownView(props: { readonly place: Place; readonly bookId: B
   const theoreticalKept = (): boolean => ((answer) => answer?.ok !== true || answer.value)(kept())
   const placed = (by: BreakdownBy, narrowing: Narrowing): Place => ({ kind: "book-breakdown", bookId: props.bookId, by, narrowing })
   const opener = (dimension: Dimension, key: string): (() => void) | undefined =>
-    ((drilled) => (drilled === undefined ? undefined : () => moves.refine(placed(drilled.by, drilled.narrowing), drilled.query)))(drilledFrom(dimension, key, props.narrowing, props.query))
+    ((drilled) => (drilled === undefined ? undefined : () => moves.go(placed(drilled.by, drilled.narrowing), drilled.query)))(drilledFrom(dimension, key, props.narrowing, props.query))
   return (
     <MainContent header={<ViewHeader place={props.place} title="集計" />}>
       <div class="max-w-5xl">

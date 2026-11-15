@@ -124,7 +124,7 @@ export function ConsolidatedBreakdownView(props: { readonly place: Place; readon
     ((by) =>
       by === undefined || by === "book" || by === "sender"
         ? undefined
-        : ((drilled) => (drilled === undefined ? undefined : () => moves.refine(placed(drilled.by, drilled.narrowing), drilled.query)))(drilledFrom(by, key, props.narrowing, props.query)))(grouping())
+        : ((drilled) => (drilled === undefined ? undefined : () => moves.go(placed(drilled.by, drilled.narrowing), drilled.query)))(drilledFrom(by, key, props.narrowing, props.query)))(grouping())
   const groups = createMemo(() => ((found, by) => (found?.ok === true && by !== undefined ? grouped(found.value, by, app.machineNames(), names()) : undefined))(consolidation(), grouping()))
   return (
     <MainContent header={<ViewHeader place={props.place} title="集計" />}>
