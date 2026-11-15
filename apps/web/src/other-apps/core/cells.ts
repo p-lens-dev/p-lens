@@ -33,6 +33,15 @@ export const signedYenOf = (text: string): Decimal | undefined => {
   return parsed?.ok === true ? parsed.value : undefined
 }
 
+const SIGNED_FRACTION = /^([-+−]?)(\d+(?:\.\d+)?)$/
+
+/** A theoretical value in yen as typed into a cell: signed as a result is, and with a fraction allowed, a theoretical value being worked out rather than counted. */
+export const signedWorthOf = (text: string): Decimal | undefined => {
+  const read = SIGNED_FRACTION.exec(plainYen(text.trim().replace(/^([-+−])\s*[¥￥]/, "$1")))
+  const parsed = read === null ? undefined : parseDecimal(`${read[1] === "" || read[1] === "+" ? "" : "-"}${read[2] ?? ""}`)
+  return parsed?.ok === true ? parsed.value : undefined
+}
+
 /**
  * A count as typed into a cell — spins, jackpots — whole, not below
  * nothing, commas allowed: none where the cell is empty, and a cell that

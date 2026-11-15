@@ -27,6 +27,7 @@ const lineOf = (line: { readonly date: string; readonly gameKind?: PlayGameKind;
   machineName: "流星の剣",
   maker: undefined,
   labels: line.labels ?? [],
+  tokenCommodity: undefined,
   notes: NO_NOTES,
   sides: { spent: yen(line.spent), won: yen(line.won) },
   actual: line.actual,

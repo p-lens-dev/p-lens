@@ -4,7 +4,7 @@ import { SOURCE_TAGS } from "../core/tally/source-tags"
 import { identityIn, parlorsFromDeclarations, sameIdentity, type Parlor } from "../core/parlor/parlor"
 import { yenOf } from "../core/report/figures"
 import type { TallyLine } from "../core/report/tally-line"
-import { tallySummaryOf, type TallySummary } from "../core/report/tallies"
+import { tallySummaryOf, tokenCommodityOf, type TallySummary } from "../core/report/tallies"
 import { tallyNotesOf } from "../core/report/tally-notes"
 import { ZERO, negate, type Decimal } from "../core/decimal/decimal"
 import { andThen, collect, mapOk } from "../core/result/result"
@@ -75,6 +75,7 @@ const lineOf = (parlors: readonly Parlor[], figures: Figures, transaction: Trans
       ...tallyNamesOf(parlors, transaction, tally),
       maker: tagOf(transaction, SOURCE_TAGS.maker),
       labels: userTagsOf(transaction.ttags.filter(([name]) => USER_TAG_NAMES.includes(name)).map(([, value]) => value)),
+      tokenCommodity: tokenCommodityOf(transaction),
       notes: tallyNotesOf(transaction),
       sides: { spent: figures.spent.get(tally.id) ?? ZERO, won: negate(figures.won.get(tally.id) ?? ZERO) },
       actual: negate(figures.actual.get(tally.id) ?? ZERO),

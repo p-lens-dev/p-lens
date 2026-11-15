@@ -1,6 +1,6 @@
 import { ZERO, compare, negate, type Decimal } from "../../core/decimal/decimal"
 import { Err, Ok, type Result } from "../../core/result/result"
-import { countOf, dayOf, gameKindOf, hoursOf, labelsOf, signedYenOf, unreadableOf, yenOf, type RowField, type RowsUnreadable } from "../core/cells"
+import { countOf, dayOf, gameKindOf, hoursOf, labelsOf, signedWorthOf, signedYenOf, unreadableOf, yenOf, type RowField, type RowsUnreadable } from "../core/cells"
 import { machineKeyOf } from "../../core/catalog/description"
 import { rowsOfCsv, type CsvProblem } from "../core/csv-rows"
 import type { SourceTally } from "../core/source-tally"
@@ -9,10 +9,10 @@ import type { SourceTally } from "../core/source-tally"
 export const GENERAL = "csv"
 
 /** What a column of a person's own file may be taken in as: this app's fields a tally is read from. */
-export type Field = "date" | "outlay" | "takings" | "result" | "parlor" | "machine" | "gameKind" | "cabinetNumber" | "hours" | "spins" | "jackpots" | "memo" | "labels"
+export type Field = "date" | "parlor" | "gameKind" | "machine" | "cabinetNumber" | "outlay" | "takings" | "result" | "theoreticalValue" | "spins" | "jackpots" | "hours" | "memo" | "labels"
 
-/** The fields in the order a person is offered them. */
-export const FIELDS: readonly Field[] = ["date", "outlay", "takings", "result", "parlor", "machine", "gameKind", "cabinetNumber", "hours", "spins", "jackpots", "memo", "labels"]
+/** The fields in the order a person is offered them: the order 汎用形式's export writes its columns in, a field it writes no column for beside its nearest. */
+export const FIELDS: readonly Field[] = ["date", "parlor", "gameKind", "machine", "cabinetNumber", "outlay", "takings", "result", "theoreticalValue", "spins", "jackpots", "hours", "memo", "labels"]
 
 /** A file of a person's own making as it was read: its first row's names, the rows under it, and how many columns the widest row has. */
 export interface Sheet {
@@ -43,17 +43,18 @@ export const sheetOf = (text: string): Result<Sheet, GeneralProblem> => {
 
 /** The names a column is usually headed by for each field, as a search compares text. */
 const USUAL_NAMES: Readonly<Record<Field, readonly string[]>> = {
-  date: ["日付", "日", "date", "年月日"],
+  date: ["日付", "営業日", "日", "date", "年月日"],
+  parlor: ["店舗", "店舗名", "店", "ホール", "ホール名"],
+  gameKind: ["種別", "種類", "ジャンル"],
+  machine: ["機種", "機種名", "台"],
+  cabinetNumber: ["台番号", "台番"],
   outlay: ["投資", "投資額", "投資金額", "使った金額"],
   takings: ["回収", "回収額", "回収金額", "換金額"],
   result: ["収支", "勝ち負け", "損益", "差額"],
-  parlor: ["店舗", "店舗名", "店", "ホール", "ホール名"],
-  machine: ["機種", "機種名", "台"],
-  gameKind: ["種別", "種類", "ジャンル"],
-  cabinetNumber: ["台番号", "台番"],
-  hours: ["稼働時間", "時間", "遊技時間"],
+  theoreticalValue: ["期待値", "理論値"],
   spins: ["回転数", "総回転数", "ゲーム数", "総ゲーム数", "g数"],
   jackpots: ["大当り", "大当たり", "大当り回数", "大当たり回数", "当たり回数", "at回数", "ボーナス回数"],
+  hours: ["稼働時間", "時間", "遊技時間"],
   memo: ["メモ", "備考", "コメント"],
   labels: ["タグ"],
 }
@@ -90,12 +91,20 @@ const sidesOf = (cell: Cell, bySides: boolean): Result<readonly [Decimal, Decima
   return outlay === undefined || takings === undefined ? Err([...(outlay === undefined ? (["outlay"] as const) : []), ...(takings === undefined ? (["takings"] as const) : [])]) : Ok([outlay, takings])
 }
 
+/** A theoretical value as a signed sum of yen, a fraction allowed: none where it is empty, and a cell that says something else does not read. */
+const theoreticalValueOf = (text: string): Result<Decimal | undefined, "unread"> => {
+  if (text.trim() === "") return Ok(undefined)
+  const value = signedWorthOf(text)
+  return value === undefined ? Err("unread") : Ok(value)
+}
+
 const tallyOf = (cell: Cell, bySides: boolean): Result<SourceTally, readonly RowField[]> => {
-  const [date, sides, gameKind, hours, spins, jackpots] = [dayOf(cell("date")), sidesOf(cell, bySides), gameKindOf(cell("gameKind")), hoursOf(cell("hours")), countOf(cell("spins")), countOf(cell("jackpots"))]
-  if (date === undefined || !sides.ok || !gameKind.ok || !hours.ok || !spins.ok || !jackpots.ok)
+  const [date, sides, worth, gameKind, hours, spins, jackpots] = [dayOf(cell("date")), sidesOf(cell, bySides), theoreticalValueOf(cell("theoreticalValue")), gameKindOf(cell("gameKind")), hoursOf(cell("hours")), countOf(cell("spins")), countOf(cell("jackpots"))]
+  if (date === undefined || !sides.ok || !worth.ok || !gameKind.ok || !hours.ok || !spins.ok || !jackpots.ok)
     return Err([
       ...(date === undefined ? (["date"] as const) : []),
       ...(sides.ok ? [] : sides.error),
+      ...(worth.ok ? [] : (["theoreticalValue"] as const)),
       ...(gameKind.ok ? [] : (["gameKind"] as const)),
       ...(hours.ok ? [] : (["hours"] as const)),
       ...(spins.ok ? [] : (["countedSpins"] as const)),
@@ -112,7 +121,7 @@ const tallyOf = (cell: Cell, bySides: boolean): Result<SourceTally, readonly Row
     memo: cell("memo").trim(),
     hours: hours.value,
     clock: undefined,
-    theoreticalValue: undefined,
+    theoreticalValue: worth.value,
     gameKind: gameKind.value,
     countedSpins: spins.value === undefined ? undefined : { type: "every-spin", count: spins.value },
     countedJackpots: jackpots.value,

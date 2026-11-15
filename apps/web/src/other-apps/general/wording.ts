@@ -7,16 +7,17 @@ export const GENERAL_NAME = "汎用形式"
 /** This app's fields a column of a person's own file may be taken in as, as the person is offered them. */
 export const FIELD_NAMES: Readonly<Record<Field, string>> = {
   date: "日付",
+  parlor: "店舗",
+  gameKind: "種別",
+  machine: "機種",
+  cabinetNumber: "台番号",
   outlay: "投資",
   takings: "回収",
   result: "収支",
-  parlor: "店舗",
-  machine: "機種",
-  gameKind: "種別",
-  cabinetNumber: "台番号",
-  hours: "稼働時間",
+  theoreticalValue: "期待値",
   spins: "回転数・ゲーム数",
   jackpots: "大当り・AT・ボーナス",
+  hours: "稼働時間",
   memo: "メモ",
   labels: "タグ",
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import { guessedMapping, missingOf, readGeneral, sheetOf, withColumn, type Mapping, type Sheet } from "../../../src/other-apps/general/csv-import"
-import { signedYenOf } from "../../../src/other-apps/core/cells"
+import { signedWorthOf, signedYenOf } from "../../../src/other-apps/core/cells"
 import { dec } from "../../support/values"
 
 const sheet = (text: string): Sheet => ((read) => (read.ok ? read.value : { header: [], rows: [], width: 0 }))(sheetOf(text))
@@ -55,12 +55,31 @@ describe("a person's own CSV", () => {
     ] as never)
   })
 
+  test("takes in a theoretical value, signed, where a column is chosen for it, and none where its cell is empty", () => {
+    const worthy = sheet("営業日,収支,期待値\n2026-11-08,-500,\"1,234.5\"\n2026-11-09,300,\n2026-11-10,0,-¥800\n")
+    expect(guessedMapping(worthy)).toEqual(["date", "result", "theoreticalValue"])
+    expect(guessedMapping(sheet("日付,理論値\n1,2\n"))).toEqual(["date", "theoreticalValue"])
+    const read = readGeneral(worthy, guessedMapping(worthy))
+    expect(read.ok && read.value.map((tally) => tally.theoreticalValue)).toEqual([dec("1234.5"), undefined, dec("-800")] as never)
+    expect(readGeneral(sheet("日付,収支,期待値\n2026-11-08,-500,高い\n"), ["date", "result", "theoreticalValue"])).toEqual({
+      ok: false,
+      error: { type: "rows-unreadable", rows: [{ line: 2, fields: ["theoreticalValue"] }] },
+    })
+  })
+
   test("is refused whole where its mapping lacks what a tally needs or a row does not read", () => {
     expect(readGeneral(sheet(FILE), ["date", undefined, undefined, "outlay"])).toEqual({ ok: false, error: { type: "unmapped", missing: ["sides"] } })
     expect(readGeneral(sheet("日,収支,種別,時間\n2026/13/1,勝ち,麻雀,長い\n"), ["date", "result", "gameKind", "hours"])).toEqual({
       ok: false,
       error: { type: "rows-unreadable", rows: [{ line: 2, fields: ["date", "result", "gameKind", "hours"] }] },
     })
+  })
+})
+
+describe("a theoretical value in yen as typed into a cell", () => {
+  test("is signed as a result is, and may have a fraction", () => {
+    expect([signedWorthOf("1,234.5"), signedWorthOf("-¥800"), signedWorthOf("−0.25円"), signedWorthOf("+63")]).toEqual([dec("1234.5"), dec("-800"), dec("-0.25"), dec("63")])
+    expect([signedWorthOf(""), signedWorthOf("高い"), signedWorthOf("1."), signedWorthOf(".5")]).toEqual([undefined, undefined, undefined, undefined])
   })
 })
 

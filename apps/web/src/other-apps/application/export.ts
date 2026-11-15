@@ -5,7 +5,7 @@ import type { IsoDate } from "../../core/calendar/calendar"
 import { fileStemOf } from "../../core/book/file-name"
 import { BOOK_FILES, journalsOf, type BookFiles } from "../../core/journal/layout"
 import { titleOfMain } from "../../core/journal/title"
-import { Ok, mapErr, mapOk } from "../../core/result/result"
+import { Ok, andThen, mapErr, mapOk } from "../../core/result/result"
 import type { TallyLine } from "../../core/report/tally-line"
 import type { PlayId } from "../../core/play/play"
 import { tallyNotesIn } from "../../core/tally/in-journal"
@@ -13,6 +13,10 @@ import type { StoredBook } from "../../storage/port/book-storage"
 import type { BookSession } from "../../application/book-session"
 import type { Outcome } from "../../application/errors"
 import { linesIn } from "../../application/tally-lines"
+import { fromHledger } from "../../application/lift"
+import { pricesRequest } from "../../hledger/query/requests"
+import { pricePointsOf } from "../../core/report/holdings"
+import type { PricePoint } from "../../core/valuation/valuation"
 
 /** Everything writing a book out reaches: the book as hledger reads it, the archive several files go as one in, the handing over of a file, the day it is, and the moment, in milliseconds since the epoch. */
 export interface ExportPorts {
@@ -87,6 +91,17 @@ export const ofTallies = async <File>(ports: ExportPorts, bookId: BookId, watch:
   return ports.session.readUnlessStopped(bookId, watch.stopped, async (journal, stored) => {
     watch.onReport({ type: "totalling" })
     return mapOk(await linesIn(journal, ""), (lines) => (watch.stopped.aborted ? undefined : made(lines, stored)))
+  })
+}
+
+/** A file made of every tally of a book with the rates the book sets its tokens at, as hledger reads them: the rates asked beside the tallies, in the same turn. None where the person stopped it. */
+export const ofPricedTallies = async <File>(ports: ExportPorts, bookId: BookId, watch: ExportWatch, made: (lines: readonly TallyLine[], prices: readonly PricePoint[], stored: StoredBook) => File): Promise<Outcome<File | undefined>> => {
+  if (watch.stopped.aborted) return Ok(undefined)
+  watch.onReport({ type: "reading" })
+  return ports.session.readUnlessStopped(bookId, watch.stopped, async (journal, stored) => {
+    watch.onReport({ type: "totalling" })
+    const [lines, prices] = await Promise.all([linesIn(journal, ""), journal.ask(pricesRequest("")).then(fromHledger)])
+    return andThen(lines, (found) => mapOk(prices, (directives) => (watch.stopped.aborted ? undefined : made(found, pricePointsOf(directives), stored))))
   })
 }
 

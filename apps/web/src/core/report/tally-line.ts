@@ -19,6 +19,8 @@ export interface TallyLine {
   readonly maker: string | undefined
   /** The words it is tagged with, each once, in their order: the person's own, and those another app labelled it with. */
   readonly labels: readonly string[]
+  /** The commodity its tokens are in, which names their rate and parlor; none for a tally kept in yen alone. */
+  readonly tokenCommodity: string | undefined
   readonly notes: TallyNotes
   readonly sides: Sides
   readonly actual: Decimal

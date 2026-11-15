@@ -43,6 +43,7 @@ const lineOf = (line: {
   machineName: line.machineName,
   maker: line.maker,
   labels: line.labels ?? [],
+  tokenCommodity: undefined,
   notes: { ...NO_NOTES, aside: { ...NO_NOTES.aside, clock: line.clock }, playSeconds: line.playSeconds === undefined ? undefined : yen(line.playSeconds) },
   sides: { spent: yen(line.spent), won: yen(line.won) },
   actual: yen(line.won - line.spent),

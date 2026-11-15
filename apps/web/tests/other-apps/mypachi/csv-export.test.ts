@@ -29,6 +29,7 @@ const lineOf = (line: { readonly date: string; readonly gameKind?: PlayGameKind;
   machineName: line.machineName,
   maker: undefined,
   labels: line.labels ?? [],
+  tokenCommodity: undefined,
   notes: { ...NO_NOTES, playSeconds: line.playSeconds },
   sides: { spent: yen(line.spent), won: yen(line.won) },
   actual: line.actual,

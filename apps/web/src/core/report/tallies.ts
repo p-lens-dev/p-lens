@@ -1,6 +1,6 @@
 import type { BalanceReport, EntryHead, Tag, Transaction } from "../../hledger/protocol/wire"
 import { parseIsoDate, type IsoDate } from "../calendar/calendar"
-import { YEN } from "../commodity/commodity"
+import { YEN, readTokenCommodity } from "../commodity/commodity"
 import { ZERO, negate, sum, type Decimal } from "../decimal/decimal"
 import { ACCOUNTS, isWrittenReversed } from "../journal/accounts"
 import { PARLOR_ID_TAG, type ParlorId } from "../parlor/parlor"
@@ -70,6 +70,10 @@ export const tallySummaryOf = (transaction: Transaction): TallySummary | undefin
         inferredValue: statisticOf(transaction, ACCOUNTS.inferredTheoreticalValue),
       }
 }
+
+/** The commodity a tally's tokens are in, as its first posting in any says it; none for a tally kept in yen alone. */
+export const tokenCommodityOf = (transaction: Transaction): string | undefined =>
+  transaction.tpostings.flatMap((posting) => posting.pamount.map((amount) => amount.acommodity)).find((commodity) => readTokenCommodity(commodity) !== undefined)
 
 export const tallySummariesOf = (transactions: readonly Transaction[]): readonly TallySummary[] =>
   transactions.map(tallySummaryOf).filter((tally): tally is TallySummary => tally !== undefined)
