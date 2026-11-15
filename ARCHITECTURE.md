@@ -470,11 +470,8 @@ is prizes taken home, in equity. A test holds it
 tally of a play followed live, one typed in, one taken in from another app, a prize
 exchange, savings opened or put right — in the cases where money came
 back, and the files that name the cash account, so a new writer cannot be
-added without being added there. A hand is held to it too: a file edited
-raw is refused where the edit brings in a positive amount to `資産:現金`
-(`cashRaisedBy`, asked of hledger before and after as the names are), and
-says which entry. One a book already held is not the edit's doing and
-stays. What a book brings with it whole — put back from a backup, synced
+added without being added there. Nothing on screen edits a book's files
+by hand. What a book brings with it whole — put back from a backup, synced
 from another device — is taken as it is. The prize accounts are declared in a book
 the first time an entry needs them (`withPrizesDeclaredFor`). The form asks for the two sides and shows their
 difference, the result, which nobody types (`resultOfYenTally`); the

@@ -102,7 +102,7 @@ function BookRow(props: { readonly listed: BookStanding; readonly motion: Motion
           </Show>
           <Show when={props.listed.unreadable.length > 0}>
             <span role="alert" class="text-xs text-negative">
-              {props.listed.unreadable.map((file) => unreadableFileText(file.path, file.lines)).join("")}生ファイルで直してください。
+              {props.listed.unreadable.map((file) => unreadableFileText(file.path, file.lines)).join("")}バックアップから復元してください。
             </span>
           </Show>
         </div>
