@@ -89,6 +89,6 @@ P-Lens 運営者（以下「運営者」）は、app.p-lens.jp で提供する�
 
 ## 12. 運営者とお問い合わせ
 
-本アプリは、P-Lens 運営者（https://github.com/p-lens）が開発し、提供しています。
+本アプリは、P-Lens 運営者（https://github.com/p-lens-dev）が開発し、提供しています。
 
 本ポリシーについてのお問い合わせは、公式サイト（https://p-lens.jp）に記載の窓口までお願いします。

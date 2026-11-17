@@ -74,7 +74,7 @@ describe("a play followed live", () => {
     const [head = "", ...readings] = (storage.peek(BOOK)?.files[`pachinko-play/${ID}.jsonl`] ?? "").split("\n")
     expect(JSON.parse(head)).toEqual({
       header: true,
-      about: "P-Lens play log. This first line is its header and says what the play was; every line after it is one reading of the play. The format is described at https://github.com/p-lens/p-lens.",
+      about: "P-Lens play log. This first line is its header and says what the play was; every line after it is one reading of the play. The format is described at https://github.com/p-lens-dev/p-lens.",
       v: 1,
       playId: ID,
       gameKind: "pachinko",

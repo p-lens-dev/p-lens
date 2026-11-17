@@ -11,7 +11,7 @@ import { loadCredits, type Credit, type GroupId } from "./credits"
  * who conveys its object code: this app's source, and hledger's, at the
  * versions built in.
  */
-const SOURCE_CODE = "https://github.com/p-lens/p-lens"
+const SOURCE_CODE = "https://github.com/p-lens-dev/p-lens"
 
 const HEADINGS: Readonly<Record<GroupId, string>> = {
   hledger: "会計エンジン（hledger と、組み込まれた Haskell のライブラリ）",

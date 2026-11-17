@@ -7,10 +7,10 @@
   "author": "P-Lens contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/p-lens/p-lens.git",
+    "url": "git+https://github.com/p-lens-dev/p-lens.git",
     "directory": "packages/solid-gathering-shell"
   },
-  "homepage": "https://github.com/p-lens/p-lens/tree/main/packages/solid-gathering-shell",
+  "homepage": "https://github.com/p-lens-dev/p-lens/tree/main/packages/solid-gathering-shell",
   "exports": {
     ".": "./src/index.ts"
   },

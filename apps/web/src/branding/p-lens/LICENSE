@@ -2,7 +2,7 @@
 ==========================================
 
 このフォルダにあるのは、P-Lens というソフトウェアではなく、それを app.p-lens.jp
-で配信している運営者（https://github.com/p-lens）のものです。ソフトウェア本体
+で配信している運営者（https://github.com/p-lens-dev）のものです。ソフトウェア本体
 とは別のもので、GNU General Public License の対象ではありません。
 
 対象外のもの:
@@ -28,7 +28,7 @@ default/ を自分のものにしてください。BRANDING を付けずにビ�
 ------------------------------------------------------------------------
 
 What is in this folder is not the software P-Lens. It belongs to the operator
-who serves that software at app.p-lens.jp (https://github.com/p-lens). It is
+who serves that software at app.p-lens.jp (https://github.com/p-lens-dev). It is
 separate from the software and is not covered by the GNU General Public
 License.
 

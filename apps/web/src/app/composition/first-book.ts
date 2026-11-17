@@ -11,7 +11,7 @@ import type { StoredBook } from "../../storage/port/book-storage"
  * is described. Then the book's title, and the files it is made of.
  */
 const MAIN = `; A P-Lens book: pachinko and pachislot play, kept as a plain-text hledger journal.
-; Made with P-Lens, open source at https://github.com/p-lens/p-lens
+; Made with P-Lens, open source at https://github.com/p-lens-dev/p-lens
 ; Read and checked by hledger, with thanks: https://github.com/simonmichael/hledger
 ;
 ; What is where:
@@ -21,7 +21,7 @@ const MAIN = `; A P-Lens book: pachinko and pachislot play, kept as a plain-text
 ;   pachinko-play/        a pachinko play's readings as JSON Lines, in a file named by its play-id
 ;   pachislot-play/       a pachislot play's, the same
 ;   logs/activity.jsonl   what was done to the book, as JSON Lines: who, when and what, a line a change
-; Each parlor-id, with the parlor's name, is the one the open parlor list gives: https://github.com/p-lens/p-lens-parlors
+; Each parlor-id, with the parlor's name, is the one the open parlor list gives: https://github.com/p-lens-dev/p-lens-parlors
 ; (app.p-lens.jp reads that list as it is published at https://parlors.p-lens.jp). Machines are named as P-Lens's catalog names them.
 ; The layout, the accounts and every tag are described in ARCHITECTURE.md in the P-Lens repository.
 ;

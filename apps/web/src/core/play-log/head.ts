@@ -32,7 +32,7 @@ export interface PlayLogHead {
   readonly prior: { readonly type: "even" } | { readonly type: "distribution"; readonly id: string } | { readonly type: "stock"; readonly key: string } | undefined
 }
 
-const ABOUT = "P-Lens play log. This first line is its header and says what the play was; every line after it is one reading of the play. The format is described at https://github.com/p-lens/p-lens."
+const ABOUT = "P-Lens play log. This first line is its header and says what the play was; every line after it is one reading of the play. The format is described at https://github.com/p-lens-dev/p-lens."
 
 /**
  * The version of the play log's schema — the head's shape and a reading's
