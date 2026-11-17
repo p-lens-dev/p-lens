@@ -20,7 +20,7 @@ import { readTerms, termsFormOf, type TermsField } from "../../live/start-terms"
 import { Terms } from "../start/Terms"
 import { ParlorField } from "../start/Start"
 import { cabinetText } from "../../../wording/cabinet"
-import { chosenParlorText, venueText } from "../../../wording/parlor"
+import { chosenParlorText, venueParts } from "../../../wording/parlor"
 import { seal } from "../../../../mummer"
 import type { PlayHold } from "../../live/play-hold"
 
@@ -32,6 +32,9 @@ const CHANGE_CABINET = "台番号・機種を変更する"
 const PENCILLED = "group flex h-5 items-center gap-1 rounded-[3px] text-xs font-bold text-text-primary focus-visible:outline-2 focus-visible:outline-focus-ring [&_svg]:size-3.5"
 
 /** The same word where nothing of it can be changed, a play another device holds: as high, and with no pencil. */
+/** A parlor's name beside its rate: cut short past about six full-width characters, so the pencil after it stays at the line's side. */
+const PARLOR = "min-w-0 max-w-[6em] truncate"
+
 const UNPENCILLED = "flex h-5 items-center text-xs font-bold text-text-primary"
 
 /** Whether a choice in the start form names the parlor a play is at. */
@@ -137,9 +140,10 @@ function VenueChange(props: { readonly draft: PlayDraft; readonly before: Parlor
 }
 
 /**
- * The corner a play is on and its parlor after it (`venueText`), above
+ * The corner a play is on and its parlor after it (`venueParts`), above
  * everything counted from it, in a line no taller than its words, the
- * parlor cut short where the line is too narrow, with a pencil beside it
+ * parlor cut short past about six full-width characters, so that the
+ * pencil beside it never drifts towards the middle, with the pencil
  * and nothing of its terms: the day's earlier parlor was left chosen as the
  * play began, the terms typed were another corner's, or the person has
  * moved, and nothing below reads right until they are set right. Pressed,
@@ -152,7 +156,7 @@ function VenueChange(props: { readonly draft: PlayDraft; readonly before: Parlor
  * machine the play is on are said anew. Between the two the line is
  * empty, and holds what it is given to at its very middle, however long
  * the parlor's name: the corner and the cabinet each have half of what is
- * left, the corner cut short in its own. A play another device holds has
+ * left, the corner cut short in its own besides. A play another device holds has
  * the corner and the cabinet with no pencils.
  */
 export function CornerTerms(props: { readonly draft: PlayDraft; readonly hold: PlayHold; readonly between: JSX.Element }): JSX.Element {
@@ -168,7 +172,15 @@ export function CornerTerms(props: { readonly draft: PlayDraft; readonly hold: P
     setLook({ type: "changing", before })
   }
   const changing = (): ParlorSetting | undefined => ((state) => (state.type === "changing" && props.hold.type === "held" ? state.before : undefined))(look())
-  const corner = (): string => venueText("pachinko", props.draft.venue.terms, parlorOf(props.draft))
+  const corner = (): JSX.Element => {
+    const parts = venueParts("pachinko", props.draft.venue.terms, parlorOf(props.draft))
+    return (
+      <>
+        <span class="shrink-0">{parts.rate}</span>
+        <span class={PARLOR}>{parts.parlor}</span>
+      </>
+    )
+  }
   const cabinet = (): string => cabinetText(props.draft.cabinetNumber === undefined ? undefined : seal.cabinet(props.draft.cabinetNumber))
   return (
     <Show
@@ -176,9 +188,9 @@ export function CornerTerms(props: { readonly draft: PlayDraft; readonly hold: P
       keyed
       fallback={
         <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-          <Show when={props.hold.type === "held"} fallback={<span class={`${UNPENCILLED} min-w-0 max-w-full justify-self-start`}><span class="truncate">{corner()}</span></span>}>
+          <Show when={props.hold.type === "held"} fallback={<span class={`${UNPENCILLED} min-w-0 max-w-full justify-self-start`}>{corner()}</span>}>
             <button type="button" onClick={open} class={`${PENCILLED} min-w-0 max-w-full justify-self-start`}>
-              <span class="truncate">{corner()}</span>
+              {corner()}
               <span class="shrink-0 text-text-secondary group-hover:text-text-primary">
                 <EditIcon label={CHANGE_VENUE} />
               </span>

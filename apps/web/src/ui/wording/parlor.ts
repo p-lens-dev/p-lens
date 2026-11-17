@@ -41,12 +41,15 @@ const termsText = (gameKind: PlayGameKind, terms: PlayTerms): string =>
 export const rateText = (gameKind: PlayGameKind, terms: PlayTerms): string => `${tierOf(gameKind, terms)}（${termsText(gameKind, terms)}）`
 
 /**
- * Where a play is, as the line above its live counts says it: its corner's
- * rate first, which a narrow screen never cuts short, then its parlor,
- * which it may — `4円・マレハン東京皇国第8支店` — or that it has no rate.
+ * Where a play is, as the line above its live counts says it, in two
+ * parts: its corner's rate with the mark after it, which is never cut
+ * short, then its parlor, which may be — `4円・` and
+ * `マレハン東京皇国第8支店` — or that it has no rate.
  */
-export const venueText = (gameKind: PlayGameKind, terms: PlayTerms | undefined, parlor: Parlor | undefined): string =>
-  `${terms === undefined ? "レート指定なし" : tierOf(gameKind, terms)}・${parlorText(parlor)}`
+export const venueParts = (gameKind: PlayGameKind, terms: PlayTerms | undefined, parlor: Parlor | undefined): { readonly rate: string; readonly parlor: string } => ({
+  rate: `${terms === undefined ? "レート指定なし" : tierOf(gameKind, terms)}・`,
+  parlor: parlorText(parlor),
+})
 
 /** A distance as a person reads it: metres up close, kilometres beyond. */
 export const distanceText = (metres: number): string =>
