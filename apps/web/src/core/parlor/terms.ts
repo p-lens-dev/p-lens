@@ -68,8 +68,32 @@ export const exchangeRateOf = (terms: Pick<PlayTerms, "exchange">): Decimal => q
 
 /** The rental rates parlors advertise, in yen per token, dearest first, for each game. */
 const TIERS: Readonly<Record<PlayGameKind, readonly number[]>> = {
-  pachinko: [4, 2, 1, 0.5, 0.25, 0.2],
+  pachinko: [4, 2, 1, 0.5, 0.25, 0.2, 0.1],
   pachislot: [20, 10, 5, 2, 1, 0.5],
+}
+
+/**
+ * A rate few parlors run, named only within a narrow band of its own, so
+ * that the common rate beside it keeps its wide one: a rental from `rental`
+ * up to below `rentalBelow` a token, and an exchange from `exchangeFrom` up
+ * to its own rate.
+ */
+interface RareTier {
+  readonly tier: number
+  readonly rentalBelow: number
+  readonly exchangeFrom: number
+}
+
+/** Pachislot's 8円: renting 111 to 125 medals for ¥1,000 and exchanging 125 to 142; anything else around it is 10円's or 5円's. */
+const RARE_TIERS: Readonly<Record<PlayGameKind, readonly RareTier[]>> = {
+  pachinko: [],
+  pachislot: [{ tier: 8, rentalBelow: 9, exchangeFrom: 7 }],
+}
+
+/** The rare rate a rental falls in the band of, where it does. */
+const rareRented = (gameKind: PlayGameKind, terms: Pick<PlayTerms, "rental">): RareTier | undefined => {
+  const rate = terms.rental.yen / terms.rental.tokens
+  return RARE_TIERS[gameKind].find((rare) => rate >= rare.tier - SLACK && rate < rare.rentalBelow - SLACK)
 }
 
 /** Rates are compared with room for the float a division leaves: 1000 / 250 is 4, not 3.9999…. */
@@ -83,27 +107,18 @@ const SLACK = 1e-9
  */
 const rentalTier = (gameKind: PlayGameKind, terms: Pick<PlayTerms, "rental">): number | undefined => {
   const rate = terms.rental.yen / terms.rental.tokens
-  return TIERS[gameKind].find((tier) => tier <= rate + SLACK)
+  return rareRented(gameKind, terms)?.tier ?? TIERS[gameKind].find((tier) => tier <= rate + SLACK)
 }
 
 /**
  * The advertised rate a corner's exchange belongs to. A parlor exchanges at
  * the advertised rate or cheaper — 280 balls for 1000 yen is 3.57 a ball at a
  * 4-yen corner — so the rate is the cheapest advertised one not below it.
+ * A rare rate is never one an exchange alone points to.
  */
 const exchangeTier = (gameKind: PlayGameKind, terms: Pick<PlayTerms, "exchange">): number | undefined => {
   const rate = terms.exchange.yen / terms.exchange.tokens
   return TIERS[gameKind].toReversed().find((tier) => tier >= rate - SLACK)
-}
-
-/**
- * The rates a corner is called by, in yen per token, dearest first: the
- * advertised ones, and pachislot's 8円, which some parlors run though the
- * journal keeps no pool under it.
- */
-const CORNER_RATES: Readonly<Record<PlayGameKind, readonly number[]>> = {
-  pachinko: [4, 2, 1, 0.5, 0.25, 0.2],
-  pachislot: [20, 10, 8, 5, 2, 1, 0.5],
 }
 
 const GAME_SHORT: Readonly<Record<PlayGameKind, string>> = { pachinko: "パチ", pachislot: "スロ" }
@@ -115,7 +130,7 @@ const GAME_SHORT: Readonly<Record<PlayGameKind, string>> = { pachinko: "パチ",
  * terms, or below every rate, is at a rate unknown.
  */
 export const cornerOf = (gameKind: PlayGameKind, terms: PlayTerms | undefined): string => {
-  const rate = terms === undefined ? undefined : CORNER_RATES[gameKind].find((each) => each <= terms.rental.yen / terms.rental.tokens + SLACK)
+  const rate = terms === undefined ? undefined : rentalTier(gameKind, terms)
   return `${rate === undefined ? UNKNOWN_TIER : `${String(rate)}円`}${GAME_SHORT[gameKind]}`
 }
 
@@ -126,9 +141,15 @@ export const UNKNOWN_TIER = "レート不明"
  * The advertised rate a corner plays at, as the journal names it — `4円`,
  * `1円`, `20円` — when its rental and its exchange point to the same one.
  * A 4-yen rental exchanged at more than 4 yen, or a 1-yen one at 3.57, points
- * to none, and is kept as a rate unknown rather than guessed at.
+ * to none, and is kept as a rate unknown rather than guessed at. A rare
+ * rate is named only where both fall in its narrow band.
  */
 export const tierOf = (gameKind: PlayGameKind, terms: PlayTerms): string => {
+  const rare = rareRented(gameKind, terms)
+  if (rare !== undefined) {
+    const exchanged = terms.exchange.yen / terms.exchange.tokens
+    return exchanged >= rare.exchangeFrom - SLACK && exchanged <= rare.tier + SLACK ? `${String(rare.tier)}円` : UNKNOWN_TIER
+  }
   const rented = rentalTier(gameKind, terms)
   return rented !== undefined && rented === exchangeTier(gameKind, terms) ? `${String(rented)}円` : UNKNOWN_TIER
 }

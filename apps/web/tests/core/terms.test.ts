@@ -17,6 +17,24 @@ describe("a corner's terms", () => {
     expect(tierOf("pachinko", terms([200, 178], [200, 224]))).toBe("1円")
     expect(tierOf("pachinko", terms([1000, 1000], [1000, 1000]))).toBe("1円")
     expect(tierOf("pachislot", terms([1000, 46], [1000, 56]))).toBe("20円")
+    expect(tierOf("pachislot", terms([1000, 100], [1000, 112]))).toBe("10円")
+  })
+
+  test("name an 8-yen pachislot corner 8円 only within its narrow band, 10円 keeping its wide one", () => {
+    expect(tierOf("pachislot", terms([1000, 125], [1000, 125]))).toBe("8円")
+    expect(tierOf("pachislot", terms([1000, 120], [1000, 140]))).toBe("8円")
+    expect(poolOf("pachislot", terms([1000, 125], [1000, 130]))).toEqual({ kind: "medal", tier: "8円" })
+    expect(cornerOf("pachislot", terms([1000, 125], [1000, 125]))).toBe("8円スロ")
+    expect(tierOf("pachislot", terms([1000, 125], [1000, 150]))).toBe(UNKNOWN_TIER)
+    expect(tierOf("pachislot", terms([1000, 100], [1000, 130]))).toBe("10円")
+    expect(tierOf("pachislot", terms([1000, 100], [1000, 190]))).toBe("10円")
+    expect(poolOfExchange("pachislot", { yen: 1000, tokens: 125 }).tier).toBe("10円")
+  })
+
+  test("name a 0.1-yen pachinko corner 0.1円", () => {
+    expect(tierOf("pachinko", terms([1000, 10_000], [1000, 10_000]))).toBe("0.1円")
+    expect(tierOf("pachinko", terms([1000, 10_000], [1000, 11_200]))).toBe("0.1円")
+    expect(cornerOf("pachinko", terms([1000, 10_000], [1000, 10_000]))).toBe("0.1円パチ")
   })
 
   test("round the rental down and the exchange up, and call a board that disagrees a rate unknown", () => {
