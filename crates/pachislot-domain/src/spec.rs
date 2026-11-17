@@ -64,7 +64,8 @@ pub struct Resources {
     /// Medals a regular game takes.
     pub bet: NonZeroU32,
     /// ベース, for a machine of an AT: how a regular game's small wins and
-    /// replays come out, as the games fifty medals last.
+    /// replays come out, as the games fifty medals last. A setting the AT's
+    /// `base` component gives one for takes that one instead.
     pub base: Option<Base>,
     /// For a machine whose ceilings are counted on its screen: the screen's
     /// games a regular game comes to on average, when the screen adds games
@@ -302,6 +303,11 @@ pub struct Components {
     /// 継続率: how often an AT paid in sets carries on to one more, under
     /// each setting.
     pub continuation_rate: BTreeMap<EntityId, PerSettingLevel<BasisPoints>>,
+    /// On an AT: the ベース under each setting, where the small wins and
+    /// replays come out otherwise from one setting to the next, every
+    /// setting given. The machine's `base` is then not needed, and a
+    /// setting given here takes this one over it.
+    pub base: BTreeMap<EntityId, PerSettingLevel<Base>>,
     /// An AT's medals as a table under each setting: so many medals, so
     /// often.
     pub payout_table: BTreeMap<EntityId, PerSettingLevel<Vec<PayoutRow>>>,
@@ -379,6 +385,7 @@ pub enum Component {
     Misses,
     Sets,
     ContinuationRate,
+    Base,
     PayoutTable,
     NetPerGame,
     OtherNet,
@@ -665,6 +672,8 @@ pub struct At {
     pub sets: Option<Sets>,
     pub continuation_rate: Option<PerSettingLevel<BasisPoints>>,
     pub payout_table: Option<PerSettingLevel<Vec<PayoutRow>>>,
+    /// The ベース under each setting, where it is given a setting.
+    pub base: Option<PerSettingLevel<Base>>,
     /// 純増: the medals a game of the AT gains.
     pub net_per_game: Option<Medals>,
     /// The shares of its medals won at another 純増.

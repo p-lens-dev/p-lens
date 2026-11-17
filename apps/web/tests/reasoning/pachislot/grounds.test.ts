@@ -232,6 +232,23 @@ describe("an AT machine's grounds, reasoned", () => {
     expect(groundsStanding(proof).tone).toBe("holds")
   })
 
+  test("each setting level loses what its own ベース says, and the 機械割 comes back from it", async () => {
+    const rate = rateSpec as SpecDto
+    const { base: _machine, ...resources } = rate.resources
+    const own = solved({ ...rate, components: { ...rate.components, base: { at: [{ settingLevel: 1, value: 40 }, { settingLevel: 6, value: 50 }] } }, resources })
+    const proof = await proved(own.basis, own.analysis)
+    const lines = groundsLines(proof, groundsNamingOf(own.basis)).map((line) => plainOf(line.parts))
+    expect(lines).toContain("設定1の通常時1Gあたりの減り ＝ 50枚 ÷ 設定1のベース 40G ＝ 1.25枚/G")
+    expect(lines).toContain("設定6の通常時1Gあたりの減り ＝ 50枚 ÷ 設定6のベース 50G ＝ 1枚/G")
+    expect(lines).toContain("検算：獲得枚数から戻した機械割 110% ＝ 入力された 110%")
+    expect(amiss(proof)).toEqual([])
+    expect(groundsStanding(proof).tone).toBe("holds")
+    const machine = solved(rate)
+    const gainOf = (analysis: AnalysisDto, level: number): number | undefined => analysis.settingLevels.find((each) => each.settingLevel === level)?.at?.gain
+    expect(gainOf(own.analysis, 1)).toBe(gainOf(machine.analysis, 1))
+    expect(gainOf(own.analysis, 6)).toBeLessThan(gainOf(machine.analysis, 6) ?? 0)
+  })
+
   test("a 機械割 is reasoned from an AT's own medals where its 純増 is given", async () => {
     const { basis, analysis } = solved(withNet)
     const proof = await proved(basis, analysis)

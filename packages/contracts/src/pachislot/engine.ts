@@ -42,7 +42,7 @@ export interface SpecDto {
     readonly settingLevels: readonly number[]
     /** Medals a regular game takes. */
     readonly bet: number
-    /** ベース, for a machine of an AT: regular games fifty medals last. */
+    /** ベース, for a machine of an AT: regular games fifty medals last. Not needed where the AT's `base` gives one for every setting, which then takes it over this. */
     readonly base?: number
     /** For ceilings counted on the screen: the screen's games a regular game comes to on average, one or more. */
     readonly lcdRate?: number
@@ -105,6 +105,8 @@ export interface ComponentsDto {
   readonly continuationRate?: Readonly<Record<string, readonly BySettingLevelDto<number>[]>>
   /** An AT's medals as a table under each setting — so many medals, so often in hundredths of a percent — in place of a `payout`. */
   readonly payoutTable?: Readonly<Record<string, readonly BySettingLevelDto<readonly PayoutRowDto[]>[]>>
+  /** On an AT: the ベース under each setting — regular games fifty medals last — where the small wins and replays come out otherwise from one setting to the next, every setting given. The machine's own `base` is then not needed, and each setting is played at this one. */
+  readonly base?: Readonly<Record<string, readonly BySettingLevelDto<number>[]>>
   /** 純増: medals a game of an AT gains. It says the games an AT of so many medals takes, so with it an AT's gain and the machine's 機械割 each follow from the other. On a CZ that is a bonus, the games its medals take. */
   readonly netPerGame?: Readonly<Record<string, number>>
   /** 上位AT, or a bonus inside the AT: shares of an AT's medals won at another 純増 than its `netPerGame`, which the rest are won at. */
@@ -265,6 +267,8 @@ export interface AtTableDto {
   readonly ownChances?: readonly (number | null)[]
   /** The side bonus's chance a regular game below its ceiling; left out where the machine has none. */
   readonly sideChance?: number
+  /** The setting's own ベース, where the AT's `base` gives one; left out where it is played at the machine's. */
+  readonly base?: number
   /** Where the trigger has a meter: the chance the trigger after so many misses since the AT comes with it full, the last holding past it; left out where it has none. */
   readonly meterWins?: readonly number[]
   /**
@@ -320,6 +324,7 @@ export interface ModeRuleDto {
  * again as after a setting change once an AT reaches it.
  */
 export interface AtRulesDto {
+  /** The machine's ベース, which a setting with its own in its table plays at instead. */
   readonly base: number
   readonly at: string
   readonly trigger?: string

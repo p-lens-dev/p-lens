@@ -376,6 +376,7 @@ pub fn table(chance: f64, success: f64, after_at: Vec<f64>, after_reset: Vec<f64
         ceiling_redraws: Vec::new(),
         own_chances: Vec::new(),
         side_chance: Probability::NONE,
+        base: None,
         meter_wins: Vec::new(),
         allotments: Allotments {
             after_at,

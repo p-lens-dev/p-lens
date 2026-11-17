@@ -640,7 +640,7 @@ pub(crate) fn at_machine<'a>(
             .base
             .map_or(Ok(None), |_| Err(SpecError::BaseWithoutAt));
     };
-    let base = spec.resources.base.ok_or(SpecError::MissingBase)?;
+    let base = machine_base(spec, at)?;
     let cz = czs.first().copied();
     let stray = elements.iter().find(|element| match element {
         Element::At(other) => other.id != at.id,
@@ -679,6 +679,26 @@ pub(crate) fn at_machine<'a>(
         spec.resources.cap,
     )
     .map(Some)
+}
+
+/// The machine's ベース: as the spec gives it, or where it gives one only a
+/// setting, the lowest setting's.
+fn machine_base(spec: &Spec, at: &At) -> Result<Base, SpecError> {
+    spec.resources
+        .base
+        .or_else(|| at.base.as_ref().and_then(lowest_base))
+        .ok_or(SpecError::MissingBase)
+}
+
+/// The ベース of the lowest setting given, standing for the machine's where
+/// the spec gives one only a setting: every setting has its own then, so it
+/// is never played at.
+fn lowest_base(bases: &PerSettingLevel<Base>) -> Option<Base> {
+    bases
+        .0
+        .iter()
+        .min_by_key(|(setting_level, _)| *setting_level)
+        .map(|(_, base)| *base)
 }
 
 /// A ceiling counted on a screen or in another unit, in the regular games
@@ -1659,7 +1679,7 @@ fn read_back(
     rules: &AtRules,
     odds: Odds<'_>,
     (allotments, payout): (&Allotments, &PayoutLaw),
-    published: f64,
+    (published, loss): (f64, f64),
 ) -> Option<f64> {
     let chance_for = |completion: f64| {
         natural_chance(
@@ -1671,7 +1691,9 @@ fn read_back(
     };
     let first = chance_for(capped(payout, rules.cap.map(Medals::get)).completion)?;
     let settle = |chance: f64| {
-        chance_for(cap_figures_of(rules, odds.at_chance(chance), allotments, payout).completion)
+        chance_for(
+            cap_figures_of(rules, odds.at_chance(chance), (allotments, payout), loss).completion,
+        )
     };
     if !rules.reset_on_cap {
         return Some(first);
@@ -1703,6 +1725,13 @@ fn table_paying(
     let own_chances = own_chances_of(machine, setting_level)?;
     let side_chance = side_chance_of(machine, setting_level)?;
     let meter_wins = meter_wins_of(machine, setting_level)?;
+    let base = machine
+        .at
+        .base
+        .as_ref()
+        .and_then(|bases| bases.get(setting_level))
+        .copied();
+    let loss = base.unwrap_or(rules.base).loss_per_game();
     let odds = Odds {
         chance: 0.0,
         success,
@@ -1722,7 +1751,7 @@ fn table_paying(
     let chance = match given {
         Given::Below(chance) => chance,
         Given::Published(published) => {
-            read_back(rules, odds, (&allotments, &payout), published).ok_or_else(beyond)?
+            read_back(rules, odds, (&allotments, &payout), (published, loss)).ok_or_else(beyond)?
         }
     };
     Ok(AtTable {
@@ -1738,6 +1767,7 @@ fn table_paying(
         ceiling_redraws,
         own_chances,
         side_chance,
+        base,
         meter_wins,
         allotments,
         payout,
@@ -1760,7 +1790,7 @@ fn cycle_of(rules: &AtRules, table: &AtTable) -> Cycle {
 pub(crate) fn rate_cycle(rules: &AtRules, cycle: Cycle, bet: f64, table: &AtTable) -> RateCycle {
     RateCycle {
         games: 1.0 / cycle.at_chance(),
-        loss: rules.base.loss_per_game(),
+        loss: rules.loss_per_game(table),
         bet,
         net: rules.net_per_game.map_or(0.0, Medals::get),
         triggers: rules.trigger_payout.map(|payout| TriggersPaid {
@@ -1881,6 +1911,11 @@ pub(crate) fn coverage(
             .payout_table
             .as_ref()
             .map(|table| (&machine.at.id, levels(table))),
+        machine
+            .at
+            .base
+            .as_ref()
+            .map(|bases| (&machine.at.id, levels(bases))),
         machine
             .at
             .rate

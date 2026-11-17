@@ -143,6 +143,10 @@ pub struct ComponentsDto {
     /// An AT's medals as a table under each setting.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub payout_table: BTreeMap<String, Vec<BySettingLevelDto<Vec<PayoutRowDto>>>>,
+    /// On an AT: the ベース under each setting, every setting given, where
+    /// it differs from one to the next.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub base: BTreeMap<String, Vec<BySettingLevelDto<f64>>>,
     /// 純増: medals a game of an AT gains.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub net_per_game: BTreeMap<String, f64>,
@@ -398,6 +402,9 @@ pub struct AtTableDto {
     /// The side bonus's chance a regular game below its ceiling; none where the machine has none.
     #[serde(default, skip_serializing_if = "is_none")]
     pub side_chance: f64,
+    /// The setting's own ベース; none where it takes the machine's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base: Option<f64>,
     /// Where the trigger has a meter: the chance the trigger after so many
     /// misses since the AT comes with it full, the last holding past it;
     /// none where it has no meter.

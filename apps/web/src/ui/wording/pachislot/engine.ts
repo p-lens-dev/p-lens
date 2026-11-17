@@ -29,6 +29,7 @@ const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   sets: "セットごとの枚数",
   continuationRate: "継続率",
   payoutTable: "獲得枚数の表",
+  base: "設定ごとのベース",
   netPerGame: "純増",
   otherNet: "別の純増",
   rate: "機械割",
@@ -118,7 +119,7 @@ const describeEngineError = (error: EngineErrorDto): string => {
     case "at-not-alone":
       return `AT機には「${error.entity}」を入れられません。ボーナスや2つ目のAT・CZは入れず、AT・CZ・モード・小役・リプレイ・ベースだけにしてください。`
     case "missing-base":
-      return "AT機にはベース（50枚あたりのゲーム数）が要ります。"
+      return "AT機にはベース（50枚あたりのゲーム数）が要ります。設定ごとのベースを全部の設定に入れるか、ベースを入れてください。"
     case "base-without-at":
       return "ベースはAT機にだけ入れます。この機種にはATがありません。"
     case "first-hit-beyond-ceiling":

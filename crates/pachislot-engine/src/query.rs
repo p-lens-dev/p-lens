@@ -78,6 +78,7 @@ fn check_entities(spec: &Spec) -> Result<(), SpecError> {
             Component::ContinuationRate,
         ))
         .chain(keyed(&components.payout_table, Component::PayoutTable))
+        .chain(keyed(&components.base, Component::Base))
         .chain(keyed(&components.net_per_game, Component::NetPerGame))
         .chain(keyed(&components.other_net, Component::OtherNet))
         .chain(keyed(&components.rate, Component::Rate))
@@ -263,6 +264,7 @@ fn at(spec: &Spec, entity: &EntityId) -> Result<At, SpecError> {
         sets: components.sets.get(entity).copied(),
         continuation_rate: components.continuation_rate.get(entity).cloned(),
         payout_table: components.payout_table.get(entity).cloned(),
+        base: components.base.get(entity).cloned(),
         net_per_game: components.net_per_game.get(entity).copied(),
         other_net: components
             .other_net
@@ -312,6 +314,7 @@ fn misplaced(spec: &Spec, entity: &EntityId, kinds: &[Component]) -> Option<Comp
             || components.sets.contains_key(entity)
             || components.continuation_rate.contains_key(entity)
             || components.payout_table.contains_key(entity)
+            || components.base.contains_key(entity)
             || components.other_net.contains_key(entity)
             || components.rate.contains_key(entity)
             || components.window.contains_key(entity)

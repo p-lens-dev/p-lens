@@ -62,7 +62,8 @@ pub struct CueChance {
 /// a trigger wins the AT at the setting's success rate, certainly once it
 /// has missed as many times since the last AT as the mode allows; and a second ceiling, in
 /// games since the last AT, the mode's own, wins it whatever came before.
-/// Every game loses what the ベース says otherwise.
+/// Every game loses what the ベース says otherwise: the setting's own,
+/// where its table has one, and the machine's where it does not.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AtRules {
     pub base: Base,
@@ -121,6 +122,19 @@ pub struct AtRules {
     /// table's `side_chance` — with its own ceiling, paying its medals and
     /// winning nothing; none where the machine has none.
     pub side_bonus: Option<SideBonusRule>,
+}
+
+impl AtRules {
+    /// The ベース a regular game is played at under a setting: its table's
+    /// own, or the machine's.
+    pub fn base_under(&self, table: &AtTable) -> Base {
+        table.base.unwrap_or(self.base)
+    }
+
+    /// Theoretical medals a regular game loses under a setting, ATs aside.
+    pub fn loss_per_game(&self, table: &AtTable) -> f64 {
+        self.base_under(table).loss_per_game()
+    }
 }
 
 /// A side bonus as the engine plays it: certain on its ceiling, in regular
@@ -323,6 +337,9 @@ pub struct AtTable {
     /// The side bonus's chance a regular game below its ceiling; none where
     /// the machine has none.
     pub side_chance: Probability,
+    /// The setting's own ベース, where the spec gives one a setting; none
+    /// where it takes the machine's.
+    pub base: Option<Base>,
     /// Where the trigger has a meter: the chance the trigger after so many
     /// misses since the AT — none, one, two, … — comes with the meter full,
     /// among play that has missed them all, so that it certainly wins; the

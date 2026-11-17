@@ -189,6 +189,8 @@ export interface WorldForm {
   readonly rows: readonly EntityRow[]
   /** ベース: regular games fifty medals last, for a machine of an AT. */
   readonly base: string
+  /** The ベース under each setting level as typed, keyed by the level: every level typed, or none; with every level typed, `base` may be left empty. */
+  readonly bases: Readonly<Record<string, string>>
   /** The screen's games a regular game comes to, where the ceilings are counted on it; empty where they count regular games. */
   readonly lcdRate: string
   /** What the trigger's ceilings are counted in where it is not games — `pt`, `周期` — as typed; empty where they count games. */
@@ -254,6 +256,7 @@ export const STARTING_WORLD: WorldForm = {
   bet: "3",
   rows: [row("big", "BIG", "bonus"), row("reg", "REG", "bonus"), row("grape", "ブドウ", "role"), row("cherry", "チェリー", "role"), row("replay", "リプレイ", "replay")],
   base: "",
+  bases: {},
   lcdRate: "",
   unitName: "",
   unitGames: "",
@@ -262,13 +265,13 @@ export const STARTING_WORLD: WorldForm = {
 
 /** Where a typed-in formula starts: BIG and REG, and a 機械割 for each level. */
 export const STARTING_MANUAL: ManualForm = {
-  world: { settingLevels: ALL_SETTING_LEVELS, bet: "3", rows: [row("big", "BIG", "bonus"), row("reg", "REG", "bonus")], base: "", lcdRate: "", unitName: "", unitGames: "", cap: "" },
+  world: { settingLevels: ALL_SETTING_LEVELS, bet: "3", rows: [row("big", "BIG", "bonus"), row("reg", "REG", "bonus")], base: "", bases: {}, lcdRate: "", unitName: "", unitGames: "", cap: "" },
   rates: {},
 }
 
 /** Where a typed-in formula of an AT machine starts: its AT, its ベース, and a 機械割 for each level. */
 export const STARTING_AT_MANUAL: ManualForm = {
-  world: { settingLevels: ALL_SETTING_LEVELS, bet: "3", rows: [row("at", "AT", "at")], base: "", lcdRate: "", unitName: "", unitGames: "", cap: "" },
+  world: { settingLevels: ALL_SETTING_LEVELS, bet: "3", rows: [row("at", "AT", "at")], base: "", bases: {}, lcdRate: "", unitName: "", unitGames: "", cap: "" },
   rates: {},
 }
 
@@ -383,9 +386,34 @@ const ceilingOf = (text: string, field: string): Read<number | undefined> => {
 }
 
 /** ベース: games fifty medals last, above none. */
-const baseOf = (text: string): Read<number> => {
-  const read = hundredthsOf(text, "ベース")
-  return !read.ok ? read : read.value === 0 ? Err({ field: "ベース", reason: "out-of-range" }) : Ok(read.value / 100)
+const baseOf = (text: string, field = "ベース"): Read<number> => {
+  const read = hundredthsOf(text, field)
+  return !read.ok ? read : read.value === 0 ? Err({ field, reason: "out-of-range" }) : Ok(read.value / 100)
+}
+
+/** An AT machine's ベース as typed: the machine's, and one a setting level where every level has one — then the machine's may be left empty. */
+interface TypedBases {
+  readonly base: number | undefined
+  readonly bases: readonly BySettingLevelDto<number>[] | undefined
+}
+
+const basesOf = (form: WorldForm): Read<TypedBases> => {
+  const typed = (level: number): string => tidyTyped(form.bases[String(level)] ?? "")
+  const given = form.settingLevels.filter((level) => typed(level) !== "")
+  if (given.length === 0) {
+    const base = baseOf(form.base)
+    return base.ok ? Ok({ base: base.value, bases: undefined }) : base
+  }
+  const missing = form.settingLevels.find((level) => typed(level) === "")
+  if (missing !== undefined) return Err({ field: `ベース 設定${missing}`, reason: "required" })
+  const bases = form.settingLevels.toSorted((left, right) => left - right).map((level) => {
+    const read = baseOf(typed(level), `ベース 設定${level}`)
+    return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
+  })
+  const wrong = bases.find((read) => !read.ok)
+  if (wrong !== undefined && !wrong.ok) return Err(wrong.error)
+  const base = tidyTyped(form.base) === "" ? Ok(undefined) : baseOf(form.base)
+  return base.ok ? Ok({ base: base.value, bases: bases.flatMap((read) => (read.ok ? [read.value] : [])) }) : base
 }
 
 /** A share in percent as basis points: `30` is `3000`, no more than the whole. */
@@ -794,7 +822,8 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
 /** The world the rows make: a table per component, keyed by each row's key. */
 /** What only an AT machine has: its ベース, and its screen's rate and 有利区間の上限 where it has them. */
 interface MachineResources {
-  readonly base: number
+  readonly base: number | undefined
+  readonly bases: readonly BySettingLevelDto<number>[] | undefined
   readonly lcdRate: number | undefined
   readonly ceilingUnit: { readonly name: string; readonly perGame: number } | undefined
   readonly cap: number | undefined
@@ -906,11 +935,12 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
       ...(Object.keys(ceilingRedraws).length > 0 ? { ceilingRedraw: ceilingRedraws } : {}),
       ...(Object.keys(triggerChances).length > 0 ? { triggerChance: triggerChances } : {}),
       ...(Object.keys(expiries).length > 0 ? { expiry: expiries } : {}),
+      ...(at?.bases === undefined ? {} : { base: Object.fromEntries(listed("at").map((key) => [key, at.bases ?? []])) }),
     },
     resources: {
       settingLevels: form.settingLevels.toSorted((left, right) => left - right),
       bet,
-      ...(at === undefined ? {} : { base: at.base }),
+      ...(at?.base === undefined ? {} : { base: at.base }),
       ...(at?.lcdRate === undefined ? {} : { lcdRate: at.lcdRate }),
       ...(at?.ceilingUnit === undefined ? {} : { ceilingUnit: at.ceilingUnit }),
       ...(at?.cap === undefined ? {} : { cap: at.cap }),
@@ -923,14 +953,14 @@ const readRows = (form: WorldForm, payoutRule: (entity: EntityRow) => PayoutRule
   const bet = betOf(form.bet)
   const at = isAtMachine(form)
   const bonuses: Read<true> = at || form.rows.some((entity) => entity.kind === "bonus") ? Ok(true) : Err({ field: "ボーナス", reason: "no-bonus" })
-  const base: Read<number | undefined> = at ? baseOf(form.base) : Ok(undefined)
+  const base: Read<TypedBases | undefined> = at ? basesOf(form) : Ok(undefined)
   const lcdRate = at ? lcdRateOf(form.lcdRate) : Ok(undefined)
   const ceilingUnit = at ? ceilingUnitOf(form) : Ok(undefined)
   const cap = at ? ceilingOf(form.cap, "有利区間の上限") : Ok(undefined)
   const rows = form.rows.map((entity) => readRow(form, entity, payoutRule))
   const problems = [...problemsOf([levels, bet, bonuses, base, lcdRate, ceilingUnit, cap]), ...rows.flatMap((read) => (read.ok ? [] : read.error))]
   if (problems.length > 0 || !bet.ok || !base.ok || !lcdRate.ok || !ceilingUnit.ok || !cap.ok) return Err(problems)
-  const machine = base.value === undefined ? undefined : { base: base.value, lcdRate: lcdRate.value, ceilingUnit: ceilingUnit.value, cap: cap.value }
+  const machine = base.value === undefined ? undefined : { base: base.value.base, bases: base.value.bases, lcdRate: lcdRate.value, ceilingUnit: ceilingUnit.value, cap: cap.value }
   return Ok(worldOf(form, bet.value, machine, rows.flatMap((read) => (read.ok ? [read.value] : []))))
 }
 
@@ -1113,6 +1143,7 @@ export const worldFormOf = (spec: SpecDto): WorldForm => ({
     law: lawFormOf(spec, entity),
   })),
   base: spec.resources.base === undefined ? "" : String(spec.resources.base),
+  bases: Object.fromEntries(Object.values(spec.components.base ?? {})[0]?.map((each) => [String(each.settingLevel), String(each.value)]) ?? []),
   lcdRate: spec.resources.lcdRate === undefined ? "" : String(spec.resources.lcdRate),
   unitName: spec.resources.ceilingUnit?.name ?? "",
   unitGames: spec.resources.ceilingUnit === undefined ? "" : String(Math.round(100 / spec.resources.ceilingUnit.perGame) / 100),

@@ -11,6 +11,7 @@ import { amountText, formatCount, theoreticalFigureText, theoreticalFractionText
 import { seal } from "../../../../mummer"
 import { StandingMark } from "./StandingMark"
 import { BordersNote } from "./BordersNote"
+import { HourlyValueNote } from "./HourlyValueNote"
 import { SpinRangeNote } from "../spin-spread/SpinRangeNote"
 
 /** The jackpots this play records, and beside them, where the seat's count was read, what the parlor's counter should be showing: the two a person checks against each other. */
@@ -62,7 +63,9 @@ function Tile(props: { readonly label: string; readonly value: string; readonly 
  * The spin performance's name is followed by a small i that says where the
  * cabinet's own likely is (`SpinRangeNote`). Unfolded, the border is there
  * to be read as well, its name followed by a small i that gives the play's
- * borders all rented, six in ten its own and all its own (`BordersNote`). What the
+ * borders all rented, six in ten its own and all its own (`BordersNote`); and
+ * where the formula says how fast a cabinet plays, the value a spin is
+ * followed by a small i that gives it over an hour (`HourlyValueNote`). What the
  * play is worth has its tiles from the start, each holding the shape of
  * its figure with nothing in it until a reading gives one: a figure
  * arriving changes a tile, and never the lay of the screen.
@@ -118,18 +121,23 @@ export function LiveFigures(props: {
               <p class="min-w-0 text-xs text-text-muted">算出条件「{formulaText(formula.figures)}」{props.terms === undefined ? "（交換率が入っていません）" : `／ 交換率 ${tokenValueOf(props.terms).toFixed(2)}円/玉`}</p>
               {props.beside(formula)}
             </div>
-            <dl class="grid grid-cols-3 gap-1.5 @roomy:grid-cols-4">
+            <dl class="grid grid-cols-3 gap-1.5">
               <Tile label="期待値（ここまで）" value={theoreticalFigureText(seal.play(theoretical()?.theoreticalValue))} />
-              <Tile label="期待値（1回転）" value={theoreticalFractionText(seal.play(theoretical()?.yenPerSpin), 3)} />
+              <Tile
+                label="期待値（1回転）"
+                value={theoreticalFractionText(seal.play(theoretical()?.yenPerSpin), 3)}
+                note={
+                  <Show when={formula.figures.spinsPerHour} keyed>
+                    {(spinsPerHour) => <HourlyValueNote yenPerHour={theoretical()?.yenPerHour} spinsPerHour={spinsPerHour} />}
+                  </Show>
+                }
+              />
               <Tile
                 label="実質ボーダー"
                 value={rateOf(theoretical()?.border)}
                 unit="回転/千円"
                 note={<BordersNote borders={playBordersOf(formula.figures, props.terms, props.consumption, props.overEntry)} />}
               />
-              <Show when={formula.figures.spinsPerHour !== undefined}>
-                <Tile label="期待値（時給）" value={theoreticalFigureText(seal.play(theoretical()?.yenPerHour))} />
-              </Show>
             </dl>
           </div>
         )}

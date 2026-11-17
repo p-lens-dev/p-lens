@@ -63,6 +63,7 @@ describe("the 解析値 form", () => {
       bet: "3",
       rows: [{ key: "big", label: "BIG", kind: "bonus" as const, of: "", trials: "", payout: "２５２", chances: { "1": "1/273.1", "6": "２５５" }, chanceKind: "combined" as const, ceiling: "", resetCeiling: "", atCeiling: "", resetAllotment: {}, success: {}, misses: "", net: "", unitCeiling: "", resetUnitCeiling: "", atUnitCeiling: "", trigger: "cz" as const, bonusShares: {}, bonusMiss: "counted" as const, forcedCz: "drawn" as const, ceilingAt: "outright" as const, ceilingPayout: "", ceilingAcrossBonuses: "", gates: [], redraw: {}, ceilingRedraw: {}, triggerChances: {}, directBonuses: {}, expiryGames: "", expiryTo: "", sinceAtCeiling: "", resetSinceAtCeiling: "", meterFull: "", meterGains: [], endings: [], endingAllotment: {}, law: EMPTY_LAW }],
       base: "",
+      bases: {},
       lcdRate: "",
       unitName: "",
       unitGames: "",
@@ -193,6 +194,24 @@ describe("an AT machine typed in by hand", () => {
   test("a stored AT machine read back into the form comes out as the same world", () => {
     const madeUp = atSpec as SpecDto
     expect(readManualForm(manualFormOf(madeUp, measured))).toEqual({ ok: true, value: { spec: madeUp, conditions: measured } })
+  })
+
+  test("a ベース under each setting level reads back the same, the machine's then optional, and every level is asked for once one is typed", () => {
+    const at = atSpec as SpecDto
+    const bases = [
+      { settingLevel: 1, value: 36 },
+      { settingLevel: 6, value: 44.5 },
+    ]
+    const own: SpecDto = { ...at, components: { ...at.components, base: { at: bases } }, resources: { settingLevels: [1, 6], bet: 3 } }
+    expect(readManualForm(manualFormOf(own, measured))).toEqual({ ok: true, value: { spec: own, conditions: measured } })
+    const beside: SpecDto = { ...own, resources: at.resources }
+    expect(readManualForm(manualFormOf(beside, measured))).toEqual({ ok: true, value: { spec: beside, conditions: measured } })
+    const form = manualFormOf(at, measured)
+    const typed = readManualForm({ ...form, world: { ...form.world, base: "", bases: { "1": "３６", "6": "44.5" } } })
+    expect(typed.ok && typed.value.spec.components.base).toEqual({ at: bases })
+    expect(typed.ok && typed.value.spec.resources.base).toBeUndefined()
+    const partial = readManualForm({ ...form, world: { ...form.world, bases: { "1": "36" } } })
+    expect(partial.ok ? [] : partial.error).toContainEqual({ field: "ベース 設定6", reason: "required" })
   })
 
   test("ceilings in games and in another unit read back the same, a spec counting its ceilings in the unit is typed again in it, and a unit of no games is refused", () => {

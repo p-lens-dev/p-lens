@@ -85,11 +85,12 @@ const bonusMachineNet = (ordered: readonly Checkpoint[], from: number, to: numbe
  * What an AT machine's games between two lines likely won or lost: each AT
  * won at the medals its result says it took, or what an AT gains on
  * average where it says none, and every regular game at what its ベース
- * loses.
+ * loses — the ベース of the setting level the AT's gain is taken at.
  */
 const atMachineNet = (ordered: readonly Checkpoint[], from: number, to: number, formula: FormulaSnapshot): number | undefined => {
-  const gain = formula.figures.at(0)?.at?.gain
-  const base = formula.normalized.atRules?.base
+  const figures = formula.figures.at(0)
+  const gain = figures?.at?.gain
+  const base = formula.normalized.tables.find((table) => table.settingLevel === figures?.settingLevel)?.at?.base ?? formula.normalized.atRules?.base
   if (gain === undefined || base === undefined) return undefined
   const span = ordered.slice(from + 1, to + 1)
   const won = span.filter((checkpoint) => checkpoint.event?.kind === "jackpot").length

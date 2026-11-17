@@ -167,7 +167,7 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
   const newMachine = (): NewMachine | undefined => {
     const day = releaseDate()
     const words = keywords()
-    return machineName().trim() === "" || namesSettingLevel(machineName()) || namesSettingLevel(modelName()) || !day.ok || !words.ok
+    return machineName().trim() === "" || namesSettingLevel(machineName()) || !day.ok || !words.ok
       ? undefined
       : { name: readName(machineName()), modelName: readModelName(modelName()), keywords: words.value, releasedOn: day.value }
   }
@@ -265,7 +265,7 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
     const registering = target().type === "none"
     const nameMissing = registering && (machineName().trim() === "" || namesSettingLevel(machineName()))
     const dateMissing = registering && !releaseDate().ok
-    const modelMissing = registering && (readModelName(modelName()) === undefined || namesSettingLevel(modelName()))
+    const modelMissing = registering && readModelName(modelName()) === undefined
     const descriptionWrong = registering && !keywords().ok
     const figuresMissing = unstated() === undefined
     const bonusesMissing = stated() === undefined
@@ -334,7 +334,7 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
                   <TextField label="機種名" value={machineName()} onChange={setMachineName} placeholder="ホールでの呼び名" tidied={readName} required invalid={nameNudge.red()} error={namesSettingLevel(machineName()) ? SETTING_LEVEL_IN_NAME : undefined} onFocus={nameNudge.settle} />
                   <TextField label="リリース日" type="date" value={releasedOn()} onChange={setReleasedOn} required invalid={dateNudge.red()} error={releaseDateWording()} onFocus={dateNudge.settle} />
                 </div>
-                <TextField label="型式名" value={modelName()} onChange={(newMachineModelName) => startForm.updatePachinko({ newMachineModelName })} tidied={readName} required invalid={modelNudge.red()} error={namesSettingLevel(modelName()) ? SETTING_LEVEL_IN_NAME : undefined} onFocus={modelNudge.settle} />
+                <TextField label="型式名" value={modelName()} onChange={(newMachineModelName) => startForm.updatePachinko({ newMachineModelName })} tidied={readName} required invalid={modelNudge.red()} onFocus={modelNudge.settle} />
                 <TextField
                   label="検索ワード（任意）"
                   value={keywordsTyped()}

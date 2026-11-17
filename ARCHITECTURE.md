@@ -1542,7 +1542,12 @@ only the primitives, the core and the application.
 - **An AT machine** is a world of one AT entity — its published 初当たり
   (`firstHit`), its payout, and its `ceiling` and `resetCeiling` — its CZ
   if one brings the AT, its modes if it has them, and a `base` resource,
-  ベース. A CZ is an entity of its own (`cz`) with its published 合算
+  ベース. Where the small wins come out otherwise from one setting level to
+  the next, the AT's `base` component gives a ベース under every setting
+  level, each played at its own (`tables[].at.base`), and the resource is
+  then not needed; a setting level without one in its table is played at
+  the machine's (`atRules.base`), so a spec stored before comes to every
+  figure as it did. A CZ is an entity of its own (`cz`) with its published 合算
   (`firstHit`, ceilings included), its `success` rate under every setting
   level, its `ceiling` and `resetCeiling`, and its スルー天井 (`misses`: the
   CZs missed since the last AT after which the next one wins it); the AT it

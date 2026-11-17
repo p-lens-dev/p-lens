@@ -236,6 +236,11 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
             "spec.components.continuationRate",
             |values, at| shares(values, at),
         )?,
+        base: table(&dto.base, "spec.components.base", |values, at| {
+            by_setting_level(values, at, |games: &f64, field| {
+                Base::new(*games).ok_or_else(|| invalid(field))
+            })
+        })?,
         payout_table: table(
             &dto.payout_table,
             "spec.components.payoutTable",
@@ -692,6 +697,10 @@ fn at_table(dto: &AtTableDto, field: &str) -> Result<AtTable, ErrorDto> {
             })
             .collect::<Result<_, _>>()?,
         side_chance: probability(dto.side_chance, &format!("{field}.sideChance"))?,
+        base: dto
+            .base
+            .map(|games| Base::new(games).ok_or_else(|| invalid(&format!("{field}.base"))))
+            .transpose()?,
         meter_wins: dto
             .meter_wins
             .iter()
@@ -1041,6 +1050,7 @@ fn at_table_dto(each: &AtTable) -> AtTableDto {
             .map(|chance| chance.map(Probability::value))
             .collect(),
         side_chance: each.side_chance.value(),
+        base: each.base.map(Base::games),
         meter_wins: each.meter_wins.clone(),
         allotments: AllotmentsDto {
             after_at: each.allotments.after_at.clone(),
@@ -1304,6 +1314,7 @@ fn component_name(component: Component) -> String {
         Component::Misses => "misses",
         Component::Sets => "sets",
         Component::ContinuationRate => "continuationRate",
+        Component::Base => "base",
         Component::PayoutTable => "payoutTable",
         Component::NetPerGame => "netPerGame",
         Component::OtherNet => "otherNet",

@@ -44,11 +44,14 @@ export const optionalDecentName = (body: Body, field: string): Result<string | u
   return value === undefined || value === null || (typeof value === "string" && value.trim() === "") ? Ok(undefined) : decentName(body, field)
 }
 
-/** A machine's model name, or none where it is left out or left empty: decent, and written as a machine's name is kept. */
+/**
+ * A machine's model name, or none where it is left out or left empty: decent, and
+ * written as a machine's name is kept. It is the 型式名 as the maker registered it,
+ * so it may say a setting level (`…設定付GO 2`), as the name may not.
+ */
 export const optionalModelName = (body: Body, field: string): Result<string | undefined, ApiError> => {
   const read = optionalDecentName(body, field)
-  if (!read.ok || read.value === undefined) return read
-  return namesSettingLevel(read.value) ? invalid(field, "names-setting-level") : Ok(keptName(read.value))
+  return !read.ok || read.value === undefined ? read : Ok(keptName(read.value))
 }
 
 /** A 大当り確率 as a spec sheet writes it, `1/319.7`, or none where the field is left out or left empty. */

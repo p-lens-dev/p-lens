@@ -73,8 +73,8 @@ impl Hunted {
 /// What playing on comes to with its medals summed: what the AT gains, what
 /// the triggers pay and — where the machine has one — what a side bonus
 /// pays, less what the regular games lose.
-fn finished(rules: &AtRules, sum: Hunted) -> Hunted {
-    let loss = rules.base.loss_per_game() * sum.games;
+fn finished(rules: &AtRules, table: &AtTable, sum: Hunted) -> Hunted {
+    let loss = rules.loss_per_game(table) * sum.games;
     Hunted {
         medals: if rules.side_bonus.is_some() {
             sum.at_medals + sum.trigger_medals + sum.side_medals - loss
@@ -265,7 +265,7 @@ fn hunt_in_mode(
         ),
         |(going, sum, mut side), game| {
             if going.left() < SETTLED {
-                return Err(finished(rules, sum));
+                return Err(finished(rules, table, sum));
             }
             let now = since_at.saturating_add(game);
             let (next, added) = played(
@@ -329,6 +329,7 @@ fn hunt_chained(
     if let Some(across) = rules.ceiling_across_bonuses {
         return Some(finished(
             rules,
+            table,
             hunt_across(rules, table, (seated, since_side_bonus), across),
         ));
     }
@@ -339,7 +340,7 @@ fn hunt_chained(
         side_from(rules, table, since_side_bonus),
     )?;
     if !rules.restarts() || again <= 0.0 {
-        return Some(finished(rules, sum));
+        return Some(finished(rules, table, sum));
     }
     let (anew, anew_again) = stretch(rules, table, &restarted(table), None)?;
     let anew = rules.side_bonus.as_ref().map_or(anew, |side| {
@@ -347,7 +348,7 @@ fn hunt_chained(
     });
     (anew_again < 1.0).then(|| {
         let each = Hunted::NONE.plus(anew, 1.0 / (1.0 - anew_again));
-        finished(rules, sum.plus(each, again))
+        finished(rules, table, sum.plus(each, again))
     })
 }
 

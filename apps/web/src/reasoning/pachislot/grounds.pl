@@ -30,8 +30,11 @@
 :- dynamic(given/1).
 :- dynamic(memo/2).
 
-% 通常時1Gあたりの減り: fifty medals over the games they last.
-rule(loss_per_game, loss_per_game(Loss), ( given(base(Games)), Loss is 50 / Games )).
+% 通常時1Gあたりの減り: fifty medals over the games they last — the setting
+% level's own ベース where its sheet gives one, the machine's otherwise.
+rule(loss_per_game, loss_per_game(Level, Loss),
+     ( given(level(Level)), \+ given(level_base(Level, _)), given(base(Games)), Loss is 50 / Games )).
+rule(loss_per_game_by_level, loss_per_game(Level, Loss), ( given(level_base(Level, Games)), Loss is 50 / Games )).
 
 % 純増: the AT's own, or over all its medals where shares of them are won
 % at another. A medal won at a 純増 of N takes 1/N games, so the AT's games
@@ -160,10 +163,10 @@ rule(ending_part, ending_part(Level, Index, Ending, Part),
 % over them.
 rule(gain_from_rate, gain(Level, Gain),
      ( \+ pays, given(stated_rate(Level, Rate)), cycle_games(Level, Games), given(bet(Bet)), net(Net),
-       loss_per_game(Loss), Spread is 1 + Bet * (1 - Rate) / Net, Gain is Games * (Bet * (Rate - 1) + Loss) / Spread )).
+       loss_per_game(Level, Loss), Spread is 1 + Bet * (1 - Rate) / Net, Gain is Games * (Bet * (Rate - 1) + Loss) / Spread )).
 rule(gain_from_rate_beside_bonuses, gain(Level, Gain),
      ( pays, given(stated_rate(Level, Rate)), cycle_games(Level, Games), paid_bonuses(Level, Bonus, Own),
-       given(bet(Bet)), net(Net), loss_per_game(Loss), Spread is 1 + Bet * (1 - Rate) / Net,
+       given(bet(Bet)), net(Net), loss_per_game(Level, Loss), Spread is 1 + Bet * (1 - Rate) / Net,
        Gain is (Bet * (Rate - 1) * (Games + Own) + Loss * Games - Bonus) / Spread )).
 rule(gain_fixed, gain(Level, Gain), ( \+ given(cap(_)), given(law(Level, fixed(Gain))) )).
 rule(gain_in_sets, gain(Level, Gain),
@@ -175,7 +178,7 @@ rule(gain_under_cap, gain(Level, Gain), ( given(cap(_)), given(law(Level, _)), c
 rule(gain_solved, gain(Level, Gain), ( gain_taken(Level), given(engine(gain(Level), Gain)) )).
 rule(gain_taken, gain_taken(Level), ( given(cap(_)), given(law(Level, _)), \+ capped(Level, _, _) )).
 rule(capped, capped(Level, Gain, Completion),
-     ( given(cap(Cap)), law(Level, Law), arrivals(Level, Arrivals), loss_per_game(Loss),
+     ( given(cap(Cap)), law(Level, Law), arrivals(Level, Arrivals), loss_per_game(Level, Loss),
        under_cap(Law, Cap, Arrivals, Loss, Gain, Completion) )).
 rule(law_as_given, law(Level, Law), ( given(law(Level, Law)), Law \== table )).
 rule(law_by_table, law(Level, table(Rows)),
@@ -258,11 +261,11 @@ rule(bonus_games_uncounted, bonus_games(_, 0), \+ given(trigger_net(_))).
 % 機械割: medals out over medals in, across a cycle and its AT, and its
 % bonuses where the trigger is one.
 rule(rate, rate(Level, Rate),
-     ( \+ pays, gain(Level, Gain), cycle_games(Level, Games), given(bet(Bet)), net(Net), loss_per_game(Loss),
+     ( \+ pays, gain(Level, Gain), cycle_games(Level, Games), given(bet(Bet)), net(Net), loss_per_game(Level, Loss),
        AtGames is Gain / Net, Staked is Bet * (Games + AtGames), Out is Staked - Loss * Games + Gain, Rate is Out / Staked )).
 rule(rate_beside_bonuses, rate(Level, Rate),
      ( pays, gain(Level, Gain), cycle_games(Level, Games), paid_bonuses(Level, Bonus, Own), given(bet(Bet)), net(Net),
-       loss_per_game(Loss), AtGames is Gain / Net, Staked is Bet * (Games + Own + AtGames),
+       loss_per_game(Level, Loss), AtGames is Gain / Net, Staked is Bet * (Games + Own + AtGames),
        Out is Staked - Loss * Games + Gain + Bonus, Rate is Out / Staked )).
 
 % Checks, each ending in a verdict rather than failing, so a disagreement
@@ -307,7 +310,8 @@ rule(unverified_completion, remark(completion),
 % machine's. An AT that gains nothing is a guess at what to doubt, not
 % knowledge of machines: what is known is only that none of the catalog's
 % 190 pachislot formulas with a 純増 showed one on 2026-10-13.
-rule(odd_loss_beyond_bet, remark(loss_beyond_bet(Loss, Bet)), ( loss_per_game(Loss), given(bet(Bet)), Loss > Bet )).
+rule(odd_loss_beyond_bet, remark(loss_beyond_bet(Level, Loss, Bet)),
+     ( given(level(Level)), loss_per_game(Level, Loss), given(bet(Bet)), Loss > Bet )).
 rule(odd_no_gain, remark(no_gain(Level, Gain)), ( gain(Level, Gain), Gain =< 0 )).
 
 % The grounds: each setting level's figures and their checks, then the

@@ -64,9 +64,11 @@ const levelFacts = (figures: SettingLevelFiguresDto, basis: Basis): readonly str
   const stated = statedRate(spec, at, level)
   const side = rules?.sideBonus
   const sideChance = basis.normalized.tables.find((table) => table.settingLevel === level)?.at?.sideChance
+  const levelBase = basis.normalized.tables.find((table) => table.settingLevel === level)?.at?.base
   const sidePublished = side === undefined ? undefined : under(spec.components.firstHit?.[side.id], level)
   return [
     given(`level(${level})`),
+    ...(levelBase === undefined ? [] : [given(`level_base(${level}, ${prologNumber(levelBase)})`)]),
     ...(published === undefined ? [] : [given(`first_hit(${level}, ${prologNumber(chanceOf(published))})`)]),
     ...(below === undefined ? [] : [given(`first_hit_below(${level}, ${prologNumber(chanceOf(below))})`)]),
     ...(chance === undefined ? [] : [given(`chance(${level}, ${prologNumber(chance)})`)]),
@@ -256,7 +258,8 @@ const machineFacts = (spec: SpecDto, rules: AtRulesDto): readonly string[] => {
 
 /**
  * What the reasoner is told of an AT machine's formula, as Prolog facts:
- * its bet, its ベース as the engine normalised it and its 純増; what its
+ * its bet, its ベース as the engine normalised it — the machine's, and each
+ * setting level's own where it has one — and its 純増; what its
  * sheet says of the machine and of its modes, and of the ways an AT ends
  * where its modes are allotted by them; under each setting level
  * what its sheet publishes and what the engine came to; and the 機械割 the formula stores under each — for a

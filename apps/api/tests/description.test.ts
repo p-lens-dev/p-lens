@@ -26,15 +26,16 @@ describe("how a machine is described", () => {
     expect((await client.call("GET", "/catalog")).body.machines[0].machine).toEqual(machine)
   })
 
-  test("a name or model name saying a setting level is refused, however it is written; a word it is searched by may say one", async () => {
+  test("a name saying a setting level is refused, however it is written; a model name, as the maker wrote it, or a word it is searched by may say one", async () => {
     const client = await api()
     for (const name of ["e星都幻鬼 設定2", "e星都幻鬼(設定1)", "e星都幻鬼 設 定 ２", "e星都幻鬼 セッテイ6", "e星都幻鬼 高設定"]) {
       const refused = await register(client, { ...GENKI, name })
       expect(refused.status).toBe(400)
       expect(refused.body.error).toEqual({ type: "invalid-body", field: "name", reason: "names-setting-level" })
     }
-    const model = await register(client, { ...GENKI, modelName: "e星都幻鬼W設定2" })
-    expect(model.body.error).toEqual({ type: "invalid-body", field: "modelName", reason: "names-setting-level" })
+    const model = await register(client, { ...GENKI, name: "e星都幻鬼 甘", modelName: "e星都幻鬼 設定付W" })
+    expect(model.status).toBe(201)
+    expect((await client.call("GET", `/machines/${model.body.machineId}`)).body.machine.modelName).toBe("e星都幻鬼 設定付W")
     expect((await register(client, { ...GENKI, keywords: ["設定付き"] })).status).toBe(201)
   })
 

@@ -124,7 +124,7 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
     const day = releaseDate()
     const words = keywords()
     const name = readName(pachislot().newMachineName)
-    return name === "" || namesSettingLevel(name) || namesSettingLevel(pachislot().newMachineModelName) || !day.ok || !words.ok ? undefined : { name, modelName: readModelName(pachislot().newMachineModelName), keywords: words.value, releasedOn: day.value }
+    return name === "" || namesSettingLevel(name) || !day.ok || !words.ok ? undefined : { name, modelName: readModelName(pachislot().newMachineModelName), keywords: words.value, releasedOn: day.value }
   }
   const [manual, setManual] = createSignal(props.start.manual)
   const [world, setWorld] = createSignal(props.start.world)
@@ -194,7 +194,7 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
     const registering = pachislot().machine.type === "none"
     const nameMissing = registering && (pachislot().newMachineName.trim() === "" || namesSettingLevel(pachislot().newMachineName))
     const dateMissing = registering && !releaseDate().ok
-    const modelMissing = registering && (readModelName(pachislot().newMachineModelName) === undefined || namesSettingLevel(pachislot().newMachineModelName))
+    const modelMissing = registering && readModelName(pachislot().newMachineModelName) === undefined
     const descriptionWrong = registering && !keywords().ok
     const figuresMissing = proposed() === undefined
     if (nameMissing) nameNudge.nudge()
@@ -311,7 +311,6 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
                   tidied={readName}
                   required
                   invalid={modelNudge.red()}
-                  error={namesSettingLevel(pachislot().newMachineModelName) ? SETTING_LEVEL_IN_NAME : undefined}
                   onFocus={modelNudge.settle}
                 />
                 <TextField

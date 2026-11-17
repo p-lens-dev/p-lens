@@ -150,6 +150,7 @@ fn table(payout: PayoutLaw) -> AtTable {
         ceiling_redraws: Vec::new(),
         own_chances: Vec::new(),
         side_chance: chance(0.0),
+        base: None,
         meter_wins: Vec::new(),
         allotments: Allotments {
             after_at: vec![1.0],

@@ -1222,6 +1222,12 @@ export function ManualEditor(props: { readonly form: ManualForm; readonly onChan
           </Show>
         </Show>
       </div>
+      <Show when={isAtMachine(world())}>
+        <section class="flex flex-col gap-2 rounded-lg border border-border px-4 py-3">
+          <span class={LABEL}>設定ごとのベース（任意）</span>
+          <LevelCells name="ベース" levels={world().settingLevels} values={world().bases} suffix="G" placeholder="" onChange={(bases) => setWorld({ ...world(), bases })} />
+        </section>
+      </Show>
       <section class="flex flex-col gap-2 rounded-lg border border-border px-4 py-3">
         <span class={LABEL}>機械割</span>
         <LevelCells name="機械割" levels={world().settingLevels} values={props.form.rates} suffix="%" placeholder="" onChange={(rates) => props.onChange({ ...props.form, rates })} />
@@ -1232,7 +1238,7 @@ export function ManualEditor(props: { readonly form: ManualForm; readonly onChan
       </Show>
       <Show when={isAtMachine(world())}>
         <p class="text-xs text-text-muted">
-          天井の液晶ゲーム数がスイカなどで加算される機種は、液晶のゲーム数÷実ゲーム数の平均（例: 1.6倍）を入れると、天井を実ゲーム数に直して計算します。天井がptや周期で数えられる機種は、その単位の名前と1単位あたりの平均G数を入れます（液晶の加算とはどちらか一方）。モードを足すと、天井はモードごとに入れます。小役は、通常時に数える設定差のあるもの（共通ベルなど）を設定ごとの確率で入れます。払い出しはベースに含まれるので枚数は入れず、CZやATに直結する小役（強チェリーなど）は入れないでください。
+          天井の液晶ゲーム数がスイカなどで加算される機種は、液晶のゲーム数÷実ゲーム数の平均（例: 1.6倍）を入れると、天井を実ゲーム数に直して計算します。天井がptや周期で数えられる機種は、その単位の名前と1単位あたりの平均G数を入れます（液晶の加算とはどちらか一方）。モードを足すと、天井はモードごとに入れます。ベースが設定で違う機種は、設定ごとのベースを全部の設定に入れると、設定ごとにそのベースで計算します（上のベースは空でも構いません）。小役は、通常時に数える設定差のあるもの（共通ベルなど）を設定ごとの確率で入れます。払い出しはベースに含まれるので枚数は入れず、CZやATに直結する小役（強チェリーなど）は入れないでください。
         </p>
       </Show>
       <div class="flex flex-wrap gap-2">

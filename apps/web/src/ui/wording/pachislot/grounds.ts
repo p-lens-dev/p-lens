@@ -123,7 +123,7 @@ const stepUnder = (step: Step | undefined, ...rules: readonly string[]): Step | 
 /** The AT's 純増 a step reasoned from: its own, or over all its medals. */
 const netIn = (step: Step): number | undefined => arg(stepUnder(step, "net_single", "net_over_all"), 0)
 
-const lossIn = (step: Step): number | undefined => arg(stepUnder(step, "loss_per_game"), 0)
+const lossIn = (step: Step): number | undefined => arg(stepUnder(step, "loss_per_game", "loss_per_game_by_level"), 1)
 
 /** The regular games a cycle lasts, as a step reasoned them or took them. */
 const cycleIn = (step: Step): number | undefined => arg(stepUnder(step, "cycle_from_first_hit", "cycle_from_chance", "cycle_to_at_ceiling", "cycle_unplayed"), 1)
@@ -1043,7 +1043,11 @@ const lineOf = (step: Step, naming: GroundsNaming): Said | undefined => {
       return plain(`ATまでの${triggerWord(naming)} ＝ スルー天井 `, figure(times(givenNumber(step, "misses", 0))), " ＋ 1 ＝ ", figure(times(arg(step, 1))), `（${successWord(naming)} `, figure(rate(successOf(step))), "：スルー天井でだけ当選）")
     case "loss_per_game": {
       const base = known(givenNumber(step, "base", 0))
-      return plain("通常時1Gあたりの減り ＝ 50枚 ÷ ベース ", figure(told(base, { ...WHOLE, unit: "G" })), link(near(50 / shownAt(base, WHOLE), known(arg(step, 0)), PER_GAME)), figure(perGame(arg(step, 0))))
+      return plain("通常時1Gあたりの減り ＝ 50枚 ÷ ベース ", figure(told(base, { ...WHOLE, unit: "G" })), link(near(50 / shownAt(base, WHOLE), known(arg(step, 1)), PER_GAME)), figure(perGame(arg(step, 1))))
+    }
+    case "loss_per_game_by_level": {
+      const base = known(givenNumber(step, "level_base", 1))
+      return plain(`設定${numberOf(step.claim.args[0]) ?? "--"}の通常時1Gあたりの減り ＝ 50枚 ÷ 設定${numberOf(step.claim.args[0]) ?? "--"}のベース `, figure(told(base, { ...WHOLE, unit: "G" })), link(near(50 / shownAt(base, WHOLE), known(arg(step, 1)), PER_GAME)), figure(perGame(arg(step, 1))))
     }
     case "check_engine": {
       const { label, measure } = engineFigure(step)
@@ -1100,8 +1104,8 @@ const lineOf = (step: Step, naming: GroundsNaming): Said | undefined => {
     case "unverified_completion":
       return { parts: said("未確認：上限に届くATの割合は、計算エンジンが解いた値をそのまま使っています。ATの獲得枚数を機械割から導く機種では、ここでは確かめられません"), tone: "unverified" }
     case "odd_loss_beyond_bet": {
-      const beyond = compoundOf(step.claim.args[0], "loss_beyond_bet", 2)
-      return { parts: said("気になる点：通常時1Gで、賭けた ", figure(medals(numberOf(beyond?.args[1]))), " より多い ", figure(perGame(numberOf(beyond?.args[0]))), " が減る計算です"), tone: "odd" }
+      const beyond = compoundOf(step.claim.args[0], "loss_beyond_bet", 3)
+      return { parts: said(`気になる点：設定${numberOf(beyond?.args[0]) ?? "--"}の通常時1Gで、賭けた `, figure(medals(numberOf(beyond?.args[2]))), " より多い ", figure(perGame(numberOf(beyond?.args[1]))), " が減る計算です"), tone: "odd" }
     }
     case "odd_no_gain": {
       const none = compoundOf(step.claim.args[0], "no_gain", 2)

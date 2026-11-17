@@ -809,8 +809,8 @@ fn after_ended(
 pub(crate) fn cap_figures_of(
     rules: &AtRules,
     odds: Odds<'_>,
-    allotments: &Allotments,
-    payout: &PayoutLaw,
+    (allotments, payout): (&Allotments, &PayoutLaw),
+    loss: f64,
 ) -> CapFigures {
     let window = rules.window.map(NonZeroU32::get);
     let arrived = window.map_or_else(Vec::new, |window| {
@@ -821,14 +821,19 @@ pub(crate) fn cap_figures_of(
         rules.cap.map(Medals::get),
         window,
         &arrived,
-        rules.base.loss_per_game(),
+        loss,
     )
 }
 
 /// What an AT machine's setting settles to: what an AT comes to, and the
 /// shares a cycle starts from given it.
 pub fn settled(rules: &AtRules, table: &AtTable) -> (CapFigures, Vec<f64>) {
-    let figures = cap_figures_of(rules, Odds::of(table), &table.allotments, &table.payout);
+    let figures = cap_figures_of(
+        rules,
+        Odds::of(table),
+        (&table.allotments, &table.payout),
+        rules.loss_per_game(table),
+    );
     let shares = after_at(rules, &table.allotments, figures.completion);
     (figures, shares)
 }
@@ -1289,13 +1294,13 @@ fn weighed_start(rules: &AtRules, table: &AtTable, start: PathStart) -> Standing
 }
 
 /// The headroom an AT won on the next game has, from what is held.
-fn headroom_at(rules: &AtRules, held: Option<f64>, since_at: u32) -> Option<f64> {
+fn headroom_at(rules: &AtRules, table: &AtTable, held: Option<f64>, since_at: u32) -> Option<f64> {
     headroom(
         rules.cap.map(Medals::get),
         held,
         rules.window.map(NonZeroU32::get),
         since_at,
-        rules.base.loss_per_game(),
+        rules.loss_per_game(table),
     )
 }
 
@@ -1304,7 +1309,7 @@ fn headroom_at(rules: &AtRules, held: Option<f64>, since_at: u32) -> Option<f64>
 pub(crate) fn gain_now(rules: &AtRules, table: &AtTable, held: &Held, since_at: u32) -> f64 {
     held.iter()
         .map(|(held, weight)| {
-            weight * capped(&table.payout, headroom_at(rules, *held, since_at)).gain
+            weight * capped(&table.payout, headroom_at(rules, table, *held, since_at)).gain
         })
         .sum()
 }
@@ -1408,7 +1413,7 @@ fn after_won(
             let (likely, left) = outcome(
                 rules,
                 &table.payout,
-                headroom_at(rules, *held, standing.since_at),
+                headroom_at(rules, table, *held, standing.since_at),
                 seen,
             );
             (
@@ -1506,7 +1511,7 @@ fn played(
         .map(|(drawn, weight)| drawn.at * weight)
         .sum();
     let medals = gain_now(rules, table, &standing.held, standing.since_at) * winning + bonuses
-        - rules.base.loss_per_game();
+        - rules.loss_per_game(table);
     let seen = each.iter().zip(&standing.modes).map(|(drawn, weight)| {
         weight
             * match end {
