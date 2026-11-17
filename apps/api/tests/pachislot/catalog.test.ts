@@ -116,6 +116,15 @@ describe("pachislot in the one catalog", () => {
     expect(count(client, "machines")).toBe(0)
   })
 
+  test("takes a machine's setting named beside the six, 設定H, and no setting past them", async () => {
+    const { client, machineId } = await registered()
+    const relabelled = <T,>(value: T, to: number): T => JSON.parse(JSON.stringify(value).replaceAll('"settingLevel":6', `"settingLevel":${to}`).replaceAll('"settingLevels":[1,6]', `"settingLevels":[1,${to}]`)) as T
+    const named = await client.call("POST", `/machines/${machineId}/formulas`, { as: BOB, body: relabelled(await manual(), 7) })
+    expect(named.status).toBe(201)
+    const past = await client.call("POST", `/machines/${machineId}/formulas`, { as: BOB, body: relabelled(await manual(), 9) })
+    expect(past.status).toBe(400)
+  })
+
   test("takes a typed-in formula's measured 機械割, and no sampled one, whatever margins it states", async () => {
     const { client, machineId } = await registered()
     expect((await client.call("POST", `/machines/${machineId}/formulas`, { as: BOB, body: await manual() })).status).toBe(201)

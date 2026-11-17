@@ -346,6 +346,16 @@ describe("an AT machine's grounds, reasoned", () => {
     expect(amiss(await proved(wrong, cut.analysis)).map(([rule]) => rule)).toContain("check_chance")
   })
 
+  test("a ceiling counting every game is turned into regular games at the CZ's games as well as its own", async () => {
+    const cz = czSpec as SpecDto
+    const counted = solved({ ...cz, components: { ...cz.components, netPerGame: { at: 4 }, games: { cz: 30 } } })
+    const proof = await proved(counted.basis, counted.analysis)
+    const lines = groundsLines(proof, groundsNamingOf(counted.basis)).map((line) => plainOf(line.parts))
+    expect(lines.some((line) => line.includes("÷ 通常1Gあたりの実ゲーム数 1.2") && line.includes("切り上げて通常"))).toBe(true)
+    expect(amiss(proof)).toEqual([])
+    expect(groundsStanding(proof).tone).toBe("holds")
+  })
+
   test("a cycle names the CZ and its ceilings, and a setting change's shorter AT間天井 leaves an AT's cycle as it was", async () => {
     const cz = czSpec as SpecDto
     const cut = solved({ ...cz, components: { ...cz.components, netPerGame: { at: 4 } } })

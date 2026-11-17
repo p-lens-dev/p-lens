@@ -2,6 +2,7 @@ import type { SettingLevelShare } from "../../../../core/pachislot/formula"
 import { Err, Ok, type Result } from "../../../../core/result/result"
 import { tidyTyped } from "../../../../core/text/tidy"
 import { type FormProblem, hundredthsOf } from "./world-form"
+import { settingLevelText } from "../../../wording/pachislot/setting-level"
 
 /** A 設定配分 as typed: what it is a spread for, and each setting level's share in percent. */
 export interface DistributionForm {
@@ -20,9 +21,9 @@ export interface ReadDistribution {
 /** A share left empty is none: a setting level the parlor is thought never to use. */
 const shareOf = (text: string, level: number): Result<SettingLevelShare, FormProblem> => {
   if (tidyTyped(text) === "") return Ok({ settingLevel: level, basisPoints: 0 })
-  const read = hundredthsOf(text.replace(/%$/, ""), `設定${level}`)
+  const read = hundredthsOf(text.replace(/%$/, ""), settingLevelText(level))
   if (!read.ok) return read
-  return read.value > 10_000 ? Err({ field: `設定${level}`, reason: "out-of-range" }) : Ok({ settingLevel: level, basisPoints: read.value })
+  return read.value > 10_000 ? Err({ field: settingLevelText(level), reason: "out-of-range" }) : Ok({ settingLevel: level, basisPoints: read.value })
 }
 
 /** What the shares come to, in hundredths of a percent. */

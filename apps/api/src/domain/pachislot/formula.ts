@@ -9,6 +9,7 @@ import type {
   FormulaSettingLevelFiguresDto,
   SpecDto,
 } from "@p-lens/contracts/pachislot"
+import { isSettingLevel } from "@p-lens/contracts/pachislot"
 
 import { all, type Body, decentName, isBody, object, oneOf, optionalId } from "../body"
 import type { ApiError } from "../errors"
@@ -42,8 +43,6 @@ const invalid = (field: string, reason: Extract<ApiError, { type: "invalid-body"
 const isPositive = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0
 
 const isShare = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
-
-const isSettingLevel = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 6
 
 /** Results in order: every value, or the first that failed. */
 const each = <T>(results: readonly Result<T, ApiError>[]): Result<readonly T[], ApiError> => {

@@ -33,14 +33,14 @@ fn with_bases(machine: Option<f64>, low: f64, high: f64) -> Spec {
     spec
 }
 
-fn at_table(spec: &NormalizedSpec, setting: u8) -> &AtTable {
+fn at_table(spec: &NormalizedSpec, setting: i8) -> &AtTable {
     spec.table(setting_level(setting))
         .and_then(|table| table.at.as_ref())
         .expect("an AT machine's table")
 }
 
 /// What a seat at the start of play comes to under a setting, in medals.
-fn hunted(spec: &Spec, setting: u8) -> f64 {
+fn hunted(spec: &Spec, setting: i8) -> f64 {
     let normalized = normalize(spec).expect("normalises");
     let rules = normalized.at_rules.as_ref().expect("an AT machine");
     hunt(start(0, 0, 0), rules, at_table(&normalized, setting))
@@ -51,15 +51,24 @@ fn hunted(spec: &Spec, setting: u8) -> f64 {
 #[test]
 fn each_setting_is_played_at_its_own_base() {
     let own = with_bases(None, 36.0, 44.0);
-    assert!(close(hunted(&own, 1), hunted(&with_machine_base(Some(36.0)), 1)));
-    assert!(close(hunted(&own, 6), hunted(&with_machine_base(Some(44.0)), 6)));
+    assert!(close(
+        hunted(&own, 1),
+        hunted(&with_machine_base(Some(36.0)), 1)
+    ));
+    assert!(close(
+        hunted(&own, 6),
+        hunted(&with_machine_base(Some(44.0)), 6)
+    ));
     assert!(hunted(&own, 6) > hunted(&with_machine_base(Some(36.0)), 6));
 }
 
 #[test]
 fn a_setting_given_its_own_base_takes_it_over_the_machines() {
     let both = with_bases(Some(40.0), 36.0, 44.0);
-    assert!(close(hunted(&both, 6), hunted(&with_machine_base(Some(44.0)), 6)));
+    assert!(close(
+        hunted(&both, 6),
+        hunted(&with_machine_base(Some(44.0)), 6)
+    ));
 }
 
 #[test]

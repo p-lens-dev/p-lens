@@ -1494,7 +1494,7 @@ only the primitives, the core and the application.
 
 | Crate | Holds | Knows |
 |---|---|---|
-| `pachislot-domain` | types: `Probability`, `ProbabilitySource`, `BasisPoints` (kept apart from pachinko's), `SettingLevel` (`1..=6`), `PerSettingLevel`, the `Spec` world, `NormalizedSpec`, `Distribution`, `Segment`, `PayoutRate`, `PlayConditions` | nothing; no I/O, no serde |
+| `pachislot-domain` | types: `Probability`, `ProbabilitySource`, `BasisPoints` (kept apart from pachinko's), `SettingLevel` (`-1..=8`: 設定L, 0, 1–6, H, V), `PerSettingLevel`, the `Spec` world, `NormalizedSpec`, `Distribution`, `Segment`, `PayoutRate`, `PlayConditions` | nothing; no I/O, no serde |
 | `pachislot-engine` | `query` (the world into bonuses, small wins and replays), `normalize` (one table of a regular game's outcomes per setting level), `analyze` (payout rates), `posterior` (the setting level, by Bayes), `theoretical` (the theoretical value) | domain |
 | `pachislot-simulator` | xoshiro256** (its own copy), a regular game drawn from a setting level's table, sessions over a mix of setting levels, payout rates estimated with their margins | domain, engine |
 | `pachislot-wasm` | DTOs, conversions, the calls: `normalize`, `analyze`, `posterior`, `theoreticalValue`, `simulateChunk`, `estimateChunk` | all three |
@@ -1524,7 +1524,12 @@ only the primitives, the core and the application.
 - **設定 is a setting level** — `SettingLevel`, `settingLevels` — in full
   everywhere: 6 is the highest and the best, and "settings" would read as the
   app's own. A machine lists the setting levels it has (`1, 2, 4, 5, 6` is
-  common).
+  common). One a machine names beside the six is numbered where it stands,
+  so that order and "the lowest" still hold: 設定L `-1` and 設定0 `0` below
+  them, 設定H `7` and 設定V `8` above (`1, 2, 5, 6, H`; `L, 3, 6, H`). The
+  number is never shown: `settingLevelText` says 設定L, and the catalog and a
+  play's setting shares take the same range (`isSettingLevel`). Levels named
+  otherwise — C, C+ — are not written.
 - **A payout rate** comes from what every outcome pays — a replay counted as
   the bet paid back — or as measured, which is how a typed-in formula and a
   rate that depends on how the reels are stopped are given. Games are regular
@@ -1620,7 +1625,13 @@ only the primitives, the core and the application.
   Where the ceilings count the screen's games, `lcdRate` says how
   many the screen counts for each regular game, and the trigger's ceilings
   are taken that much sooner — on average, which the screen's additions are;
-  the AT間天井 is counted in regular games. Where they count something
+  the AT間天井 is counted in regular games. Where they count every game —
+  実ゲーム数, a CZ's and a side bonus's games too — the CZ and the side
+  bonus say how many games each of them lasts (`games`), and every ceiling
+  in games, the AT間天井 included, comes sooner by the regular game and
+  those games at each one's chance as given under the lowest setting
+  level, the screen's beside them where `lcdRate` says so; the grounds
+  reason it at that rate (`real_games`). Where they count something
   else — points, 周期 — `ceilingUnit` names it and says how much of it a
   regular game comes to on average. A ceiling counted in it stands beside
   the one in games (`unitCeiling`, `resetUnitCeiling`; on a mode
@@ -3489,6 +3500,7 @@ is not written out here a second time.
 | ベース | base (`base`): regular games fifty medals last |
 | モード / 振り分け | mode / allotment (`allotment`, `resetAllotment`) |
 | 液晶ゲーム数の加算 | LCD rate (`lcdRate`) |
+| 実ゲーム数で数える天井 | a CZ's or side bonus's games (`games`) |
 | pt・周期で数える天井 | ceiling unit (`ceilingUnit`: a name and `perGame`) |
 | 設定変更（リセット） | setting change (`afterReset`) |
 | 有利区間 / 有利区間の上限 | 有利区間 / cap (`cap`), counted from its lowest point |

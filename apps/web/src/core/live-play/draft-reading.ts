@@ -1,3 +1,5 @@
+import { isSettingLevel } from "@p-lens/contracts/pachislot"
+
 import { parseIsoDate } from "../calendar/calendar"
 import type * as Pachinko from "../pachinko"
 import type * as Pachislot from "../pachislot"
@@ -61,7 +63,7 @@ const isPachinkoSnapshot = (value: unknown): value is Pachinko.FormulaSnapshot =
 const isBonus = (value: unknown): value is Pachinko.Bonus =>
   isFields(value) && isText(value["name"]) && isFigure(value["payout"]) && isFigure(value["spent"]) && isOptional(value["jackpots"], isCount)
 
-const isShare = (value: unknown): value is Pachislot.SettingLevelShare => isFields(value) && isCount(value["settingLevel"]) && isFigure(value["basisPoints"])
+const isShare = (value: unknown): value is Pachislot.SettingLevelShare => isFields(value) && isSettingLevel(value["settingLevel"]) && isFigure(value["basisPoints"])
 
 const isPrior = (value: unknown): value is Pachislot.Weighing["prior"] =>
   isFields(value) &&

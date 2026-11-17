@@ -3,6 +3,7 @@ import { Index, Show, type JSX } from "solid-js"
 
 import { readSettingLevels } from "../../../../core/pachislot/setting-level-reading"
 import { averageSettingLevelText, shareText, UNSEEN } from "../../../wording/pachislot/formula"
+import { settingLevelText } from "../../../wording/pachislot/setting-level"
 
 function Bar(props: { readonly weight: WeightDto; readonly largest: number; readonly high: boolean; readonly grounded: boolean; readonly unfolding: boolean; readonly place: number }): JSX.Element {
   return (
@@ -52,7 +53,7 @@ export function SettingLevelOdds(props: {
           <dt class="text-xs font-bold text-text-muted">最有力</dt>
           <dd class="text-xl font-bold tabular-nums text-text-primary">
             <Show when={props.grounded ? reading().mostLikely : undefined} fallback={UNSEEN.settingLevel}>
-              {(settingLevel) => `設定${settingLevel()}`}
+              {(settingLevel) => settingLevelText(settingLevel())}
             </Show>
           </dd>
         </div>

@@ -11,7 +11,14 @@ import type { ProbabilityDto } from "../probability.ts"
 
 export type { ProbabilityDto }
 
-/** One setting's value. Settings are `1` to `6`; a machine lists the ones it has. */
+/**
+ * Whether a value is a setting level: `1` to `6`, or one a machine names
+ * beside them, numbered where it stands — 設定L `-1` and 設定0 `0` below
+ * the six, 設定H `7` and 設定V `8` above them.
+ */
+export const isSettingLevel = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= -1 && value <= 8
+
+/** One setting's value. Settings are `1` to `6`, or 設定L `-1`, 0, H `7` or V `8` beside them; a machine lists the ones it has. */
 export interface BySettingLevelDto<T> {
   readonly settingLevel: number
   readonly value: T
@@ -143,6 +150,8 @@ export interface ComponentsDto {
   readonly resetSinceAtCeiling?: Readonly<Record<string, number>>
   /** On a CZ: a meter its misses fill — 宿怨ポイント — the points that fill it, and what a miss adds, each so many points at its share of misses in hundredths of a percent under each setting; the rest add none. Full, it makes the next trigger certainly win the AT; an AT empties it. */
   readonly meter?: Readonly<Record<string, MeterDto>>
+  /** On a CZ or a side bonus: the games each of it lasts, on a machine whose ceilings count every game — 実ゲーム数, its CZs and bonuses included. Given on any, the ceilings in games come that much sooner in regular games, at each one's chance under the lowest setting. */
+  readonly games?: Readonly<Record<string, number>>
   /** ゾーン: on a mode, or on the CZ of a machine without modes, the regular games since the last AT it draws at besides its chance a game. */
   readonly gates?: Readonly<Record<string, readonly GateDto[]>>
   /** On a mode: where a missed trigger in it moves play — the mode drawn again at each failed CZ — each mode it may go to with its share under each setting, the whole of it. A mode without stays. */

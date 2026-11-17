@@ -288,7 +288,8 @@ fn at(spec: &Spec, entity: &EntityId) -> Result<At, SpecError> {
 /// or a mode has: a 初当たり or a ceiling after a reset an AT or a CZ, a
 /// ceiling one of the three, an allotment a mode, a success rate, a スルー
 /// 天井 or a ceiling counted from the AT a CZ — the last two a mode too — and
-/// that ceiling after a setting change a CZ alone.
+/// that ceiling after a setting change a CZ alone; the games a ceiling
+/// counts of it a CZ or a side bonus.
 fn misplaced(spec: &Spec, entity: &EntityId, kinds: &[Component]) -> Option<Component> {
     let components = &spec.components;
     let at = kinds.contains(&Component::At);
@@ -307,6 +308,9 @@ fn misplaced(spec: &Spec, entity: &EntityId, kinds: &[Component]) -> Option<Comp
     }
     if !at && !cz && !side && components.net_per_game.contains_key(entity) {
         return Some(Component::At);
+    }
+    if !cz && !side && components.games.contains_key(entity) {
+        return Some(Component::Cz);
     }
     if !at
         && (components.direct.contains_key(entity)
@@ -402,6 +406,7 @@ fn cz(spec: &Spec, entity: &EntityId) -> Result<Cz, SpecError> {
         bonus_share,
         gates: components.gates.get(entity).cloned().unwrap_or_default(),
         meter: components.meter.get(entity).cloned(),
+        games: components.games.get(entity).copied(),
     })
 }
 
@@ -489,6 +494,7 @@ fn side_bonus(spec: &Spec, entity: &EntityId) -> Result<SideBonus, SpecError> {
             .copied()
             .ok_or_else(|| missing(entity, Component::Payout))?,
         net_per_game,
+        games: components.games.get(entity).copied(),
     })
 }
 

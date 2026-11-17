@@ -7,7 +7,7 @@ import { TextField } from "../../../primitives/text-field"
 import { ToggleGroup, ToggleGroupItem } from "../../../primitives/toggle-group"
 import { bonusTitle } from "../../../wording/pachislot/formula"
 import {
-  ALL_SETTING_LEVELS,
+  OFFERED_SETTING_LEVELS,
   type AtLawForm,
   EMPTY_GATE,
   EMPTY_LAW,
@@ -40,6 +40,7 @@ import {
   takesGates,
   type WorldForm,
 } from "./world-form"
+import { settingLevelMark, settingLevelText } from "../../../wording/pachislot/setting-level"
 
 const KINDS: readonly SelectOption[] = [
   { value: "bonus", label: "ボーナス" },
@@ -56,7 +57,7 @@ const replaced = <T,>(items: readonly T[], index: number, item: T): readonly T[]
 
 const LABEL = "text-xs font-bold uppercase tracking-wide text-text-secondary"
 
-/** Which setting levels the machine has: all six, or some of them. */
+/** Which setting levels the machine has: all six, or some of them, and 設定L, 0, H or V where it names one beside them. */
 function LevelPicker(props: { readonly levels: readonly number[]; readonly onChange: (levels: readonly number[]) => void }): JSX.Element {
   return (
     <div class="flex flex-col gap-1.5">
@@ -64,9 +65,9 @@ function LevelPicker(props: { readonly levels: readonly number[]; readonly onCha
       <ToggleGroup
         multiple
         value={props.levels.map(String)}
-        onChange={(values: string[]) => props.onChange(ALL_SETTING_LEVELS.filter((level) => values.includes(String(level))))}
+        onChange={(values: string[]) => props.onChange(OFFERED_SETTING_LEVELS.filter((level) => values.includes(String(level))))}
       >
-        <Index each={ALL_SETTING_LEVELS}>{(level) => <ToggleGroupItem value={String(level())}>{level()}</ToggleGroupItem>}</Index>
+        <Index each={OFFERED_SETTING_LEVELS}>{(level) => <ToggleGroupItem value={String(level())}>{settingLevelMark(level())}</ToggleGroupItem>}</Index>
       </ToggleGroup>
     </div>
   )
@@ -86,13 +87,13 @@ function LevelCells(props: {
       <Index each={props.levels}>
         {(level) => (
           <TextField
-            label={`${props.name} 設定${level()}`}
+            label={`${props.name} ${settingLevelText(level())}`}
             labelHidden
             compact
             value={props.values[String(level())] ?? ""}
             onChange={(value) => props.onChange({ ...props.values, [String(level())]: value })}
             inputMode="decimal"
-            placeholder={`設定${level()} ${props.placeholder}`}
+            placeholder={`${settingLevelText(level())} ${props.placeholder}`}
             {...(props.suffix === undefined ? {} : { suffix: props.suffix })}
           />
         )}
@@ -319,6 +320,16 @@ function RowEditor(props: {
               inputMode="decimal"
               suffix="枚/G"
               placeholder="なし"
+            />
+          </div>
+          <div class="w-52">
+            <TextField
+              label="1回のゲーム数（実ゲーム数の天井）"
+              value={props.row.games}
+              onChange={(games) => props.onChange({ ...props.row, games })}
+              inputMode="numeric"
+              suffix="G"
+              placeholder="数えない"
             />
           </div>
         </Show>

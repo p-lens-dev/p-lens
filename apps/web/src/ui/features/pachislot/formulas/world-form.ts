@@ -3,6 +3,7 @@ import { SPEC_VERSION } from "@p-lens/contracts/pachislot"
 
 import { Err, Ok, type Result } from "../../../../core/result/result"
 import { tidyTyped } from "../../../../core/text/tidy"
+import { settingLevelText } from "../../../wording/pachislot/setting-level"
 
 /** A field that could not be read, named as the form names it. */
 export interface FormProblem {
@@ -12,8 +13,11 @@ export interface FormProblem {
 
 type Read<T> = Result<T, FormProblem>
 
-/** Every setting level a machine may have. */
+/** The six numbered setting levels, which a machine typed in from scratch has. */
 export const ALL_SETTING_LEVELS: readonly number[] = [1, 2, 3, 4, 5, 6]
+
+/** Every setting level a machine may have, in order: 設定L and 設定0 below the six, 設定H and 設定V above them. */
+export const OFFERED_SETTING_LEVELS: readonly number[] = [-1, 0, ...ALL_SETTING_LEVELS, 7, 8]
 
 /** What a row of the 解析値 is. */
 export type EntityKindName = "bonus" | "part" | "role" | "replay" | "at" | "cz" | "mode" | "watch" | "cue" | "side"
@@ -91,6 +95,8 @@ export interface EntityRow {
   readonly sinceAtCeiling: string
   /** A CZ's ceiling counted from the last AT after a setting change, on a machine without modes, as typed; empty for the same. */
   readonly resetSinceAtCeiling: string
+  /** A CZ's or a side bonus's games, on a machine whose ceilings count every game, as typed; empty where they count regular games. */
+  readonly games: string
   /** A CZ's meter: the points that fill it, as typed; empty for none. */
   readonly meterFull: string
   /** What a failed CZ adds to its meter, in the order typed. */
@@ -243,6 +249,7 @@ const row = (key: string, label: string, kind: EntityKindName, payout = ""): Ent
   expiryTo: "",
   sinceAtCeiling: "",
   resetSinceAtCeiling: "",
+  games: "",
   meterFull: "",
   meterGains: [],
   endings: [],
@@ -405,9 +412,9 @@ const basesOf = (form: WorldForm): Read<TypedBases> => {
     return base.ok ? Ok({ base: base.value, bases: undefined }) : base
   }
   const missing = form.settingLevels.find((level) => typed(level) === "")
-  if (missing !== undefined) return Err({ field: `ベース 設定${missing}`, reason: "required" })
+  if (missing !== undefined) return Err({ field: `ベース ${settingLevelText(missing)}`, reason: "required" })
   const bases = form.settingLevels.toSorted((left, right) => left - right).map((level) => {
-    const read = baseOf(typed(level), `ベース 設定${level}`)
+    const read = baseOf(typed(level), `ベース ${settingLevelText(level)}`)
     return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
   })
   const wrong = bases.find((read) => !read.ok)
@@ -441,7 +448,7 @@ const ceilingUnitOf = (form: WorldForm): Read<{ readonly name: string; readonly 
 const sharesOf = (form: WorldForm, values: Readonly<Record<string, string>>, name: string, optional: boolean): readonly Read<BySettingLevelDto<number>>[] | undefined => {
   if (optional && form.settingLevels.every((level) => tidyTyped(values[String(level)] ?? "") === "")) return undefined
   return form.settingLevels.map((level) => {
-    const read = shareOf(values[String(level)] ?? "", `${name} 設定${level}`)
+    const read = shareOf(values[String(level)] ?? "", `${name} ${settingLevelText(level)}`)
     return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
   })
 }
@@ -560,6 +567,8 @@ interface ReadRow {
   readonly sinceAtCeiling: number | undefined
   /** A CZ's ceiling counted from the last AT after a setting change, where given. */
   readonly resetSinceAtCeiling: number | undefined
+  /** A CZ's or a side bonus's games a ceiling counting every game counts, where given. */
+  readonly games: number | undefined
   /** A CZ's meter, where it has one. */
   readonly meter: MeterDto | undefined
   /** An AT's AT間天井 counted from the last AT across the bonuses that start play again, where given. */
@@ -632,7 +641,7 @@ const readLaw = (form: WorldForm, entity: EntityRow, name: string): Result<ReadL
   const continuationRate: readonly Read<BySettingLevelDto<number>>[] =
     law.shape === "sets"
       ? form.settingLevels.map((level) => {
-          const read = continuationRateOf(law.continuationRate[String(level)] ?? "", `${name} 継続率 設定${level}`)
+          const read = continuationRateOf(law.continuationRate[String(level)] ?? "", `${name} 継続率 ${settingLevelText(level)}`)
           return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
         })
       : []
@@ -642,7 +651,7 @@ const readLaw = (form: WorldForm, entity: EntityRow, name: string): Result<ReadL
       ? law.rows.map((row, index) => ({
           medals: medalsOf(row.medals, `${name} 表${index + 1}行目 枚数`),
           shares: form.settingLevels.map((level) => {
-            const read = shareOf(row.shares[String(level)] ?? "", `${name} 表${index + 1}行目 設定${level}`)
+            const read = shareOf(row.shares[String(level)] ?? "", `${name} 表${index + 1}行目 ${settingLevelText(level)}`)
             return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
           }),
         }))
@@ -717,21 +726,21 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const hasChance = !isMode && !isWatch && !brought && !(entity.kind === "bonus" && splitBonuses(form).has(entity.key))
   const chances: readonly Read<BySettingLevelDto<ProbabilityDto>>[] = hasChance
     ? form.settingLevels.map((level) => {
-        const read = chanceOf(entity.chances[String(level)] ?? "", `${name}${chanceWord(entity)} 設定${level}`)
+        const read = chanceOf(entity.chances[String(level)] ?? "", `${name}${chanceWord(entity)} ${settingLevelText(level)}`)
         return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
       })
     : []
   const typedDirect = brought && form.settingLevels.some((level) => tidyTyped(entity.chances[String(level)] ?? "") !== "")
   const direct: readonly Read<BySettingLevelDto<ProbabilityDto>>[] = typedDirect
     ? form.settingLevels.map((level) => {
-        const read = chanceOf(entity.chances[String(level)] ?? "", `${name} 直撃 設定${level}`)
+        const read = chanceOf(entity.chances[String(level)] ?? "", `${name} 直撃 ${settingLevelText(level)}`)
         return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
       })
     : []
   const typedDirectBonus = brought && bringsBonus(form) && form.settingLevels.some((level) => tidyTyped(entity.directBonuses[String(level)] ?? "") !== "")
   const directBonus: readonly Read<BySettingLevelDto<ProbabilityDto>>[] = typedDirectBonus
     ? form.settingLevels.map((level) => {
-        const read = chanceOf(entity.directBonuses[String(level)] ?? "", `${name} 直撃ボーナス 設定${level}`)
+        const read = chanceOf(entity.directBonuses[String(level)] ?? "", `${name} 直撃ボーナス ${settingLevelText(level)}`)
         return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
       })
     : []
@@ -744,7 +753,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const typedChance = isMode && form.settingLevels.some((level) => tidyTyped(entity.triggerChances[String(level)] ?? "") !== "")
   const triggerChance: readonly Read<BySettingLevelDto<ProbabilityDto>>[] = typedChance
     ? form.settingLevels.map((level) => {
-        const read = chanceOf(entity.triggerChances[String(level)] ?? "", `${name} CZ確率 設定${level}`)
+        const read = chanceOf(entity.triggerChances[String(level)] ?? "", `${name} CZ確率 ${settingLevelText(level)}`)
         return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
       })
     : []
@@ -755,6 +764,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const net: Read<number | undefined> = (isCz || isSide) && tidyTyped(entity.net) !== "" ? setOf(entity.net, `${name} 純増`) : Ok(undefined)
   const sinceAtCeiling = isCz || (isMode && hasCz(form)) ? ceilingOf(entity.sinceAtCeiling, `${name} ATから数える天井`) : Ok(undefined)
   const resetSinceAtCeiling = isCz && !hasModes(form) ? ceilingOf(entity.resetSinceAtCeiling, `${name} リセット後のATから数える天井`) : Ok(undefined)
+  const games = isCz || isSide ? ceilingOf(entity.games, `${name} 1回のゲーム数`) : Ok(undefined)
   const meter = isCz ? meterOf(form, entity, name) : Ok(undefined)
   const ceilingAcrossBonuses = brought && restartsAtBonus(form) ? ceilingOf(entity.ceilingAcrossBonuses, `${name} ATから数えるAT間天井`) : Ok(undefined)
   const ceilingPayout: Read<number | undefined> =
@@ -780,7 +790,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const problems = [
     ...endings.flatMap((read) => (read.ok ? [] : read.error)),
     ...problemsOf(endingAllotment),
-    ...problemsOf([label, payout, of, trials, net, sinceAtCeiling, resetSinceAtCeiling, meter, ceilingAcrossBonuses, ceilingPayout, ...direct, ...directBonus, ceiling, resetCeiling, atCeiling, unitCeiling, resetUnitCeiling, atUnitCeiling, misses, ...chances, ...(allotment ?? []), ...(resetAllotment ?? []), ...success, ...bonusShare, ...gates, ...redraw, ...ceilingRedraw, ...triggerChance, expiry]),
+    ...problemsOf([label, payout, of, trials, net, sinceAtCeiling, resetSinceAtCeiling, games, meter, ceilingAcrossBonuses, ceilingPayout, ...direct, ...directBonus, ceiling, resetCeiling, atCeiling, unitCeiling, resetUnitCeiling, atUnitCeiling, misses, ...chances, ...(allotment ?? []), ...(resetAllotment ?? []), ...success, ...bonusShare, ...gates, ...redraw, ...ceilingRedraw, ...triggerChance, expiry]),
     ...(law.ok ? [] : law.error),
   ]
   if (problems.length > 0 || !law.ok) return Err(problems)
@@ -810,6 +820,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
     net: net.ok ? net.value : undefined,
     sinceAtCeiling: sinceAtCeiling.ok ? sinceAtCeiling.value : undefined,
     resetSinceAtCeiling: resetSinceAtCeiling.ok ? resetSinceAtCeiling.value : undefined,
+    games: games.ok ? games.value : undefined,
     meter: meter.ok ? meter.value : undefined,
     ceilingAcrossBonuses: ceilingAcrossBonuses.ok ? ceilingAcrossBonuses.value : undefined,
     ceilingPayout: ceilingPayout.ok ? ceilingPayout.value : undefined,
@@ -853,6 +864,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
   const trials = keyed((read) => read.trials)
   const sinceAtCeilings = keyed((read) => read.sinceAtCeiling)
   const resetSinceAtCeilings = keyed((read) => read.resetSinceAtCeiling)
+  const games = keyed((read) => read.games)
   const ceilingsAcrossBonuses = keyed((read) => read.ceilingAcrossBonuses)
   const ceilingPayouts = keyed((read) => (triggering.includes(read.entity.key) ? read.ceilingPayout : undefined))
   const directs = keyed((read) => read.direct)
@@ -927,6 +939,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
       ...(Object.keys(cues).length > 0 ? { cue: cues } : {}),
       ...(Object.keys(sinceAtCeilings).length > 0 ? { sinceAtCeiling: sinceAtCeilings } : {}),
       ...(Object.keys(resetSinceAtCeilings).length > 0 ? { resetSinceAtCeiling: resetSinceAtCeilings } : {}),
+      ...(Object.keys(games).length > 0 ? { games } : {}),
       ...(Object.keys(directs).length > 0 ? { direct: directs } : {}),
       ...(Object.keys(directBonuses).length > 0 ? { directBonus: directBonuses } : {}),
       ...(Object.keys(gates).length > 0 ? { gates } : {}),
@@ -992,7 +1005,7 @@ export const readManualForm = (form: ManualForm): Result<ReadWorld, readonly For
     entity.kind === "bonus" || entity.kind === "cz" ? "optional" : entity.kind === "side" || (entity.kind === "at" && entity.law.shape === "average") ? "required" : "none",
   )
   const rates: readonly Read<BySettingLevelDto<number>>[] = form.world.settingLevels.map((level) => {
-    const read = rateOf(form.rates[String(level)] ?? "", `機械割 設定${level}`)
+    const read = rateOf(form.rates[String(level)] ?? "", `機械割 ${settingLevelText(level)}`)
     return read.ok ? Ok({ settingLevel: level, value: read.value }) : read
   })
   const problems = [...(spec.ok ? [] : spec.error), ...problemsOf(rates)]
@@ -1136,6 +1149,7 @@ export const worldFormOf = (spec: SpecDto): WorldForm => ({
     expiryTo: spec.components.expiry?.[entity]?.to ?? "",
     sinceAtCeiling: spec.components.sinceAtCeiling?.[entity] === undefined ? "" : String(spec.components.sinceAtCeiling[entity]),
     resetSinceAtCeiling: typedCount(spec.components.resetSinceAtCeiling?.[entity]),
+    games: typedCount(spec.components.games?.[entity]),
     meterFull: typedCount(spec.components.meter?.[entity]?.full),
     meterGains: (spec.components.meter?.[entity]?.gains ?? []).map((gain) => ({ points: String(gain.points), shares: Object.fromEntries(gain.share.map((each) => [String(each.settingLevel), String(each.value / 100)])) })),
     endings: endingsFormOf(spec, entity),

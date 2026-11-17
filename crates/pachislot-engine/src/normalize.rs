@@ -12,7 +12,8 @@ use pachislot_domain::spec::{
 use pachislot_domain::version::SchemaVersion;
 
 use crate::at_machine::{
-    AtMachine, Scales, at_machine, check_since_at, coverage, rules_of, table_of, unit_counted,
+    AtMachine, Scales, at_machine, check_since_at, coverage, extra_games, rules_of, table_of,
+    unit_counted,
 };
 use crate::error::{ProbabilityProblem, SpecError};
 use crate::query::elements;
@@ -205,6 +206,7 @@ fn at_tables(
         screen: spec.resources.lcd_rate.map(LcdRate::get),
         unit,
         whole_unit,
+        extra: extra_games(machine, setting_levels)?,
     };
     let rules = rules_of(machine, scales, spec.resources.cap);
     check_since_at(&rules)?;

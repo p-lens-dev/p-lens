@@ -5,8 +5,9 @@ import type { PriorProblem } from "../../../core/pachislot/prior"
 import type { EngineFailure } from "../../../pachislot-engine/protocol/messages"
 import { priorName } from "./formula"
 import { ENGINE_UNLOADED } from "../connection"
+import { settingLevelText } from "./setting-level"
 
-const settingLevel = (value: number): string => `設定${value}`
+const settingLevel = (value: number): string => settingLevelText(value)
 
 const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   label: "名前",
@@ -59,6 +60,8 @@ const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   ending: "ATの終わり方",
   endingAllotment: "ATの終わり方ごとのモード振り分け",
   sideBonus: "別枠ボーナス",
+  meter: "メーター",
+  games: "1回のゲーム数（実ゲーム数の天井）",
 }
 
 /** A component by what the person entering a spec calls it. */

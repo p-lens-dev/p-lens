@@ -126,7 +126,7 @@ fn a_seat_is_worth_each_setting_s_hunt_by_how_likely_it_is_in_yen_less_the_renta
     let weights = [(setting_level(1), 0.25), (setting_level(6), 0.75)];
     let seat = start(50, 300, 1);
     let found = hunt_theoretical_value(&spec, &machine, &weights, play, seat).expect("comes");
-    let under = |setting: u8| {
+    let under = |setting: i8| {
         let table = spec
             .table(setting_level(setting))
             .and_then(|table| table.at.as_ref())

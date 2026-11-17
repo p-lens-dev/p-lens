@@ -816,13 +816,7 @@ pub(crate) fn cap_figures_of(
     let arrived = window.map_or_else(Vec::new, |window| {
         arrivals(rules, odds, &allotments.after_at, window)
     });
-    cap_figures(
-        payout,
-        rules.cap.map(Medals::get),
-        window,
-        &arrived,
-        loss,
-    )
+    cap_figures(payout, rules.cap.map(Medals::get), window, &arrived, loss)
 }
 
 /// What an AT machine's setting settles to: what an AT comes to, and the

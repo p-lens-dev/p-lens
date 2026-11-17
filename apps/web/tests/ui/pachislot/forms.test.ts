@@ -57,11 +57,21 @@ describe("the 解析値 form", () => {
     expect(readWorldForm(worldFormOf(madeUp))).toEqual({ ok: true, value: { spec: madeUp, conditions: { payoutRate: { type: "from-spec" } } } })
   })
 
+  test("a machine with a setting named beside the six, 設定H, reads back the same and names it so", () => {
+    const named = JSON.parse(JSON.stringify(madeUp).replaceAll('"settingLevel":6', '"settingLevel":7').replaceAll('"settingLevels":[1,6]', '"settingLevels":[1,7]')) as SpecDto
+    const form = worldFormOf(named)
+    expect(form.settingLevels).toEqual([1, 7])
+    expect(readWorldForm(form)).toEqual({ ok: true, value: { spec: named, conditions: { payoutRate: { type: "from-spec" } } } })
+    const row = form.rows[0]!
+    const blank = readWorldForm({ ...form, rows: [{ ...row, chances: { ...row.chances, "7": "" } }, ...form.rows.slice(1)] })
+    expect(!blank.ok && blank.error.some((problem) => problem.field.endsWith("設定H"))).toBe(true)
+  })
+
   test("a chance reads as one in so many, with or without its 1/, or as a percentage", () => {
     const form = {
       settingLevels: [1, 6],
       bet: "3",
-      rows: [{ key: "big", label: "BIG", kind: "bonus" as const, of: "", trials: "", payout: "２５２", chances: { "1": "1/273.1", "6": "２５５" }, chanceKind: "combined" as const, ceiling: "", resetCeiling: "", atCeiling: "", resetAllotment: {}, success: {}, misses: "", net: "", unitCeiling: "", resetUnitCeiling: "", atUnitCeiling: "", trigger: "cz" as const, bonusShares: {}, bonusMiss: "counted" as const, forcedCz: "drawn" as const, ceilingAt: "outright" as const, ceilingPayout: "", ceilingAcrossBonuses: "", gates: [], redraw: {}, ceilingRedraw: {}, triggerChances: {}, directBonuses: {}, expiryGames: "", expiryTo: "", sinceAtCeiling: "", resetSinceAtCeiling: "", meterFull: "", meterGains: [], endings: [], endingAllotment: {}, law: EMPTY_LAW }],
+      rows: [{ key: "big", label: "BIG", kind: "bonus" as const, of: "", trials: "", payout: "２５２", chances: { "1": "1/273.1", "6": "２５５" }, chanceKind: "combined" as const, ceiling: "", resetCeiling: "", atCeiling: "", resetAllotment: {}, success: {}, misses: "", net: "", unitCeiling: "", resetUnitCeiling: "", atUnitCeiling: "", trigger: "cz" as const, bonusShares: {}, bonusMiss: "counted" as const, forcedCz: "drawn" as const, ceilingAt: "outright" as const, ceilingPayout: "", ceilingAcrossBonuses: "", gates: [], redraw: {}, ceilingRedraw: {}, triggerChances: {}, directBonuses: {}, expiryGames: "", expiryTo: "", sinceAtCeiling: "", resetSinceAtCeiling: "", games: "", meterFull: "", meterGains: [], endings: [], endingAllotment: {}, law: EMPTY_LAW }],
       base: "",
       bases: {},
       lcdRate: "",
@@ -581,6 +591,17 @@ describe("an AT machine typed in by hand", () => {
     const form = manualFormOf(forced, measured)
     expect(form.world.rows.find((row) => row.kind === "cz")?.sinceAtCeiling).toBe("800")
     expect(readManualForm(form)).toEqual({ ok: true, value: { spec: forced, conditions: measured } })
+  })
+
+  test("a CZ's games, typed for a machine whose ceilings count every game, are kept and read back", () => {
+    const madeUp = czSpec as SpecDto
+    const counted: SpecDto = { ...madeUp, components: { ...madeUp.components, games: { cz: 30 } } }
+    const form = manualFormOf(counted, measured)
+    expect(form.world.rows.find((row) => row.kind === "cz")?.games).toBe("30")
+    expect(readManualForm(form)).toEqual({ ok: true, value: { spec: counted, conditions: measured } })
+    const mistyped = { ...form, world: { ...form.world, rows: form.world.rows.map((row) => (row.kind === "cz" ? { ...row, games: "x" } : row)) } }
+    const read = readManualForm(mistyped)
+    expect(!read.ok && read.error).toEqual([{ field: "CZ 1回のゲーム数", reason: "not-a-number" }])
   })
 
   test("a CZ keeps its ceiling counted from the AT after a setting change, and reads back the same", () => {

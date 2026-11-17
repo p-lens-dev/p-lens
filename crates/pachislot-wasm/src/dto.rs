@@ -25,7 +25,7 @@ pub enum ProbabilityDto {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BySettingLevelDto<T> {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub value: T,
 }
 
@@ -183,6 +183,10 @@ pub struct ComponentsDto {
     /// certainly win the AT.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub meter: BTreeMap<String, MeterDto>,
+    /// On a CZ or a side bonus: the games each of it lasts, on a machine
+    /// whose ceilings count every game, its CZs and bonuses included.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub games: BTreeMap<String, u32>,
     /// On an AT a CZ brings: how often a regular game wins it outright, under each setting.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub direct: BTreeMap<String, Vec<BySettingLevelDto<ProbabilityDto>>>,
@@ -285,7 +289,7 @@ pub struct CeilingUnitDto {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourcesDto {
-    pub setting_levels: Vec<u8>,
+    pub setting_levels: Vec<i8>,
     pub bet: u32,
     /// ベース, for a machine of an AT: regular games fifty medals last.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -332,7 +336,7 @@ pub struct EventDto {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TableDto {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub events: Vec<EventDto>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub at: Option<AtTableDto>,
@@ -766,7 +770,7 @@ pub struct ContributionDto {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingLevelFiguresDto {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub net_per_game: f64,
     pub payout_rate: f64,
     pub bonuses: Vec<BonusFigureDto>,
@@ -936,7 +940,7 @@ pub struct ToldLegDto {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WeightDto {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub probability: f64,
 }
 
@@ -1082,7 +1086,7 @@ pub struct SimulateResponse {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TallyDto {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub games: u64,
     pub medals: f64,
     pub medals_squared: f64,
@@ -1112,7 +1116,7 @@ pub struct EstimateRequest {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingLevelEstimateDto {
-    pub setting_level: u8,
+    pub setting_level: i8,
     pub games: u64,
     pub payout_rate: Option<f64>,
     /// The 95% margin of `payout_rate`.
@@ -1179,15 +1183,15 @@ pub enum ErrorDto {
     DuplicateSettingLevel {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         at: Option<String>,
-        setting_level: u8,
+        setting_level: i8,
     },
     MissingSettingLevel {
         at: String,
-        setting_level: u8,
+        setting_level: i8,
     },
     UnknownSettingLevel {
         at: String,
-        setting_level: u8,
+        setting_level: i8,
     },
     DuplicateEntity {
         entity: String,
@@ -1219,7 +1223,7 @@ pub enum ErrorDto {
     },
     CuesExceedOne {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
         sum: f64,
     },
     WatchPartlyWhole {
@@ -1227,21 +1231,21 @@ pub enum ErrorDto {
     },
     InvalidProbability {
         at: String,
-        setting_level: u8,
+        setting_level: i8,
         problem: ProbabilityProblemDto,
     },
     ProbabilitiesExceedOne {
-        setting_level: u8,
+        setting_level: i8,
         sum: f64,
     },
     MissingPayout {
         at: String,
     },
     MissingRate {
-        setting_level: u8,
+        setting_level: i8,
     },
     UnknownRate {
-        setting_level: u8,
+        setting_level: i8,
     },
     RateNotFromSpec,
     AtNotAlone {
@@ -1251,7 +1255,7 @@ pub enum ErrorDto {
     BaseWithoutAt,
     FirstHitBeyondCeiling {
         at: String,
-        setting_level: u8,
+        setting_level: i8,
     },
     PathWithoutAt,
     /// A seat hunted at where under some setting the AT might never come.
@@ -1266,7 +1270,7 @@ pub enum ErrorDto {
         entity: String,
     },
     AllotmentNotWhole {
-        setting_level: u8,
+        setting_level: i8,
         after_reset: bool,
         sum: u32,
     },
@@ -1277,7 +1281,7 @@ pub enum ErrorDto {
         entity: String,
     },
     EndingsNotWhole {
-        setting_level: u8,
+        setting_level: i8,
         sum: u32,
     },
     EndingAllotmentToUnknown {
@@ -1286,7 +1290,7 @@ pub enum ErrorDto {
     },
     EndingAllotmentNotWhole {
         ending: String,
-        setting_level: u8,
+        setting_level: i8,
         sum: u32,
     },
     EndingsWithoutAllotment {
@@ -1296,7 +1300,7 @@ pub enum ErrorDto {
     /// the endings' mix: that mix in basis points.
     AllotmentAgainstEndings {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
         mix: u32,
     },
     /// A seat that says the last AT ended a way the machine does not have.
@@ -1378,15 +1382,15 @@ pub enum ErrorDto {
     },
     UnattainableRate {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
     },
     EndlessContinuation {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
     },
     PayoutTableNotWhole {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
         sum: u32,
     },
     CeilingUnitBesideLcdRate,
@@ -1396,7 +1400,7 @@ pub enum ErrorDto {
     GateBeyondWhole {
         entity: String,
         game: u32,
-        setting_level: u8,
+        setting_level: i8,
     },
     GateTwice {
         entity: String,
@@ -1415,12 +1419,12 @@ pub enum ErrorDto {
     },
     RedrawNotWhole {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
         sum: u32,
     },
     MeterGainsOverWhole {
         entity: String,
-        setting_level: u8,
+        setting_level: i8,
         sum: u32,
     },
     NeedsCap {
@@ -1444,7 +1448,7 @@ pub enum ErrorDto {
         id: String,
     },
     PriorMismatch {
-        setting_level: u8,
+        setting_level: i8,
     },
     InvalidPrior {
         sum: u32,

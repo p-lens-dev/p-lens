@@ -59,7 +59,8 @@ pub struct Spec {
 /// What the whole machine shares, belonging to no one entity.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Resources {
-    /// The settings the machine has: `1..=6`, or some of them.
+    /// The settings the machine has: `1..=6`, or some of them, and 設定L,
+    /// 0, H or V where it names one beside them.
     pub setting_levels: Vec<SettingLevel>,
     /// Medals a regular game takes.
     pub bet: NonZeroU32,
@@ -335,6 +336,11 @@ pub struct Components {
     /// of it, and no AT starts it again. It pays its `payout`, over games of
     /// its own where its `net_per_game` is given, and wins nothing.
     pub side_bonus: BTreeSet<EntityId>,
+    /// On a CZ or a side bonus: the games each of it lasts, on a machine
+    /// whose ceilings count every game — 実ゲーム数, its CZs and bonuses
+    /// included — rather than regular games alone. Given on any, the
+    /// ceilings in games come that much sooner in regular games.
+    pub games: BTreeMap<EntityId, NonZeroU32>,
     /// A watch: what a player watches over each of a bonus, named by the
     /// bonus — the BIG's games for a スイカ, the REG's side lamp — and never
     /// a regular game's.
@@ -417,6 +423,7 @@ pub enum Component {
     EndingAllotment,
     SideBonus,
     Meter,
+    Games,
 }
 
 /// A meter a CZ's misses fill: the points that fill it, and what a miss
@@ -494,6 +501,8 @@ pub struct SideBonus {
     /// 純増: the medals a game of it gains, which says the games it takes;
     /// none where they are not counted.
     pub net_per_game: Option<Medals>,
+    /// The games each of it lasts, where the ceilings count them.
+    pub games: Option<NonZeroU32>,
 }
 
 /// How a chance a regular game is given, under each setting — a CZ's, an
@@ -594,6 +603,8 @@ pub struct Cz {
     pub gates: Vec<Gate>,
     /// The meter its misses fill, where it has one.
     pub meter: Option<Meter>,
+    /// The games each of it lasts, where the ceilings count them.
+    pub games: Option<NonZeroU32>,
 }
 
 /// A mode between ATs: its ceiling and its own AT間天井, if it has them,

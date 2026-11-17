@@ -44,14 +44,14 @@ fn analysed(spec: &NormalizedSpec) -> Analysis {
     analyze(spec, &measured()).expect("solves")
 }
 
-fn at_table(spec: &NormalizedSpec, setting: u8) -> &AtTable {
+fn at_table(spec: &NormalizedSpec, setting: i8) -> &AtTable {
     spec.table(setting_level(setting))
         .and_then(|table| table.at.as_ref())
         .expect("an AT machine's table")
 }
 
 /// The trigger's chance a regular game below the ceilings, under one setting.
-fn chance(spec: &NormalizedSpec, setting: u8) -> f64 {
+fn chance(spec: &NormalizedSpec, setting: i8) -> f64 {
     at_table(spec, setting).chance.value()
 }
 
@@ -551,7 +551,7 @@ fn the_games_played_are_weighed_setting_by_setting_and_priced_on_the_terms() {
         .expect("terms");
     let weights = [(setting_level(1), 0.25), (setting_level(6), 0.75)];
     let found = path_theoretical_value(&spec, &rules, &analysis, &weights, play, &played);
-    let under = |setting: u8| walk(&played, &rules, at_table(&spec, setting)).medals;
+    let under = |setting: i8| walk(&played, &rules, at_table(&spec, setting)).medals;
     let medals = 0.25 * under(1) + 0.75 * under(6);
     assert!(close(found.medals, medals));
     assert!(close(found.yen, medals * 20.0));

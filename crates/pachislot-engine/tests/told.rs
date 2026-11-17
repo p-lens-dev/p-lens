@@ -15,13 +15,13 @@ fn spec_of(cz: bool) -> NormalizedSpec {
     normalize(&if cz { cz_spec() } else { at_spec() }).expect("normalises")
 }
 
-fn table(spec: &NormalizedSpec, setting: u8) -> &AtTable {
+fn table(spec: &NormalizedSpec, setting: i8) -> &AtTable {
     spec.table(setting_level(setting))
         .and_then(|table| table.at.as_ref())
         .expect("an AT machine's table")
 }
 
-fn likelihood(spec: &NormalizedSpec, setting: u8, after_reset: bool, legs: Vec<ToldLeg>) -> f64 {
+fn likelihood(spec: &NormalizedSpec, setting: i8, after_reset: bool, legs: Vec<ToldLeg>) -> f64 {
     told_log_likelihood(
         &ToldPath {
             after_reset,

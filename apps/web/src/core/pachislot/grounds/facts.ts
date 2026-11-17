@@ -226,19 +226,38 @@ const sideFacts = (rules: AtRulesDto): readonly string[] => {
 }
 
 /**
+ * The games a ceiling counting every game — 実ゲーム数 — counts for each
+ * regular game, as the engine works it out: the screen's, or one, and each
+ * CZ's and side bonus's games at its chance as given under the lowest
+ * setting level; none where none says its games.
+ */
+const everyGameRate = (spec: SpecDto): number | undefined => {
+  const counted = Object.entries(spec.components.games ?? {})
+  if (counted.length === 0) return undefined
+  const lowest = Math.min(...spec.resources.settingLevels)
+  const extra = counted.reduce((sum, [entity, games]) => {
+    const written = under(spec.components.firstHit?.[entity] ?? spec.components.chance?.[entity], lowest)
+    return sum + (written === undefined ? 0 : games * chanceOf(written))
+  }, 0)
+  return (spec.resources.lcdRate ?? 1) + extra
+}
+
+/**
  * What the sheet says of the machine whatever the setting level: whether a
  * CZ brings its AT, with its スルー天井, whether its AT間天井 brings that
  * trigger and, where it is a bonus, its medals and its 純増; the
  * 有利区間's cap, the games it carries on after an AT short of it, and
  * whether play starts again as after a setting change once an AT reaches
  * it; and the screen's games a regular game comes to, where ceilings are
- * counted on the screen.
+ * counted on the screen, or every game's, where they count CZs' and
+ * bonuses' games too.
  */
 const machineFacts = (spec: SpecDto, rules: AtRulesDto): readonly string[] => {
   const { at, trigger } = rules
   const bonus = trigger === undefined ? undefined : spec.components.payout?.[trigger]
   const bonusNet = trigger === undefined ? undefined : spec.components.netPerGame?.[trigger]
   const window = spec.components.window?.[at]
+  const everyGame = everyGameRate(spec)
   return [
     ...(trigger === undefined ? [] : [given("cz")]),
     ...missesFacts(rules),
@@ -251,7 +270,8 @@ const machineFacts = (spec: SpecDto, rules: AtRulesDto): readonly string[] => {
     ...(window === undefined ? [] : [given(`window(${window})`)]),
     ...(spec.components.resetOnCap?.includes(at) === true ? [given("reset_on_cap")] : []),
     ...sideFacts(rules),
-    ...(spec.resources.lcdRate === undefined || unitCounted(spec) ? [] : [given(`lcd_rate(${prologNumber(spec.resources.lcdRate)})`)]),
+    ...(spec.resources.lcdRate === undefined || unitCounted(spec) || everyGame !== undefined ? [] : [given(`lcd_rate(${prologNumber(spec.resources.lcdRate)})`)]),
+    ...(everyGame === undefined || unitCounted(spec) || spec.resources.ceilingUnit !== undefined ? [] : [given(`real_games(${prologNumber(everyGame)})`)]),
     ...(spec.resources.ceilingUnit === undefined || unitCounted(spec) ? [] : [given(`ceiling_unit(${prologNumber(spec.resources.ceilingUnit.perGame)})`)]),
   ]
 }

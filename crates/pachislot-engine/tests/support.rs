@@ -21,7 +21,7 @@ use pachislot_domain::probability::{BasisPoints, Denominator, Probability, Proba
 use pachislot_domain::setting_level::{PerSettingLevel, SettingLevel};
 use pachislot_domain::spec::{Base, Components, EntityId, Medals, Resources, Spec};
 
-pub fn setting_level(value: u8) -> SettingLevel {
+pub fn setting_level(value: i8) -> SettingLevel {
     SettingLevel::new(value).expect("a setting level")
 }
 

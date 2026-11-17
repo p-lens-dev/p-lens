@@ -99,14 +99,17 @@ pub(crate) fn unit_counted(machine: &AtMachine<'_>) -> Option<EntityId> {
 
 /// How a machine's ceilings become regular games: those counted on its
 /// screen at `screen` of it a regular game, those in its unit at `unit` of
-/// it; and whether the unit stands for every trigger ceiling, as a spec
-/// with a unit and no ceiling counted in it was written — `ceiling` then
-/// counting the unit.
+/// it; whether the unit stands for every trigger ceiling, as a spec with a
+/// unit and no ceiling counted in it was written — `ceiling` then counting
+/// the unit; and the games of its CZs and side bonuses a ceiling counting
+/// every game counts besides each regular game, `extra` of them — none
+/// where it counts regular games.
 #[derive(Clone, Copy)]
 pub(crate) struct Scales {
     pub(crate) screen: Option<f64>,
     pub(crate) unit: Option<f64>,
     pub(crate) whole_unit: bool,
+    pub(crate) extra: f64,
 }
 
 impl Scales {
@@ -117,7 +120,7 @@ impl Scales {
         let rate = if self.whole_unit {
             self.unit
         } else {
-            self.screen
+            self.in_games(self.screen)
         };
         earliest(
             games.map(|games| in_regular_games(games, rate)),
@@ -131,12 +134,57 @@ impl Scales {
     /// whichever comes first.
     fn at(self, games: Option<NonZeroU32>, units: Option<NonZeroU32>) -> Option<NonZeroU32> {
         earliest(
-            games,
+            games.map(|games| in_regular_games(games, self.in_games(None))),
             units
                 .zip(self.unit)
                 .map(|(units, rate)| in_regular_games(units, Some(rate))),
         )
     }
+
+    /// The games a ceiling in games counts for each regular game: the
+    /// screen's, or one, and the CZs' and side bonuses' games where it
+    /// counts them; none where it counts regular games alone.
+    fn in_games(self, screen: Option<f64>) -> Option<f64> {
+        (self.extra > 0.0)
+            .then(|| screen.unwrap_or(1.0) + self.extra)
+            .or(screen)
+    }
+}
+
+/// The games of its CZ and its side bonus a ceiling counting every game
+/// counts on average for each regular game, under the lowest setting the
+/// machine has: each one's games, where it says them, at its chance as
+/// given. None where none says its games.
+pub(crate) fn extra_games(
+    machine: &AtMachine<'_>,
+    setting_levels: &[SettingLevel],
+) -> Result<f64, SpecError> {
+    let Some(lowest) = setting_levels.iter().min().copied() else {
+        return Ok(0.0);
+    };
+    let counted = [
+        machine
+            .cz
+            .and_then(|cz| cz.games.map(|games| (&cz.id, cz.chance.values(), games))),
+        machine.side.and_then(|side| {
+            side.games
+                .map(|games| (&side.id, side.chance.values(), games))
+        }),
+    ];
+    counted
+        .into_iter()
+        .flatten()
+        .try_fold(0.0, |extra, (id, chance, games)| {
+            let given = chance
+                .get(lowest)
+                .ok_or_else(|| SpecError::MissingSettingLevel {
+                    at: id.clone(),
+                    setting_level: lowest,
+                })?
+                .probability()
+                .map_err(problem(id, lowest))?;
+            Ok(extra + f64::from(games.get()) * given.value())
+        })
 }
 
 /// The sooner of two ceilings, where either is.

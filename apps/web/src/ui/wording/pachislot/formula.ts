@@ -9,6 +9,7 @@ import { formulaIdLabel } from "../catalog"
 import { amountText, formatCount, signedAmountText, UNSEEN_THEORETICAL, type Amount } from "../numbers"
 import { seal } from "../../../mummer"
 import type { TriggerWords } from "./trigger"
+import { settingLevelText } from "./setting-level"
 
 const KIND_NAMES: Readonly<Record<FormulaKind, string>> = { manual: "手入力", simulated: "解析値から計算", sampled: "シミュレータ" }
 
@@ -43,7 +44,7 @@ export const formulaHandle = (formula: Said): string => `${formulaText(formula.f
 export const sharesText = (shares: readonly SettingLevelShare[]): string =>
   shares
     .filter((share) => share.basisPoints > 0)
-    .map((share) => `設定${share.settingLevel} ${share.basisPoints / 100}%`)
+    .map((share) => `${settingLevelText(share.settingLevel)} ${share.basisPoints / 100}%`)
     .join("・")
 
 /** Figures nothing is known of yet, each as dashes in the shape it would have. */

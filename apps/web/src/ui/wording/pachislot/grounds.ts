@@ -1,6 +1,7 @@
 import { findingsIn, givenIn, partsUnder, standingOf, stepsUnder, tallyOf, type Proof } from "../../../core/grounds/proof"
 import { atomOf, compoundOf, numberOf, type Term } from "../../../core/grounds/term"
 import type { GroundsNaming } from "../../../core/pachislot/grounds/naming"
+import { settingLevelText } from "./setting-level"
 
 /** How a line of reasoned grounds is to be taken: said plainly, a check that held or failed, a figure taken unchecked, or something guessed to be out of the ordinary. */
 export type GroundsTone = "plain" | "holds" | "fails" | "unverified" | "odd"
@@ -761,7 +762,7 @@ const allottedByEnding = (step: Step, naming: GroundsNaming): Said => {
 /** A mode's ceiling in regular games: as the sheet gives it, counted on the screen and so reached sooner, counted in another unit and so reached after that over its rate, or none. */
 const modeAt = (step: Step, naming: GroundsNaming): Said => {
   const label = triggerCeilingName(naming, known(arg(step, 0)))
-  const inGames = stepsUnder(step).find((inner) => ["ceiling_on_screen", "ceiling_in_unit", "ceiling_in_games", "no_ceiling"].includes(inner.rule))
+  const inGames = stepsUnder(step).find((inner) => ["ceiling_on_screen", "ceiling_every_game", "ceiling_in_unit", "ceiling_in_games", "no_ceiling"].includes(inner.rule))
   if (inGames?.rule === "ceiling_in_unit") {
     const counted = known(arg(inGames, 0))
     const rate = known(givenNumber(inGames, "ceiling_unit", 0))
@@ -793,6 +794,22 @@ const modeAt = (step: Step, naming: GroundsNaming): Said => {
       figure(told(quotient, WHOLE)),
       "、切り上げて通常 ",
       figure(games(arg(step, 1))),
+    )
+  }
+  if (inGames?.rule === "ceiling_every_game") {
+    const counted = known(arg(inGames, 0))
+    const rate = known(givenNumber(inGames, "real_games", 0))
+    const quotient = counted / rate
+    return plain(
+      `${label} ＝ 実ゲーム数 `,
+      figure(games(counted)),
+      " ÷ 通常1Gあたりの実ゲーム数 ",
+      figure(trimmed(rate, 3)),
+      link(near(shownAt(counted, GAMES) / Number(trimmed(rate, 3)), quotient, WHOLE)),
+      figure(told(quotient, WHOLE)),
+      "、切り上げて通常 ",
+      figure(games(arg(step, 1))),
+      "（CZ・ボーナスのゲーム数を平均で数えた近似）",
     )
   }
   return plain(`${label} `, figure(inGames?.rule === "no_ceiling" ? "なし" : games(arg(step, 1))))
@@ -979,7 +996,7 @@ const lineOf = (step: Step, naming: GroundsNaming): Said | undefined => {
     case "grounds":
       return plain("この算出条件の数字は、設定ごとに次のように導かれます。")
     case "level":
-      return plain(`設定${arg(step, 0) ?? "--"}`)
+      return plain(settingLevelText(arg(step, 0)))
     case "gain_from_rate":
       return gainFromRate(step)
     case "gain_from_rate_beside_bonuses":
@@ -1047,7 +1064,7 @@ const lineOf = (step: Step, naming: GroundsNaming): Said | undefined => {
     }
     case "loss_per_game_by_level": {
       const base = known(givenNumber(step, "level_base", 1))
-      return plain(`設定${numberOf(step.claim.args[0]) ?? "--"}の通常時1Gあたりの減り ＝ 50枚 ÷ 設定${numberOf(step.claim.args[0]) ?? "--"}のベース `, figure(told(base, { ...WHOLE, unit: "G" })), link(near(50 / shownAt(base, WHOLE), known(arg(step, 1)), PER_GAME)), figure(perGame(arg(step, 1))))
+      return plain(`${settingLevelText(numberOf(step.claim.args[0]))}の通常時1Gあたりの減り ＝ 50枚 ÷ ${settingLevelText(numberOf(step.claim.args[0]))}のベース `, figure(told(base, { ...WHOLE, unit: "G" })), link(near(50 / shownAt(base, WHOLE), known(arg(step, 1)), PER_GAME)), figure(perGame(arg(step, 1))))
     }
     case "check_engine": {
       const { label, measure } = engineFigure(step)
@@ -1105,11 +1122,11 @@ const lineOf = (step: Step, naming: GroundsNaming): Said | undefined => {
       return { parts: said("未確認：上限に届くATの割合は、計算エンジンが解いた値をそのまま使っています。ATの獲得枚数を機械割から導く機種では、ここでは確かめられません"), tone: "unverified" }
     case "odd_loss_beyond_bet": {
       const beyond = compoundOf(step.claim.args[0], "loss_beyond_bet", 3)
-      return { parts: said(`気になる点：設定${numberOf(beyond?.args[0]) ?? "--"}の通常時1Gで、賭けた `, figure(medals(numberOf(beyond?.args[2]))), " より多い ", figure(perGame(numberOf(beyond?.args[1]))), " が減る計算です"), tone: "odd" }
+      return { parts: said(`気になる点：${settingLevelText(numberOf(beyond?.args[0]))}の通常時1Gで、賭けた `, figure(medals(numberOf(beyond?.args[2]))), " より多い ", figure(perGame(numberOf(beyond?.args[1]))), " が減る計算です"), tone: "odd" }
     }
     case "odd_no_gain": {
       const none = compoundOf(step.claim.args[0], "no_gain", 2)
-      return { parts: said(`気になる点：設定${numberOf(none?.args[0]) ?? "--"}のATで、メダルが増えません（平均獲得 `, figure(medals(numberOf(none?.args[1]))), "）"), tone: "odd" }
+      return { parts: said(`気になる点：${settingLevelText(numberOf(none?.args[0]))}のATで、メダルが増えません（平均獲得 `, figure(medals(numberOf(none?.args[1]))), "）"), tone: "odd" }
     }
     default:
       return undefined
@@ -1135,7 +1152,7 @@ const plainKeys = (proof: Proof): readonly string[] => (proof.type !== "step" ||
 /** What could not be proved: a setting level's figures; none for the remarks, which only add to what is said. */
 const unprovedLine = (goal: Term): Said | undefined => {
   const level = numberOf(compoundOf(goal, "level", 3)?.args[0])
-  return level === undefined ? undefined : { parts: said(`設定${level}の機械割を、解析値から導けませんでした`), tone: "fails" }
+  return level === undefined ? undefined : { parts: said(`${settingLevelText(level)}の機械割を、解析値から導けませんでした`), tone: "fails" }
 }
 
 /**

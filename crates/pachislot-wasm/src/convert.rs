@@ -50,7 +50,7 @@ fn invalid(field: &str) -> ErrorDto {
     }
 }
 
-fn setting_level(value: u8, field: &str) -> Result<SettingLevel, ErrorDto> {
+fn setting_level(value: i8, field: &str) -> Result<SettingLevel, ErrorDto> {
     SettingLevel::new(value).ok_or_else(|| invalid(field))
 }
 
@@ -300,6 +300,9 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
             "spec.components.resetSinceAtCeiling",
             |games, at| NonZeroU32::new(*games).ok_or_else(|| invalid(at)),
         )?,
+        games: table(&dto.games, "spec.components.games", |games, at| {
+            NonZeroU32::new(*games).ok_or_else(|| invalid(at))
+        })?,
         meter: table(&dto.meter, "spec.components.meter", |meter, at| {
             Ok(Meter {
                 full: NonZeroU32::new(meter.full).ok_or_else(|| invalid(&format!("{at}.full")))?,
@@ -1344,6 +1347,7 @@ fn component_name(component: Component) -> String {
         Component::CeilingAcrossBonuses => "ceilingAcrossBonuses",
         Component::CeilingPayout => "ceilingPayout",
         Component::Meter => "meter",
+        Component::Games => "games",
         Component::Ending => "ending",
         Component::EndingAllotment => "endingAllotment",
     }

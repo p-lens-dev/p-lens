@@ -20,6 +20,7 @@ import type { FormProblem } from "./world-form"
 import { missingUndelivered } from "../../catalog/undelivered"
 import { isUnreached } from "../../catalog/unreached"
 import { REGISTER_OFFLINE_UNKEPT, REGISTRATION_SENDING } from "../../../wording/catalog"
+import { settingLevelText } from "../../../wording/pachislot/setting-level"
 
 /** The setting levels a machine's formulas have between them, lowest first. */
 const levelsOf = (detail: PachislotMachineDetail): readonly number[] =>
@@ -79,7 +80,7 @@ function Editor(props: { readonly detail: PachislotMachineDetail }): JSX.Element
         <Index each={levels()}>
           {(level) => (
             <TextField
-              label={`設定${level()}`}
+              label={settingLevelText(level())}
               value={form().shares[String(level())] ?? ""}
               onChange={(share) => setForm({ ...form(), shares: { ...form().shares, [String(level())]: share } })}
               inputMode="decimal"

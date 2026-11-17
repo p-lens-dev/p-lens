@@ -122,15 +122,17 @@ rule(cut_by_misses, cut_short(_), given(misses_by_mode)).
 rule(cut_by_forcing, cut_short(_), unplayed).
 
 % A mode's ceiling in regular games: as the sheet gives it, or counted on
-% the screen and so reached that many regular games sooner. Its AT間天井,
+% the screen, or over every game — CZs' and bonuses' too — and so reached
+% that many regular games sooner. Its AT間天井,
 % where it has one, is in regular games already.
 rule(ceilings, ceilings(Ceilings), findall(Games, mode_at(_, Games), Ceilings)).
 rule(mode_at, mode_at(Index, Games), ( given(mode(Index, Sheet, _)), in_games(Sheet, Games) )).
 rule(at_ceilings, at_ceilings(AtCeilings), findall(AtCeiling, given(mode(_, _, AtCeiling)), AtCeilings)).
 rule(no_ceiling, in_games(none, none), true).
-rule(ceiling_in_games, in_games(Games, Games), ( Games \== none, \+ given(lcd_rate(_)), \+ given(ceiling_unit(_)) )).
+rule(ceiling_in_games, in_games(Games, Games), ( Games \== none, \+ given(lcd_rate(_)), \+ given(ceiling_unit(_)), \+ given(real_games(_)) )).
 rule(ceiling_in_unit, in_games(Counted, Games), ( Counted \== none, given(ceiling_unit(Rate)), Games is max(1, ceiling(Counted / Rate)) )).
 rule(ceiling_on_screen, in_games(Screen, Games), ( Screen \== none, given(lcd_rate(Rate)), Games is max(1, ceiling(Screen / Rate)) )).
+rule(ceiling_every_game, in_games(Counted, Games), ( Counted \== none, given(real_games(Rate)), Games is max(1, ceiling(Counted / Rate)) )).
 
 % The modes a cycle starts from: as an AT allots them, or — where an AT
 % that reaches the cap starts play again as after a setting change — the

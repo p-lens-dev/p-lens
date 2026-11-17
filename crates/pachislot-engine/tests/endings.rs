@@ -77,7 +77,7 @@ fn rules_of(spec: &NormalizedSpec) -> &AtRules {
     spec.at_rules.as_ref().expect("an AT machine")
 }
 
-fn table_of(spec: &NormalizedSpec, level: u8) -> &AtTable {
+fn table_of(spec: &NormalizedSpec, level: i8) -> &AtTable {
     spec.table(setting_level(level))
         .and_then(|table| table.at.as_ref())
         .expect("an AT table")
