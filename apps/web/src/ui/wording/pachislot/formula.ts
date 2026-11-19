@@ -9,7 +9,7 @@ import { formulaIdLabel } from "../catalog"
 import { amountText, formatCount, signedAmountText, UNSEEN_THEORETICAL, type Amount } from "../numbers"
 import { seal } from "../../../mummer"
 import type { TriggerWords } from "./trigger"
-import { settingLevelText } from "./setting-level"
+import { settingLevelMark, settingLevelText } from "./setting-level"
 import { discriminationGradeOf, discriminationPointsOf } from "../../../core/pachislot/discrimination"
 import type { TappableKind } from "../../../core/pachislot/weighing"
 
@@ -92,6 +92,25 @@ const updatedText = (updatedAt: string | undefined, now: string): string => {
  */
 export const machineDiscriminationText = (discrimination: number | undefined, updatedAt: string | undefined, now: string): string =>
   `${updatedText(updatedAt, now)}判別力${discrimination === undefined ? "--" : discriminationGradeOf(discrimination)}`
+
+/**
+ * What a sign says of the setting, from the levels it may be seen under
+ * among the machine's: 設定4以上濃厚, 設定6濃厚, 設定2否定, 偶数設定濃厚 —
+ * or the levels themselves where it says none of those, 設定1・5・6濃厚.
+ */
+export const signMeaningText = (seenUnder: readonly number[], machineLevels: readonly number[]): string => {
+  const levels = machineLevels.toSorted((left, right) => left - right)
+  const seen = levels.filter((level) => seenUnder.includes(level))
+  const lowest = seen.at(0)
+  if (lowest === undefined) return "--"
+  if (seen.length === 1) return `${settingLevelText(lowest)}濃厚`
+  if (seen.length === levels.filter((level) => level >= lowest).length) return `${settingLevelText(lowest)}以上濃厚`
+  if (seen.length === levels.length - 1) return `${settingLevelText(levels.find((level) => !seen.includes(level)))}否定`
+  const ofParity = (parity: number): readonly number[] => levels.filter((level) => level > 0 && level % 2 === parity)
+  if (seen.join() === ofParity(0).join()) return "偶数設定濃厚"
+  if (seen.join() === ofParity(1).join()) return "奇数設定濃厚"
+  return `設定${seen.map(settingLevelMark).join("・")}濃厚`
+}
 
 /** What each kind of tile on a formula's counter is called, where a formula's screen lists them: a cue over a bonus and one over a moment alike. */
 export const TAPPABLE_KIND_NAMES: Readonly<Record<TappableKind, string>> = {

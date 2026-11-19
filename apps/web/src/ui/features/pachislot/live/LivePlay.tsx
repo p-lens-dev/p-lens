@@ -17,7 +17,7 @@ import {
 } from "../../../../core/pachislot/reading"
 import { withStepsMerged, type Span } from "../../../../core/pachislot/merging"
 import { stepsOf, withStepRemoved, type RevisionRefusal } from "../../../../core/pachislot/revision"
-import { besideGames, counterBonusesOf, counterBonusOf, countablesOf, countedOutOf, type Countable, type Tappable, type Weighing } from "../../../../core/pachislot/weighing"
+import { besideGames, counterBonusesOf, counterBonusOf, countablesOf, countedOutOf, settingLevelsOf, type Countable, type Tappable, type Weighing } from "../../../../core/pachislot/weighing"
 import { parsePlayLog, type Checkpoint, type PlayLogError, type Counts } from "../../../../core/play-log/checkpoint"
 import { liveSummary } from "../../../../core/play-log/live"
 import { heldNowOf } from "../../../../core/play-log/held-now"
@@ -55,6 +55,7 @@ import { Timeline } from "./Timeline"
 import { HandedDetail } from "./HandedDetail"
 import { readingFrom, readReadingForm, type ReadingField, type ReadingForm, type Standing } from "./reading-form"
 import { RoleCounter } from "./RoleCounter"
+import { SignChecklist } from "./SignChecklist"
 import type { PlayTerms } from "../../../../core/parlor/terms"
 import { HandTiles } from "./HandTiles"
 import { Tile } from "./Tile"
@@ -274,9 +275,16 @@ function Counting(props: { readonly weighing: Weighing; readonly ordered: readon
         <span class="ml-2 font-normal normal-case text-text-muted">長押しで1つ戻します</span>
       </h3>
       <RoleCounter
-        countables={countables()}
+        countables={countables().filter((tappable) => tappable.kind !== "sign")}
         counts={countsNowOf(props.ordered)}
         outOf={countedOutOf(props.weighing.formula.normalized, countsNowOf(props.ordered), countedGamesOf(props.ordered))}
+        inert={inert}
+        onCount={count}
+      />
+      <SignChecklist
+        signs={countables().flatMap((tappable) => (tappable.kind === "sign" ? [tappable] : []))}
+        settingLevels={settingLevelsOf(props.weighing.formula)}
+        counts={countsNowOf(props.ordered)}
         inert={inert}
         onCount={count}
       />

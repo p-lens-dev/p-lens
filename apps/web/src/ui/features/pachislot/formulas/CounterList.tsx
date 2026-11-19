@@ -4,13 +4,17 @@ import { discriminationOf } from "../../../../core/pachislot/discrimination"
 import type { Formula } from "../../../../core/pachislot/formula"
 import { snapshotOf } from "../../../../core/pachislot/snapshot"
 import { countablesOf, type Tappable, type TappableKind } from "../../../../core/pachislot/weighing"
-import { discriminationText, TAPPABLE_KIND_NAMES } from "../../../wording/pachislot/formula"
+import { discriminationText, signMeaningText, TAPPABLE_KIND_NAMES } from "../../../wording/pachislot/formula"
 
 /** The kinds of tile in the order a formula's screen lists them, a cue over a bonus with a cue over a moment. */
 const GROUPS: readonly (readonly TappableKind[])[] = [["game"], ["moment"], ["cue-of-bonus", "cue-of-moment"], ["sign"]]
 
-/** The tiles of one group, by their labels. */
-const groupOf = (tiles: readonly Tappable[], kinds: readonly TappableKind[]): readonly string[] => tiles.filter((tile) => kinds.includes(tile.kind)).map((tile) => tile.label)
+/** A tile as the list names it: a sign with what it says of the setting. */
+const nameOf = (tile: Tappable, settingLevels: readonly number[]): string => (tile.kind === "sign" ? `${tile.label}（${signMeaningText(tile.settingLevels, settingLevels)}）` : tile.label)
+
+/** The tiles of one group, by their names. */
+const groupOf = (tiles: readonly Tappable[], kinds: readonly TappableKind[], settingLevels: readonly number[]): readonly string[] =>
+  tiles.filter((tile) => kinds.includes(tile.kind)).map((tile) => nameOf(tile, settingLevels))
 
 /**
  * What a formula's counter counts, as its screen lists it: its 判別力, then
@@ -20,7 +24,7 @@ const groupOf = (tiles: readonly Tappable[], kinds: readonly TappableKind[]): re
  */
 export function CounterList(props: { readonly formula: Formula }): JSX.Element {
   const tiles = (): readonly Tappable[] => countablesOf(snapshotOf(props.formula))
-  const groups = () => GROUPS.map((kinds) => ({ name: TAPPABLE_KIND_NAMES[kinds[0] ?? "game"], labels: groupOf(tiles(), kinds) })).filter((group) => group.labels.length > 0)
+  const groups = () => GROUPS.map((kinds) => ({ name: TAPPABLE_KIND_NAMES[kinds[0] ?? "game"], labels: groupOf(tiles(), kinds, props.formula.figures.map((each) => each.settingLevel)) })).filter((group) => group.labels.length > 0)
   return (
     <section class="flex flex-col gap-2">
       <h3 class="flex flex-wrap items-baseline gap-x-3 text-sm font-bold text-text-primary">

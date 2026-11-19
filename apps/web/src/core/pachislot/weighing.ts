@@ -27,10 +27,8 @@ export interface Countable {
  */
 export type TappableKind = "game" | "moment" | "sign" | "cue-of-bonus" | "cue-of-moment"
 
-/** A countable on the counter, with what it is. */
-export interface Tappable extends Countable {
-  readonly kind: TappableKind
-}
+/** A countable on the counter, with what it is: a sign with the setting levels it may be seen under. */
+export type Tappable = Countable & ({ readonly kind: Exclude<TappableKind, "sign"> } | { readonly kind: "sign"; readonly settingLevels: readonly number[] })
 
 /** Whether a tile counts something beside the games, which an AT's games do not stop being counted. */
 export const besideGames = (kind: TappableKind): boolean => kind !== "game"
@@ -68,12 +66,18 @@ const overOf = (watch: WatchDto): string => watch.bonus ?? watch.moment ?? ""
  */
 export const countablesOf = (formula: FormulaSnapshot): readonly Tappable[] => {
   const normalized = formula.normalized
-  const labelled = (id: string, kind: TappableKind): Tappable => ({ id, label: formula.labels[id] || id, kind })
+  const labelled = (id: string, kind: Exclude<TappableKind, "sign">): Tappable => ({ id, label: formula.labels[id] || id, kind })
+  const sign = (id: string): Tappable => ({
+    id,
+    label: formula.labels[id] || id,
+    kind: "sign",
+    settingLevels: normalized.tables.filter((table) => table.signs?.includes(id) === true).map((table) => table.settingLevel),
+  })
   return [
     ...eventsOf(normalized).map((each) => labelled(each.id, "game")),
     ...(normalized.moments ?? []).map((id) => labelled(id, "moment")),
     ...cuesOf(normalized).map((each) => labelled(each.id, watchOf(normalized, each.id)?.moment === undefined ? "cue-of-bonus" : "cue-of-moment")),
-    ...(normalized.signs ?? []).map((id) => labelled(id, "sign")),
+    ...(normalized.signs ?? []).map(sign),
   ]
 }
 
