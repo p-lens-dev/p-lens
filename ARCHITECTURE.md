@@ -927,9 +927,9 @@ Picking a machine picks a formula (`core/formula/standing.ts`):
      to tell setting levels apart (`core/pachislot/discrimination`: what a
      day of 8000 regular games counted tells the upper half of its setting
      levels from the lower — small wins by their chance a game, cues by
-     their chance a trial, a moment's trials one a first hit; S from six
-     times likelier, A three, B one and a half, C below), shown on its
-     card; one refuted more than verified ranks below every grade. A
+     their chance a trial, a moment's trials one a first hit; in points out
+     of a hundred, 100 × (1 − e^−it), S from 85, A 70, B 50, C 30, D 10,
+     E below), shown on its card; one refuted more than verified ranks below every grade. A
      pachinko formula and a 設定配分 have one tier for all;
    - then by score: how it was made, verifications less refutations,
      adoptions less rejections and uses, each by its weight, summed

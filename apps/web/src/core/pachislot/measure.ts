@@ -14,7 +14,7 @@ const PUBLICATION_STAGE_DAYS: readonly number[] = [10, 21, 40, 70, 100]
 const stagesPassedOf = (releasedOn: IsoDate, now: string): readonly string[] =>
   PUBLICATION_STAGE_DAYS.map((days) => daysAfter(releasedOn, days)).filter((stage) => stage <= now.slice(0, 10))
 
-const GRADE_TIERS: Readonly<Record<DiscriminationGrade, number>> = { S: 4, A: 3, B: 2, C: 1 }
+const GRADE_TIERS: Readonly<Record<DiscriminationGrade, number>> = { S: 6, A: 5, B: 4, C: 3, D: 2, E: 1 }
 
 /** A formula's grade of discrimination, from what its counter counts. */
 export const gradeOf = (formula: Formula): DiscriminationGrade => discriminationGradeOf(discriminationOf(formula.basis.normalized, formula.figures))

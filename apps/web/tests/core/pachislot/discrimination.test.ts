@@ -38,8 +38,9 @@ describe("a pachislot formula's power to tell setting levels apart", () => {
     expect(discriminationOf(spec({}, { signs: ["six"] }, { signs: ["six"] }), figures)).toBe(0)
   })
 
-  test("grades S from six times likelier a day, A three, B one and a half, C below", () => {
-    expect([6, 5.99, 3, 1.5, 1.49].map((times) => discriminationGradeOf(Math.log(times) + 1e-12))).toEqual(["S", "A", "A", "B", "C"])
+  test("grades by points: S from 85, A from 70, B from 50, C from 30, D from 10, E below", () => {
+    const at = (points: number) => -Math.log(1 - points / 100)
+    expect([85, 84, 70, 50, 30, 10, 9, 0].map((points) => discriminationGradeOf(at(points)))).toEqual(["S", "A", "A", "B", "C", "D", "E", "E"])
     expect([0, 0.11, 1.92, 5.74].map(discriminationPointsOf)).toEqual([0, 10, 85, 100])
   })
 })

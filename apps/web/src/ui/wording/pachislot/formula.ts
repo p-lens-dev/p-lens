@@ -88,10 +88,17 @@ const updatedText = (updatedAt: string | undefined, now: string): string => {
  * formula — and, where a formula was registered for it in the last month,
  * how long ago, so a machine whose analysis has just grown stands out —
  * before the grade, which ends every line so the grades of a list stand in
- * one column: 5時間前更新・判別力B, 3日前更新・判別力B.
+ * one column: 5時間前更新・判別力B, 3日前更新・判別力B. The grade comes apart
+ * from the words before it, for the line to set it a little off them.
  */
-export const machineDiscriminationText = (discrimination: number | undefined, updatedAt: string | undefined, now: string): string =>
-  `${updatedText(updatedAt, now)}判別力${discrimination === undefined ? "--" : discriminationGradeOf(discrimination)}`
+export const machineDiscriminationText = (
+  discrimination: number | undefined,
+  updatedAt: string | undefined,
+  now: string,
+): { readonly lead: string; readonly grade: string } => ({
+  lead: `${updatedText(updatedAt, now)}判別力`,
+  grade: discrimination === undefined ? "--" : discriminationGradeOf(discrimination),
+})
 
 /**
  * What a sign says of the setting, from the levels it may be seen under

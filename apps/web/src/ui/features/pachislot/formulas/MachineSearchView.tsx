@@ -36,7 +36,7 @@ function MachineList(props: { readonly machines: readonly MachineSummary[]; read
               </span>
               <span class="flex shrink-0 flex-col items-end text-xs tabular-nums text-text-muted">
                 <span>{slashDay(machine.releasedOn)}</span>
-                <span>{machineDiscriminationText(machine.discrimination, machine.formulaUpdatedAt, app.services.now())}</span>
+                <MachineDiscrimination line={machineDiscriminationText(machine.discrimination, machine.formulaUpdatedAt, app.services.now())} />
               </span>
             </button>
           </li>
@@ -136,5 +136,15 @@ export function MachineSearchView(props: { readonly place: Place; readonly query
         </div>
       </div>
     </MainContent>
+  )
+}
+
+/** A machine's 判別力 on its line, its grade set a little off the words before it. */
+function MachineDiscrimination(props: { readonly line: { readonly lead: string; readonly grade: string } }): JSX.Element {
+  return (
+    <span>
+      {props.line.lead}
+      <span class="ml-0.5">{props.line.grade}</span>
+    </span>
   )
 }

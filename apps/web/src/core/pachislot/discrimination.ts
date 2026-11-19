@@ -67,9 +67,6 @@ export const discriminationOf = (normalized: NormalizedSpecDto, figures: readonl
   return (gamesTell(low, high) + watches) * DAY_GAMES
 }
 
-/** How many times likelier a day of counting makes the right half of the setting levels look. */
-const discriminationTimes = (discrimination: number): number => Math.exp(discrimination)
-
 /**
  * A formula's power to tell setting levels apart in points out of a
  * hundred, as a list shows it: what is left of the doubt a day of counting
@@ -80,17 +77,19 @@ const discriminationTimes = (discrimination: number): number => Math.exp(discrim
 export const discriminationPointsOf = (discrimination: number): number => Math.round(100 * (1 - Math.exp(-discrimination)))
 
 /**
- * A formula's grade of discrimination, the tier it ranks in: S where a day
- * of counting makes the right half six times likelier or more, A three, B
- * one and a half, C below.
+ * A formula's grade of discrimination, the tier it ranks in, by its points:
+ * S from 85, A from 70, B from 50, C from 30, D from 10, E below — a formula
+ * that counts nothing, or signs alone, is E.
  */
-export type DiscriminationGrade = "S" | "A" | "B" | "C"
+export type DiscriminationGrade = "S" | "A" | "B" | "C" | "D" | "E"
 
-const GRADE_TIMES: readonly { readonly grade: DiscriminationGrade; readonly times: number }[] = [
-  { grade: "S", times: 6 },
-  { grade: "A", times: 3 },
-  { grade: "B", times: 1.5 },
+const GRADE_POINTS: readonly { readonly grade: DiscriminationGrade; readonly points: number }[] = [
+  { grade: "S", points: 85 },
+  { grade: "A", points: 70 },
+  { grade: "B", points: 50 },
+  { grade: "C", points: 30 },
+  { grade: "D", points: 10 },
 ]
 
 export const discriminationGradeOf = (discrimination: number): DiscriminationGrade =>
-  GRADE_TIMES.find((each) => discriminationTimes(discrimination) >= each.times)?.grade ?? "C"
+  GRADE_POINTS.find((each) => discriminationPointsOf(discrimination) >= each.points)?.grade ?? "E"
