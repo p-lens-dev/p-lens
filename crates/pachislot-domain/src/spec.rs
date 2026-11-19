@@ -357,6 +357,10 @@ pub struct Components {
     /// meter run down — for watches to be over. It has no chance of its
     /// own, and says nothing of the setting by itself.
     pub moment: BTreeSet<EntityId>,
+    /// On a moment of an AT machine: the event of the play's own record it
+    /// is — a CZ missed, a bonus that missed the AT, an AT won, or any of
+    /// them, the trigger drawn — counted there rather than by hand.
+    pub mirror: BTreeMap<EntityId, Mirror>,
     /// A sign: something that, seen, says the setting is among those it
     /// names — 設定4以上濃厚, 偶数濃厚 — and nothing of how often it comes.
     pub sign: BTreeMap<EntityId, BTreeSet<SettingLevel>>,
@@ -410,6 +414,7 @@ pub enum Component {
     Trials,
     Cue,
     Moment,
+    Mirror,
     Sign,
     SinceAtCeiling,
     Direct,
@@ -574,12 +579,25 @@ impl Over {
     }
 }
 
-/// Something counted by hand for watches to be over, which by itself says
-/// nothing of the setting.
+/// Something counted for watches to be over, which by itself says nothing
+/// of the setting: by hand, or as the event of the play's record it
+/// mirrors.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Moment {
     pub id: EntityId,
     pub label: String,
+    pub mirror: Option<Mirror>,
+}
+
+/// The event of an AT machine's play record a moment is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mirror {
+    CzMissed,
+    BonusMissed,
+    AtWon,
+    /// The trigger drawn, however it went: a CZ missed, a bonus missing the
+    /// AT, or an AT won.
+    Trigger,
 }
 
 /// Something that, seen, says the setting is among those it names.

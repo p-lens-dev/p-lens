@@ -55,6 +55,11 @@ pub enum SpecError {
         entity: EntityId,
         of: EntityId,
     },
+    /// A moment mirroring an event of a play's record, on a machine without
+    /// an AT, which keeps no such record.
+    MirrorWithoutAt {
+        entity: EntityId,
+    },
     /// A watch over something that is neither a bonus nor a moment.
     WatchOfNeither {
         entity: EntityId,

@@ -943,11 +943,12 @@ Picking a machine picks a formula (`core/formula/standing.ts`):
      its machine's publication passed since it was made — 10, 21, 40, 70
      and 100 days after release, the maker publishing 小役確率, モードの特徴,
      移行率, 特定条件のAT当選率 and 詳細な設定差 in turn — and a fork, remade
-     from a listing of the same machine (a copy from another derives from
-     nothing), gains an adoption's two points — given up once it is
+     from a formula of the same machine, listed or hidden for its remake
+     (a copy from another derives from nothing), gains an adoption's two
+     points — given up once it is
      remade in turn, so the newest of a line of remakes is lifted — and a pachinko one a point
-     for each kind of component it fills that the one it was remade from
-     left empty, five at most. A favourite weighs nothing: it is its
+     for each kind of component it fills that the one it was remade from,
+     where listed, left empty, five at most. A favourite weighs nothing: it is its
      book's alone;
    - then the newer, a formula made since being most likely made to put
      the older right or to say more; then, between two made at once, the
@@ -1531,7 +1532,12 @@ only the primitives, the core and the application.
   `moment` is something a player counts by hand that is no regular game's
   outcome — a CZ inside the AT, a CZ missed, an AT's end, a meter run down —
   with no chance of its own, saying nothing of the setting by itself; an AT
-  machine, which has no bonus beside its AT, watches over moments. A `watch`
+  machine, which has no bonus beside its AT, watches over moments. On an
+  AT machine a moment may `mirror` an event of the play's own record — a CZ
+  missed, a bonus missing the AT, an AT won, or any of them — and is then
+  counted from the record (`mirroredCountsOf`) rather than by a tile, so
+  nothing is pressed twice; a machine of bonuses keeps no such record
+  (`MirrorWithoutAt`). A `watch`
   names the bonus or the moment it is watched over — a BIG's games for a
   スイカ, a REG's side lamp, the screen an AT ends on, a CZ inside the AT won
   or not — `trials` the times each of it gives (one where left out), and a

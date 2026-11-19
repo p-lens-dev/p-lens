@@ -10,7 +10,7 @@ use std::num::NonZeroU32;
 
 use pachislot_domain::normalized::NormalizedSpec;
 use pachislot_domain::observation::Segment;
-use pachislot_domain::spec::{Component, Over, Spec};
+use pachislot_domain::spec::{Component, Mirror, Over, Spec};
 use pachislot_engine::error::{InferenceError, SpecError};
 use pachislot_engine::normalize::normalize;
 use pachislot_engine::posterior::posterior;
@@ -228,4 +228,44 @@ fn a_moment_has_no_chance_of_its_own() {
         .insert(id("cz-in-at-outcome"), trials);
     let normalized = normalize(&watched_twice).expect("normalises");
     assert_eq!(normalized.watches[0].trials, trials);
+}
+
+#[test]
+fn a_moment_of_an_at_machine_may_mirror_an_event_of_the_play_record() {
+    let mut mirrored = counted_spec();
+    mirrored
+        .components
+        .mirror
+        .insert(id("cz-in-at"), Mirror::Trigger);
+    let normalized = normalize(&mirrored).expect("normalises");
+    assert_eq!(normalized.mirrors, vec![(id("cz-in-at"), Mirror::Trigger)]);
+    let mut astray = counted_spec();
+    astray
+        .components
+        .mirror
+        .insert(id("cz-in-at-won"), Mirror::AtWon);
+    assert_eq!(
+        normalize(&astray),
+        Err(SpecError::MissingComponent {
+            entity: id("cz-in-at-won"),
+            component: Component::Moment
+        })
+    );
+}
+
+#[test]
+fn a_moment_of_a_machine_of_bonuses_mirrors_nothing() {
+    let mut bonuses = support::watched_spec();
+    bonuses.entities.push(id("big-ended"));
+    bonuses.components.moment.insert(id("big-ended"));
+    bonuses
+        .components
+        .mirror
+        .insert(id("big-ended"), Mirror::AtWon);
+    assert_eq!(
+        normalize(&bonuses),
+        Err(SpecError::MirrorWithoutAt {
+            entity: id("big-ended")
+        })
+    );
 }

@@ -40,6 +40,7 @@ const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   trials: "1回あたりの回数",
   cue: "示唆",
   moment: "手で数える出来事",
+  mirror: "記録との連動",
   sign: "確定演出",
   sinceAtCeiling: "ATから数える天井",
   resetSinceAtCeiling: "リセット後のATから数える天井",
@@ -107,6 +108,8 @@ const describeEngineError = (error: EngineErrorDto): string => {
       return `「${error.entity}」は「${error.of}」の示唆になっていますが、「${error.of}」は示唆を見る場面ではありません。`
     case "cues-exceed-one":
       return `「${error.entity}」の${settingLevel(error.settingLevel)}の示唆を全部足すと ${(error.sum * 100).toFixed(2)}% になり、100% を超えています。`
+    case "mirror-without-at":
+      return `「${error.entity}」は記録と連動していますが、ATのない機種には連動できる記録がありません。`
     case "watch-partly-whole":
       return `「${error.entity}」の示唆は、足して 100% になる設定とならない設定があります。全部の設定で 100% にするか、全部の設定で 100% 未満にしてください。`
     case "invalid-probability":

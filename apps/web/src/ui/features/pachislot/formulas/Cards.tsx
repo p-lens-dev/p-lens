@@ -113,13 +113,15 @@ export function FormulaCard(props: {
       <p class="text-xs tabular-nums text-text-secondary" title="カウンターを1日（通常時8000G）付けたとき、高設定域と低設定域をどれだけ見分けられるか（100点満点）">
         {discriminationText(discriminationOf(props.listing.formula.basis.normalized, props.listing.formula.figures))}
       </p>
-      <ul class="flex flex-col gap-y-1 whitespace-nowrap text-xs tabular-nums text-text-secondary">
+      <ul class="flex flex-col gap-y-1 text-xs tabular-nums text-text-secondary">
         <Index each={props.listing.formula.figures}>
           {(figures) => (
-            <li>
-              設定{figures().settingLevel} <span class="text-text-primary">{payoutRateText(figures().payoutRate)}</span>
-              <Show when={combinedTellsMore(figures())} fallback={<Index each={figures().bonuses}>{(bonus) => <span class="ml-1 text-text-muted">{bonus().label} {oddsText(bonus().oneIn)}</span>}</Index>}>
-                <span class="ml-1 text-text-muted">合算 {oddsText(figures().combinedOneIn)}</span>
+            <li class="flex flex-wrap gap-x-1">
+              <span class="whitespace-nowrap">
+                設定{figures().settingLevel} <span class="text-text-primary">{payoutRateText(figures().payoutRate)}</span>
+              </span>
+              <Show when={combinedTellsMore(figures())} fallback={<Index each={figures().bonuses}>{(bonus) => <span class="whitespace-nowrap text-text-muted">{bonus().label} {oddsText(bonus().oneIn)}</span>}</Index>}>
+                <span class="whitespace-nowrap text-text-muted">合算 {oddsText(figures().combinedOneIn)}</span>
               </Show>
             </li>
           )}

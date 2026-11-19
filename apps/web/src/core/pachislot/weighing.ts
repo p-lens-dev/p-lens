@@ -62,7 +62,9 @@ const overOf = (watch: WatchDto): string => watch.bonus ?? watch.moment ?? ""
 /**
  * Everything a player can count, in the spec's order: what a game can come
  * to — a bonus told apart by its parts counted part by part — then the
- * moments, the cues watched for over a bonus or a moment, and the signs.
+ * moments counted by hand — one mirroring an event of the play's record is
+ * counted there — the cues watched for over a bonus or a moment, and the
+ * signs.
  */
 export const countablesOf = (formula: FormulaSnapshot): readonly Tappable[] => {
   const normalized = formula.normalized
@@ -75,7 +77,7 @@ export const countablesOf = (formula: FormulaSnapshot): readonly Tappable[] => {
   })
   return [
     ...eventsOf(normalized).map((each) => labelled(each.id, "game")),
-    ...(normalized.moments ?? []).map((id) => labelled(id, "moment")),
+    ...(normalized.moments ?? []).filter((id) => normalized.mirrors?.[id] === undefined).map((id) => labelled(id, "moment")),
     ...cuesOf(normalized).map((each) => labelled(each.id, watchOf(normalized, each.id)?.moment === undefined ? "cue-of-bonus" : "cue-of-moment")),
     ...(normalized.signs ?? []).map(sign),
   ]

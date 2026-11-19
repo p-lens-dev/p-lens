@@ -174,6 +174,9 @@ pub struct ComponentsDto {
     /// A moment: something counted by hand, no regular game's outcome, for watches to be over.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub moment: Vec<String>,
+    /// On a moment of an AT machine: the event of the play's record it mirrors, counted there.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub mirror: BTreeMap<String, MirrorDto>,
     /// A sign: the settings it may be seen under, which seeing it says the setting is among.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub sign: BTreeMap<String, Vec<i8>>,
@@ -530,6 +533,9 @@ pub struct NormalizedSpecDto {
     pub watches: Vec<WatchDto>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub moments: Vec<String>,
+    /// The moments counted as the events of the play's record they mirror.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub mirrors: BTreeMap<String, MirrorDto>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub signs: Vec<String>,
 }
@@ -605,6 +611,16 @@ pub struct SideBonusRuleDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ceiling: Option<u32>,
     pub payout: TriggerPayoutDto,
+}
+
+/// The event of an AT machine's play record a moment mirrors.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum MirrorDto {
+    CzMissed,
+    BonusMissed,
+    AtWon,
+    Trigger,
 }
 
 /// A bonus that misses the AT counted as a miss, or starting play again.
@@ -1244,6 +1260,9 @@ pub enum ErrorDto {
         sum: f64,
     },
     WatchPartlyWhole {
+        entity: String,
+    },
+    MirrorWithoutAt {
         entity: String,
     },
     InvalidProbability {

@@ -1,4 +1,4 @@
-import type { CountDto, SegmentDto } from "@p-lens/contracts/pachislot"
+import type { CountDto, MirrorDto, NormalizedSpecDto, SegmentDto } from "@p-lens/contracts/pachislot"
 
 import type { Checkpoint, Counts } from "../play-log/checkpoint"
 import { Err, Ok, type Result } from "../result/result"
@@ -87,15 +87,30 @@ const countedOf = (ordered: readonly Checkpoint[]): Stretch | undefined => {
   return last === undefined || start === undefined ? undefined : { games: last.spins - start, counts: countsAt(ordered, ordered.length - 1) }
 }
 
+/** The events of a play's record each mirror counts: the trigger drawn is any of the three. */
+const MIRRORED_EVENTS: Readonly<Record<MirrorDto, readonly string[]>> = {
+  "cz-missed": ["cz-missed"],
+  "bonus-missed": ["bonus-missed"],
+  "at-won": ["jackpot"],
+  trigger: ["cz-missed", "bonus-missed", "jackpot"],
+}
+
+/** The moments a formula counts as events of the play's record, each with how many of its events the log holds. */
+export const mirroredCountsOf = (normalized: NormalizedSpecDto, ordered: readonly Checkpoint[]): Counts =>
+  Object.fromEntries(
+    Object.entries(normalized.mirrors ?? {}).map(([id, mirror]) => [id, ordered.filter((checkpoint) => MIRRORED_EVENTS[mirror].includes(checkpoint.event?.kind ?? "")).length]),
+  )
+
 /**
  * What an AT machine's play log says was counted, as the one stretch the
  * engine weighs beside the play's path: the regular games since counting
  * began — an AT's own games are none of a log's — with everything counted
- * in them. None before a game was counted in.
+ * in them, and the moments that mirror the record's events as many as it
+ * holds. None before a game was counted in.
  */
-export const countedSegmentsOf = (ordered: readonly Checkpoint[]): readonly SegmentDto[] => {
+export const countedSegmentsOf = (ordered: readonly Checkpoint[], mirrored: Counts): readonly SegmentDto[] => {
   const counted = countedOf(ordered)
-  return counted === undefined || counted.games <= 0 ? [] : [segmentOf(counted)]
+  return counted === undefined || counted.games <= 0 ? [] : [segmentOf({ games: counted.games, counts: { ...counted.counts, ...mirrored } })]
 }
 
 /**

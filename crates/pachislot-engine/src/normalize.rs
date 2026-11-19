@@ -6,7 +6,7 @@ use pachislot_domain::normalized::{
 use pachislot_domain::probability::{Probability, ProbabilityError, ProbabilitySource};
 use pachislot_domain::setting_level::{PerSettingLevel, SettingLevel};
 use pachislot_domain::spec::{
-    CeilingUnit, Chance, Component, Element, EntityId, LcdRate, Sign, Spec, Watch,
+    CeilingUnit, Chance, Component, Element, EntityId, LcdRate, Mirror, Moment, Sign, Spec, Watch,
 };
 
 use pachislot_domain::version::SchemaVersion;
@@ -381,12 +381,28 @@ fn signs_of<'a>(
 }
 
 /// Every moment, in the order its entity was made.
-fn moments_of(elements: &[Element]) -> Vec<EntityId> {
+fn moments_of(elements: &[Element]) -> Vec<&Moment> {
     elements
         .iter()
         .filter_map(|element| match element {
-            Element::Moment(moment) => Some(moment.id.clone()),
+            Element::Moment(moment) => Some(moment),
             _ => None,
+        })
+        .collect()
+}
+
+/// The moments that mirror an event of the play's record, refused on a
+/// machine without an AT, which keeps no such record.
+fn mirrors_of(moments: &[&Moment], at_machine: bool) -> Result<Vec<(EntityId, Mirror)>, SpecError> {
+    moments
+        .iter()
+        .filter_map(|moment| moment.mirror.map(|mirror| (moment.id.clone(), mirror)))
+        .map(|(id, mirror)| {
+            if at_machine {
+                Ok((id, mirror))
+            } else {
+                Err(SpecError::MirrorWithoutAt { entity: id })
+            }
         })
         .collect()
 }
@@ -415,6 +431,8 @@ pub fn normalize(spec: &Spec) -> Result<NormalizedSpec, SpecError> {
     };
     let (watches, cues) = watches_of(&elements, setting_levels)?;
     let signs = signs_of(&elements, setting_levels)?;
+    let moments = moments_of(&elements);
+    let mirrors = mirrors_of(&moments, at_rules.is_some())?;
     let seen_under = |setting_level: SettingLevel| -> Vec<EntityId> {
         signs
             .iter()
@@ -436,7 +454,8 @@ pub fn normalize(spec: &Spec) -> Result<NormalizedSpec, SpecError> {
             .collect(),
         at_rules,
         watches,
-        moments: moments_of(&elements),
+        moments: moments.iter().map(|moment| moment.id.clone()).collect(),
+        mirrors,
         signs: signs.iter().map(|sign| sign.id.clone()).collect(),
     })
 }

@@ -2,7 +2,7 @@ use crate::probability::Probability;
 use crate::setting_level::SettingLevel;
 use std::num::NonZeroU32;
 
-use crate::spec::{Base, EntityId, Medals, Over};
+use crate::spec::{Base, EntityId, Medals, Mirror, Over};
 
 /// What an AT gains, as a law over its medals under one setting: a fixed
 /// figure — its average, where nothing more is known — so many for its
@@ -35,8 +35,10 @@ pub struct NormalizedSpec {
     /// What a player watches over each of a bonus or a moment, whose cues
     /// each table gives the chances of.
     pub watches: Vec<WatchRule>,
-    /// What a player counts by hand for watches to be over.
+    /// What a player counts for watches to be over.
     pub moments: Vec<EntityId>,
+    /// The moments counted as the events of the play's record they mirror.
+    pub mirrors: Vec<(EntityId, Mirror)>,
     /// What says, seen, that the setting is among some; each table lists
     /// those it may be seen under.
     pub signs: Vec<EntityId>,

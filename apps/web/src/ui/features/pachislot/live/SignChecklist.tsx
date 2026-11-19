@@ -2,6 +2,7 @@ import { createSignal, Index, Show, type JSX } from "solid-js"
 
 import type { Tappable } from "../../../../core/pachislot/weighing"
 import type { Counts } from "../../../../core/play-log/checkpoint"
+import { ChevronDownIcon } from "../../../primitives/icons"
 import { Unfolding } from "../../../primitives/unfolding"
 import { feelTap } from "../../../primitives/vibration"
 import { signMeaningText } from "../../../wording/pachislot/formula"
@@ -11,7 +12,8 @@ type Sign = Extract<Tappable, { readonly kind: "sign" }>
 
 /**
  * The signs a formula knows — 銅トロフィー, 666枚OVER — kept apart from
- * the tiles counted game by game, under a heading that unfolds them: a
+ * the tiles counted game by game, under a chip at the middle that unfolds
+ * them, saying how many were seen: a
  * tile each, green where the counting tiles are the player's colour, for it
  * works otherwise — seen once is all a sign tells, so a press marks it
  * seen, filled, and a press on one seen takes that back — each by its name
@@ -36,12 +38,14 @@ export function SignChecklist(props: {
           type="button"
           aria-expanded={open()}
           onClick={() => setOpen((was) => !was)}
-          class="flex items-center gap-2 self-start rounded px-1 py-1 text-xs font-bold uppercase tracking-wide text-text-secondary hover:bg-surface-3"
+          class="flex items-center gap-1.5 self-center rounded-full bg-surface-2 py-1 pl-3 pr-2 text-xs font-semibold text-text-secondary ring-1 ring-border hover:bg-surface-3 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-focus-ring"
         >
-          <span>{open() ? "▾" : "▸"}</span>
           確定演出
-          <span class="font-normal normal-case tabular-nums text-text-muted">
+          <span class="font-normal tabular-nums text-text-muted">
             {seenCount()}/{props.signs.length} 見た
+          </span>
+          <span class="flex [&_svg]:size-4" classList={{ "rotate-180": open() }}>
+            <ChevronDownIcon />
           </span>
         </button>
         <Unfolding open={open()} gap="-0.5rem">

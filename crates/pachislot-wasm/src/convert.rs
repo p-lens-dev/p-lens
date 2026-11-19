@@ -18,7 +18,7 @@ use pachislot_domain::probability::{BasisPoints, Denominator, Probability, Proba
 use pachislot_domain::setting_level::{PerSettingLevel, SettingLevel};
 use pachislot_domain::spec::{
     Base, CeilingUnit, Component, Components, EntityId, Gate as SpecGate, LcdRate, Medals, Meter,
-    MeterGain, OtherNet, Over, PayoutRow, Redraw, Resources, Sets, Spec, SpecExpiry,
+    MeterGain, Mirror, OtherNet, Over, PayoutRow, Redraw, Resources, Sets, Spec, SpecExpiry,
 };
 use pachislot_domain::version::{SchemaVersion, SpecVersion};
 use pachislot_engine::analysis::Analysis;
@@ -37,11 +37,11 @@ use crate::dto::{
     BonusFigureDto, BonusMissDto, BucketDto, BySettingLevelDto, CeilingAtDto, ComponentsDto,
     ConditionsDto, ContributionDto, CueDto, DistributionDto, ErrorDto, EstimateProgressDto,
     EstimateSummaryDto, EventDto, EventKindDto, ExpiryDto, ForcedCzDto, GateChanceDto, GateDto,
-    LawRowDto, LegEndDto, ModeRuleDto, NormalizedSpecDto, PathDto, PathStartDto, PayoutBasisDto,
-    PayoutLawDto, PayoutRowDto, PlayDto, PosteriorDto, ProbabilityDto, ProbabilityProblemDto,
-    ProgressDto, SegmentDto, SettingLevelEstimateDto, SettingLevelFiguresDto, SideBonusRuleDto,
-    SpecDto, SummaryDto, TableDto, TallyDto, TheoreticalValueDto, ToldPathDto, TriggerPayoutDto,
-    WatchDto, WeightDto,
+    LawRowDto, LegEndDto, MirrorDto, ModeRuleDto, NormalizedSpecDto, PathDto, PathStartDto,
+    PayoutBasisDto, PayoutLawDto, PayoutRowDto, PlayDto, PosteriorDto, ProbabilityDto,
+    ProbabilityProblemDto, ProgressDto, SegmentDto, SettingLevelEstimateDto,
+    SettingLevelFiguresDto, SideBonusRuleDto, SpecDto, SummaryDto, TableDto, TallyDto,
+    TheoreticalValueDto, ToldPathDto, TriggerPayoutDto, WatchDto, WeightDto,
 };
 
 fn invalid(field: &str) -> ErrorDto {
@@ -283,6 +283,9 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
         })?,
         cue: table(&dto.cue, "spec.components.cue", |of, at| id(of, at))?,
         moment: listed(&dto.moment, "spec.components.moment")?,
+        mirror: table(&dto.mirror, "spec.components.mirror", |mirror, _| {
+            Ok(mirror_of(*mirror))
+        })?,
         sign: table(&dto.sign, "spec.components.sign", |levels, at| {
             levels
                 .iter()
@@ -872,8 +875,31 @@ pub fn normalized_spec(dto: &NormalizedSpecDto) -> Result<NormalizedSpec, ErrorD
             .map(|(index, each)| watch_rule(each, &format!("normalized.watches[{index}]")))
             .collect::<Result<_, _>>()?,
         moments: ids(&dto.moments, "normalized.moments")?,
+        mirrors: dto
+            .mirrors
+            .iter()
+            .map(|(name, mirror)| Ok((id(name, "normalized.mirrors")?, mirror_of(*mirror))))
+            .collect::<Result<_, ErrorDto>>()?,
         signs: ids(&dto.signs, "normalized.signs")?,
     })
+}
+
+fn mirror_of(dto: MirrorDto) -> Mirror {
+    match dto {
+        MirrorDto::CzMissed => Mirror::CzMissed,
+        MirrorDto::BonusMissed => Mirror::BonusMissed,
+        MirrorDto::AtWon => Mirror::AtWon,
+        MirrorDto::Trigger => Mirror::Trigger,
+    }
+}
+
+fn mirror_dto(mirror: Mirror) -> MirrorDto {
+    match mirror {
+        Mirror::CzMissed => MirrorDto::CzMissed,
+        Mirror::BonusMissed => MirrorDto::BonusMissed,
+        Mirror::AtWon => MirrorDto::AtWon,
+        Mirror::Trigger => MirrorDto::Trigger,
+    }
 }
 
 fn ids(names: &[String], field: &str) -> Result<Vec<EntityId>, ErrorDto> {
@@ -986,6 +1012,11 @@ pub fn normalized_dto(spec: &NormalizedSpec) -> NormalizedSpecDto {
             .collect(),
         watches: spec.watches.iter().map(watch_dto).collect(),
         moments: spec.moments.iter().map(named).collect(),
+        mirrors: spec
+            .mirrors
+            .iter()
+            .map(|(id, mirror)| (named(id), mirror_dto(*mirror)))
+            .collect(),
         signs: spec.signs.iter().map(named).collect(),
         at_rules: spec.at_rules.as_ref().map(|rules| AtRulesDto {
             base: rules.base.games(),
@@ -1359,6 +1390,7 @@ fn component_name(component: Component) -> String {
         Component::Trials => "trials",
         Component::Cue => "cue",
         Component::Moment => "moment",
+        Component::Mirror => "mirror",
         Component::Sign => "sign",
         Component::SinceAtCeiling => "sinceAtCeiling",
         Component::Direct => "direct",
@@ -1448,6 +1480,9 @@ pub fn spec_error_dto(error: &SpecError) -> ErrorDto {
             sum: *sum,
         },
         SpecError::WatchPartlyWhole { entity } => ErrorDto::WatchPartlyWhole {
+            entity: named(entity),
+        },
+        SpecError::MirrorWithoutAt { entity } => ErrorDto::MirrorWithoutAt {
             entity: named(entity),
         },
         SpecError::InvalidProbability {

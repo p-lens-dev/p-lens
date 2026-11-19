@@ -429,8 +429,11 @@ function EventTile(props: { readonly label: string; readonly count: number; read
  * and one for an AT won, each with how many the play has had, a tap
  * keeping it at the games the row below says, and a long press taking the
  * last one back while nothing follows it; and how the AT just won went,
- * said once it ends. A play another device holds is counted there: its
- * tiles show the counts and a press or a long press here does nothing.
+ * said once it ends. Why a long press could not take one back is said
+ * until the log changes — a step removed from the timeline above, a
+ * press — for it was said of the log as it stood. A play another device
+ * holds is counted there: its tiles show the counts and a press or a long
+ * press here does nothing.
  */
 export function AtCounting(props: {
   readonly reading: AtReading
@@ -445,6 +448,7 @@ export function AtCounting(props: {
 }): JSX.Element {
   const counted = (kind: Missed | "jackpot"): number => props.ordered.filter((checkpoint) => checkpoint.event?.kind === kind).length
   const [takingBack, setTakingBack] = createSignal<Written<TakeBackRefusal> | undefined>(undefined)
+  createEffect(on(() => props.ordered, () => setTakingBack(undefined), { defer: true }))
   const takeBack = (taken: TakenBack): void => {
     if (props.hold.type !== "held") return
     void props.rewrite((ordered) => withLastTakenBack(ordered, taken)).then((written) => {

@@ -60,6 +60,7 @@ import type { PlayTerms } from "../../../../core/parlor/terms"
 import { HandTiles } from "./HandTiles"
 import { Tile } from "./Tile"
 import type { Write, Written } from "./write"
+import { mirroredCountsOf } from "../../../../core/pachislot/observation"
 
 /** The reading at a step of the log, where that step is one: what a pressed row is set right from. */
 const revisedStepOf = (ordered: readonly Checkpoint[], index: number): RevisedStep | undefined => {
@@ -277,7 +278,7 @@ function Counting(props: { readonly weighing: Weighing; readonly ordered: readon
       <RoleCounter
         countables={countables().filter((tappable) => tappable.kind !== "sign")}
         counts={countsNowOf(props.ordered)}
-        outOf={countedOutOf(props.weighing.formula.normalized, countsNowOf(props.ordered), countedGamesOf(props.ordered))}
+        outOf={countedOutOf(props.weighing.formula.normalized, { ...countsNowOf(props.ordered), ...mirroredCountsOf(props.weighing.formula.normalized, props.ordered) }, countedGamesOf(props.ordered))}
         inert={inert}
         onCount={count}
       />

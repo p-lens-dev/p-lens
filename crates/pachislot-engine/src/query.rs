@@ -88,6 +88,7 @@ fn check_entities(spec: &Spec) -> Result<(), SpecError> {
         .chain(keyed(&components.trials, Component::Trials))
         .chain(keyed(&components.cue, Component::Cue))
         .chain(listed(&components.moment, Component::Moment))
+        .chain(keyed(&components.mirror, Component::Mirror))
         .chain(keyed(&components.sign, Component::Sign))
         .chain(keyed(
             &components.since_at_ceiling,
@@ -302,6 +303,9 @@ fn at(spec: &Spec, entity: &EntityId) -> Result<At, SpecError> {
 /// counts of it a CZ or a side bonus.
 fn misplaced(spec: &Spec, entity: &EntityId, kinds: &[Component]) -> Option<Component> {
     let components = &spec.components;
+    if !kinds.contains(&Component::Moment) && components.mirror.contains_key(entity) {
+        return Some(Component::Moment);
+    }
     let at = kinds.contains(&Component::At);
     let mode = kinds.contains(&Component::Mode);
     let cz = kinds.contains(&Component::Cz);
@@ -621,6 +625,7 @@ fn element_of(spec: &Spec, entity: &EntityId) -> Result<Option<Element>, SpecErr
             Some(Element::Moment(Moment {
                 id: entity.clone(),
                 label: label_of(spec, entity),
+                mirror: components.mirror.get(entity).copied(),
             }))
         }),
         [Component::Sign] => sign(spec, entity).map(|sign| Some(Element::Sign(sign))),

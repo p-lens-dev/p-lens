@@ -94,11 +94,14 @@ describe("ranking formulas", () => {
     expect(order(["2026-06-11", "2026-06-22"])).toEqual(["late", "early"])
   })
 
-  test("a fork of the machine's own gains an adoption's two points and one for each kind of detail it fills, five at most; a copy from another machine none", () => {
+  test("a fork gains an adoption's two points, its parent listed or hidden, and one for each kind of detail it fills over a parent listed, five at most; a copy derives from nothing and gains none", () => {
     const parent = listing("parent", { adoptions: 1, uses: 150 }, "2026-09-01T00:00:00.000Z")
     const fork = { ...listing("fork", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "fork", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "parent" } }
-    const stranger = { ...listing("copy", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "copy", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "elsewhere" } }
-    expect(ids(ranked([parent, stranger], sameWorth))).toEqual(["parent", "copy"])
+    const copy = listing("copy", {}, "2026-09-10T00:00:00.000Z")
+    const orphan = { ...listing("orphan", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "orphan", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "hidden" } }
+    const used = listing("used", { uses: 150 }, "2026-09-01T00:00:00.000Z")
+    expect(ids(ranked([used, copy], sameWorth))).toEqual(["used", "copy"])
+    expect(ids(ranked([used, orphan], sameWorth))).toEqual(["orphan", "used"])
     expect(ids(ranked([parent, fork], sameWorth))).toEqual(["parent", "fork"])
     const details: Readonly<Record<string, ReadonlySet<string>>> = { parent: new Set(["regularGame"]), fork: new Set(["regularGame", "allotment", "supportGain"]) }
     expect(ids(ranked([parent, fork], { ...sameWorth, details: (each) => details[each.id] ?? new Set() }))).toEqual(["fork", "parent"])

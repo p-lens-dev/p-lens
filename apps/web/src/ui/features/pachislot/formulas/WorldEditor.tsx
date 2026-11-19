@@ -55,6 +55,17 @@ const KINDS: readonly SelectOption[] = [
 
 const isKind = (value: string): value is EntityKindName => KINDS.some((kind) => kind.value === value)
 
+/** What a moment may be counted as, beside by hand: an event of an AT machine's play record. */
+const MIRRORS: readonly SelectOption[] = [
+  { value: "", label: "なし（手で数える）" },
+  { value: "cz-missed", label: "CZ失敗" },
+  { value: "bonus-missed", label: "ATなしボーナス" },
+  { value: "at-won", label: "AT当選" },
+  { value: "trigger", label: "CZ・ボーナス・AT（どれでも）" },
+]
+
+const isMirror = (value: string): value is EntityRow["mirror"] => MIRRORS.some((mirror) => mirror.value === value)
+
 const replaced = <T,>(items: readonly T[], index: number, item: T): readonly T[] => items.map((existing, at) => (at === index ? item : existing))
 
 const LABEL = "text-xs font-bold uppercase tracking-wide text-text-secondary"
@@ -572,6 +583,18 @@ function RowEditor(props: {
         </p>
       </Show>
       <Show when={props.row.kind === "moment"}>
+        <div class="w-56">
+          <Select
+            label="記録との連動"
+            placeholder="なし"
+            options={MIRRORS}
+            value={props.row.mirror}
+            onChange={(mirror) => {
+              if (isMirror(mirror)) props.onChange({ ...props.row, mirror })
+            }}
+          />
+        </div>
+        <p class="text-xs text-text-muted">記録との連動を選ぶと、ライブ計測のCZ失敗・AT当選などの記録をそのまま数えます。小役カウンターにタイルは出ません。ATのある機種だけで選べます。</p>
         <p class="text-xs text-text-muted">
           AT中のCZ、CZ失敗、AT終了、ポイント到達など、通常ゲームの小役とは別に手で数える出来事です。それだけでは設定を見ませんが、示唆を見る場面の「1回」になります。AT中のCZの成功率なら、この出来事で見る場面を作り、「成功」を示唆として設定ごとの成功率を入れます。小役カウンターでは、AT中も数えられます。
         </p>

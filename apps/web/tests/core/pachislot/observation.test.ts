@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
-import { countedSegmentsOf, segmentsOf } from "../../../src/core/pachislot/observation"
+import { countedSegmentsOf, mirroredCountsOf, segmentsOf } from "../../../src/core/pachislot/observation"
 import { parsePlayLog, type Checkpoint } from "../../../src/core/play-log/checkpoint"
 
 const shownAs = (id: string): string | undefined => (id.startsWith("reg") ? "reg" : id === "big" ? "big" : undefined)
@@ -102,15 +102,32 @@ describe("an AT machine's log as what was counted", () => {
   test("is the play's regular games with what was counted in them, from its first game, once anything is counted", () => {
     const seat: Checkpoint = { spins: 0, outlay: 0, counter: { spins: 300 } }
     const counted = log(seat, { spins: 40, tally: { bell: 1 } }, { spins: 160, counter: { spins: 460 } }, { spins: 160, tally: { bell: 18 } })
-    expect(countedSegmentsOf(counted)).toEqual([{ games: 160, counts: [{ id: "bell", count: 18 }] }])
+    expect(countedSegmentsOf(counted, {})).toEqual([{ games: 160, counts: [{ id: "bell", count: 18 }] }])
   })
 
   test("in a log written while counting began with a press, is the regular games since that press, and nothing before", () => {
     const seat: Checkpoint = { spins: 0, outlay: 0, counter: { spins: 300 } }
-    expect(countedSegmentsOf(log(seat))).toEqual([])
-    expect(countedSegmentsOf(log(seat, { spins: 40, tally: {} }))).toEqual([])
+    expect(countedSegmentsOf(log(seat), {})).toEqual([])
+    expect(countedSegmentsOf(log(seat, { spins: 40, tally: {} }), {})).toEqual([])
     const counted = log(seat, { spins: 40, tally: {} }, { spins: 40, tally: { bell: 1 } }, { spins: 160, counter: { spins: 460 } }, { spins: 160, tally: { bell: 18 } })
-    expect(countedSegmentsOf(counted)).toEqual([{ games: 120, counts: [{ id: "bell", count: 18 }] }])
+    expect(countedSegmentsOf(counted, {})).toEqual([{ games: 120, counts: [{ id: "bell", count: 18 }] }])
+  })
+
+  test("counts a moment mirroring the record's events as many as the log holds of them, beside what was counted by hand", () => {
+    const seat: Checkpoint = { spins: 0, outlay: 0, counter: { spins: 300 } }
+    const played = log(
+      seat,
+      { spins: 40, tally: { "item-won": 1 } },
+      { spins: 120, event: { kind: "cz-missed" } },
+      { spins: 200, event: { kind: "cz-missed" } },
+      { spins: 260, event: { kind: "jackpot" } },
+    )
+    const normalized = { schemaVersion: 3, bet: 3, tables: [], mirrors: { "cz-failed": "cz-missed", "cz-any": "trigger", "at-won": "at-won" } } as const
+    const mirrored = mirroredCountsOf(normalized, played)
+    expect(mirrored).toEqual({ "cz-failed": 2, "cz-any": 3, "at-won": 1 })
+    expect(countedSegmentsOf(played, mirrored)).toEqual([
+      { games: 260, counts: [{ id: "item-won", count: 1 }, { id: "cz-failed", count: 2 }, { id: "cz-any", count: 3 }, { id: "at-won", count: 1 }] },
+    ])
   })
 })
 

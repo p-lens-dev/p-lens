@@ -1,4 +1,4 @@
-import type { BySettingLevelDto, ConditionsDto, GateDto, MeterDto, OtherNetDto, SpecDto, PayoutRowDto, ProbabilityDto, RedrawDto } from "@p-lens/contracts/pachislot"
+import type { BySettingLevelDto, ConditionsDto, GateDto, MeterDto, MirrorDto, OtherNetDto, SpecDto, PayoutRowDto, ProbabilityDto, RedrawDto } from "@p-lens/contracts/pachislot"
 import { SPEC_VERSION } from "@p-lens/contracts/pachislot"
 
 import { Err, Ok, type Result } from "../../../../core/result/result"
@@ -44,6 +44,8 @@ export interface EntityRow {
   readonly trials: string
   /** A sign's setting levels it may be seen under, as ticked. */
   readonly seenUnder: readonly number[]
+  /** A moment's event of the play's record it mirrors, as chosen; empty where it is counted by hand. */
+  readonly mirror: MirrorDto | ""
   readonly payout: string
   /** Each setting level's chance as typed — `1/273.1`, `273.1`, `16%` — by the level. */
   readonly chances: Readonly<Record<string, string>>
@@ -225,6 +227,7 @@ const row = (key: string, label: string, kind: EntityKindName, payout = ""): Ent
   of: "",
   trials: "",
   seenUnder: [],
+  mirror: "",
   payout,
   chances: {},
   chanceKind: "combined",
@@ -568,6 +571,8 @@ interface ReadRow {
   readonly trials: number | undefined
   /** A sign's setting levels it may be seen under. */
   readonly seenUnder: readonly number[] | undefined
+  /** A moment's event of the play's record it mirrors, where it does. */
+  readonly mirror: MirrorDto | undefined
   /** A CZ that is a bonus: its 純増, where given. */
   readonly net: number | undefined
   /** A CZ's ceiling counted from the last AT, or a mode's own, where given. */
@@ -834,6 +839,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
     misses: misses.ok ? misses.value : undefined,
     trials: trials.ok ? trials.value : undefined,
     seenUnder: seenUnder.ok ? seenUnder.value : undefined,
+    mirror: entity.kind === "moment" && entity.mirror !== "" ? entity.mirror : undefined,
     net: net.ok ? net.value : undefined,
     sinceAtCeiling: sinceAtCeiling.ok ? sinceAtCeiling.value : undefined,
     resetSinceAtCeiling: resetSinceAtCeiling.ok ? resetSinceAtCeiling.value : undefined,
@@ -880,6 +886,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
   const cues = owned("cue")
   const trials = keyed((read) => read.trials)
   const signs = keyed((read) => read.seenUnder)
+  const mirrors = keyed((read) => read.mirror)
   const sinceAtCeilings = keyed((read) => read.sinceAtCeiling)
   const resetSinceAtCeilings = keyed((read) => read.resetSinceAtCeiling)
   const games = keyed((read) => read.games)
@@ -956,6 +963,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
       ...(Object.keys(trials).length > 0 ? { trials } : {}),
       ...(Object.keys(cues).length > 0 ? { cue: cues } : {}),
       ...(listed("moment").length > 0 ? { moment: listed("moment") } : {}),
+      ...(Object.keys(mirrors).length > 0 ? { mirror: mirrors } : {}),
       ...(Object.keys(signs).length > 0 ? { sign: signs } : {}),
       ...(Object.keys(sinceAtCeilings).length > 0 ? { sinceAtCeiling: sinceAtCeilings } : {}),
       ...(Object.keys(resetSinceAtCeilings).length > 0 ? { resetSinceAtCeiling: resetSinceAtCeilings } : {}),
@@ -1143,6 +1151,7 @@ export const worldFormOf = (spec: SpecDto): WorldForm => ({
     of: spec.components.partOf?.[entity] ?? spec.components.watch?.[entity] ?? spec.components.cue?.[entity] ?? "",
     trials: spec.components.trials?.[entity] === undefined ? "" : String(spec.components.trials[entity]),
     seenUnder: spec.components.sign?.[entity] ?? [],
+    mirror: spec.components.mirror?.[entity] ?? "",
     payout: spec.components.payout?.[entity] === undefined ? "" : String(spec.components.payout[entity]),
     chances: Object.fromEntries([
       ...(spec.components.chance?.[entity] ?? spec.components.firstHit?.[entity] ?? spec.components.direct?.[entity] ?? []).map((each) => [String(each.settingLevel), chanceText(each.value)]),

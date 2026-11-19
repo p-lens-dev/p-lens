@@ -172,6 +172,8 @@ export interface ComponentsDto {
   readonly cue?: Readonly<Record<string, string>>
   /** A moment: something a player counts by hand that is no regular game's outcome — a CZ inside the AT, a CZ missed, an AT's end — for watches to be over. It has no chance of its own and says nothing of the setting by itself. */
   readonly moment?: readonly string[]
+  /** On a moment of an AT machine: the event of the play's record it mirrors, counted there rather than by hand. */
+  readonly mirror?: Readonly<Record<string, MirrorDto>>
   /** A sign: the settings it may be seen under — 設定4以上濃厚 names 4, 5 and 6 — which, seen, rules out the rest. */
   readonly sign?: Readonly<Record<string, readonly number[]>>
 }
@@ -205,6 +207,9 @@ export interface TableDto {
   /** The signs that may be seen under this setting. */
   readonly signs?: readonly string[]
 }
+
+/** The event of an AT machine's play record a moment mirrors: a CZ missed, a bonus that missed the AT, an AT won, or any of them — the trigger drawn. */
+export type MirrorDto = "cz-missed" | "bonus-missed" | "at-won" | "trigger"
 
 /** One cue of a watch and its chance on a trial. */
 export interface CueDto {
@@ -316,8 +321,10 @@ export interface NormalizedSpecDto {
   readonly atRules?: AtRulesDto
   /** What a player watches over each of a bonus or a moment; each table then holds its cues. */
   readonly watches?: readonly WatchDto[]
-  /** What a player counts by hand for watches to be over. */
+  /** What a player counts for watches to be over. */
   readonly moments?: readonly string[]
+  /** The moments counted as the events of the play's record they mirror. */
+  readonly mirrors?: Readonly<Record<string, MirrorDto>>
   /** What rules settings out when seen; each table lists those it may be seen under. */
   readonly signs?: readonly string[]
 }
@@ -679,6 +686,7 @@ export type EngineErrorDto =
   | { readonly type: "cue-of-non-watch"; readonly entity: string; readonly of: string }
   | { readonly type: "cues-exceed-one"; readonly entity: string; readonly settingLevel: number; readonly sum: number }
   | { readonly type: "watch-partly-whole"; readonly entity: string }
+  | { readonly type: "mirror-without-at"; readonly entity: string }
   | { readonly type: "invalid-probability"; readonly at: string; readonly settingLevel: number; readonly problem: "not-finite" | "out-of-range" }
   | { readonly type: "probabilities-exceed-one"; readonly settingLevel: number; readonly sum: number }
   | { readonly type: "missing-payout"; readonly at: string }

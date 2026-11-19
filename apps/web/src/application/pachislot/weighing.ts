@@ -8,7 +8,7 @@ import type {
   WeightDto,
 } from "@p-lens/contracts/pachislot"
 
-import { countedSegmentsOf, segmentsOf } from "../../core/pachislot/observation"
+import { countedSegmentsOf, mirroredCountsOf, segmentsOf } from "../../core/pachislot/observation"
 import { pathOf, standingOf } from "../../core/pachislot/path"
 import { priorFor } from "../../core/pachislot/prior"
 import { counterBonusOf, GAMES_PER_HOUR, huntPlayOf, playOf, settingLevelsOf, type Weighing } from "../../core/pachislot/weighing"
@@ -74,7 +74,7 @@ interface Observed {
 const observedOf = (weighing: Weighing, ordered: readonly Checkpoint[], played: number): Outcome<Observed> => {
   if (weighing.formula.normalized.atRules !== undefined) {
     const path = pathOf(ordered) ?? { start: { sinceTrigger: 0, sinceAt: 0, misses: 0, afterReset: false }, legs: [] }
-    const counted = countedSegmentsOf(ordered)
+    const counted = countedSegmentsOf(ordered, mirroredCountsOf(weighing.formula.normalized, ordered))
     const walked = path.legs.length > 0 || Object.values(path.start).some((said) => said !== undefined && said !== 0 && said !== false)
     return Ok({ seen: walked || counted.length > 0, segments: counted, path, played: { type: "path", path } })
   }
