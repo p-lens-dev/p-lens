@@ -162,15 +162,21 @@ pub struct ComponentsDto {
     /// ATs after which, on reaching the cap, play starts again as after a setting change.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reset_on_cap: Vec<String>,
-    /// A watch: what a player watches over each of a bonus, named by the bonus.
+    /// A watch: what a player watches over each of a bonus or a moment, named by it.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub watch: BTreeMap<String, String>,
-    /// The trials each of a watch's bonus gives it; one where left out.
+    /// The trials each of a watch's bonus or moment gives it; one where left out.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub trials: BTreeMap<String, u32>,
     /// A cue: one thing a watch may show on a trial, named by the watch.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub cue: BTreeMap<String, String>,
+    /// A moment: something counted by hand, no regular game's outcome, for watches to be over.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub moment: Vec<String>,
+    /// A sign: the settings it may be seen under, which seeing it says the setting is among.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub sign: BTreeMap<String, Vec<i8>>,
     /// On a CZ: the regular game since the last AT on which it comes at the
     /// latest, once. On a mode, the same for play in it, in place of the CZ's.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -342,6 +348,9 @@ pub struct TableDto {
     pub at: Option<AtTableDto>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cues: Vec<CueDto>,
+    /// The signs that may be seen under this setting.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signs: Vec<String>,
 }
 
 /// One cue of a watch and its chance on a trial.
@@ -353,13 +362,17 @@ pub struct CueDto {
     pub chance: f64,
 }
 
-/// A watch: the bonus it is watched over, the trials each of it gives, and
-/// whether a trial shows one of its cues certainly.
+/// A watch: the bonus or the moment it is watched over — one of them —
+/// the trials each of it gives, and whether a trial shows one of its cues
+/// certainly.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WatchDto {
     pub id: String,
-    pub bonus: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bonus: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moment: Option<String>,
     pub trials: u32,
     pub whole: bool,
 }
@@ -515,6 +528,10 @@ pub struct NormalizedSpecDto {
     pub at_rules: Option<AtRulesDto>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub watches: Vec<WatchDto>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub moments: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub signs: Vec<String>,
 }
 
 /// An AT machine's regular games: its ベース, its AT and what it pays, the
@@ -1213,7 +1230,7 @@ pub enum ErrorDto {
         entity: String,
         of: String,
     },
-    WatchOfNonBonus {
+    WatchOfNeither {
         entity: String,
         of: String,
     },

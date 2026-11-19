@@ -1,4 +1,4 @@
-import type { AtRulesDto, NormalizedSpecDto, PlayDto } from "@p-lens/contracts/pachislot"
+import type { AtRulesDto, NormalizedSpecDto, PlayDto, WatchDto } from "@p-lens/contracts/pachislot"
 
 import { tokenValueOf, type PlayTerms } from "../parlor/terms"
 import type { Checkpoint, Counts } from "../play-log/checkpoint"
@@ -14,11 +14,26 @@ export interface Weighing {
   readonly prior: Prior
 }
 
-/** Something a player can count at the cabinet: a small win, a replay, a bonus or a part of one, or a cue watched for over a bonus, by its id and label. */
+/** Something a player can count at the cabinet: a small win, a replay, a bonus or a part of one, a moment, a sign, or a cue watched for, by its id and label. */
 export interface Countable {
   readonly id: string
   readonly label: string
 }
+
+/**
+ * What a tile counts: what a regular game comes up with; a moment or a
+ * sign, counted beside the games; or a cue, watched for over a bonus or
+ * over a moment.
+ */
+export type TappableKind = "game" | "moment" | "sign" | "cue-of-bonus" | "cue-of-moment"
+
+/** A countable on the counter, with what it is. */
+export interface Tappable extends Countable {
+  readonly kind: TappableKind
+}
+
+/** Whether a tile counts something beside the games, which an AT's games do not stop being counted. */
+export const besideGames = (kind: TappableKind): boolean => kind !== "game"
 
 /** Regular games an hour at a steady pace, which 期待値/時 is worked out at. */
 export const GAMES_PER_HOUR = 700
@@ -38,34 +53,51 @@ export const counterBonusOf =
 
 const cuesOf = (normalized: NormalizedSpecDto) => normalized.tables.at(0)?.cues ?? []
 
+const watchOf = (normalized: NormalizedSpecDto, cue: string) => {
+  const watch = cuesOf(normalized).find((each) => each.id === cue)?.watch
+  return normalized.watches?.find((each) => each.id === watch)
+}
+
+/** What a watch is over: its bonus or its moment. */
+const overOf = (watch: WatchDto): string => watch.bonus ?? watch.moment ?? ""
+
 /**
  * Everything a player can count, in the spec's order: what a game can come
- * to — a bonus told apart by its parts counted part by part — then the cues
- * watched for over a bonus.
+ * to — a bonus told apart by its parts counted part by part — then the
+ * moments, the cues watched for over a bonus or a moment, and the signs.
  */
-export const countablesOf = (formula: FormulaSnapshot): readonly Countable[] =>
-  [...eventsOf(formula.normalized), ...cuesOf(formula.normalized)].map((each) => ({ id: each.id, label: formula.labels[each.id] || each.id }))
+export const countablesOf = (formula: FormulaSnapshot): readonly Tappable[] => {
+  const normalized = formula.normalized
+  const labelled = (id: string, kind: TappableKind): Tappable => ({ id, label: formula.labels[id] || id, kind })
+  return [
+    ...eventsOf(normalized).map((each) => labelled(each.id, "game")),
+    ...(normalized.moments ?? []).map((id) => labelled(id, "moment")),
+    ...cuesOf(normalized).map((each) => labelled(each.id, watchOf(normalized, each.id)?.moment === undefined ? "cue-of-bonus" : "cue-of-moment")),
+    ...(normalized.signs ?? []).map((id) => labelled(id, "sign")),
+  ]
+}
 
-/** How many of a bonus are counted: the bonus itself, or each of its parts. */
-const bonusesCounted = (normalized: NormalizedSpecDto, counts: Counts, bonus: string): number =>
+/** How many of what a watch is over are counted: a moment itself, a bonus itself, or each of its parts. */
+const countedOver = (normalized: NormalizedSpecDto, counts: Counts, over: string): number =>
+  (counts[over] ?? 0) +
   eventsOf(normalized)
-    .filter((event) => event.id === bonus || event.group === bonus)
+    .filter((event) => event.id !== over && event.group === over)
     .reduce((sum, event) => sum + (counts[event.id] ?? 0), 0)
 
 /**
  * What a count is out of, for saying how often it came up: the games
- * counted, for what a game comes to; for a cue, the trials watched — each
- * of its bonus counted times the trials one gives, or, where a trial shows
- * one of its watch's cues certainly, the cues of the watch counted.
+ * counted, for what a game comes to, a moment and a sign; for a cue, the
+ * trials watched — each of its bonus or moment counted times the trials one
+ * gives, or, where a trial shows one of its watch's cues certainly, the cues
+ * of the watch counted.
  */
 export const countedOutOf =
   (normalized: NormalizedSpecDto, counts: Counts, games: number) =>
   (id: string): number => {
-    const cue = cuesOf(normalized).find((each) => each.id === id)
-    const watch = normalized.watches?.find((each) => each.id === cue?.watch)
-    if (cue === undefined || watch === undefined) return games
+    const watch = watchOf(normalized, id)
+    if (watch === undefined) return games
     if (watch.whole) return cuesOf(normalized).filter((each) => each.watch === watch.id).reduce((sum, each) => sum + (counts[each.id] ?? 0), 0)
-    return bonusesCounted(normalized, counts, watch.bonus) * watch.trials
+    return countedOver(normalized, counts, overOf(watch)) * watch.trials
   }
 
 /** The bonuses a data counter shows, as the formula names them. */

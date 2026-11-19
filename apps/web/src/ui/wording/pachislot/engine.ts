@@ -36,9 +36,11 @@ const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   rate: "機械割",
   window: "引き戻しのゲーム数",
   resetOnCap: "完走後のリセット",
-  watch: "ボーナス中に見る場面",
-  trials: "ボーナス1回の回数",
+  watch: "示唆を見る場面",
+  trials: "1回あたりの回数",
   cue: "示唆",
+  moment: "手で数える出来事",
+  sign: "確定演出",
   sinceAtCeiling: "ATから数える天井",
   resetSinceAtCeiling: "リセット後のATから数える天井",
   direct: "直撃AT",
@@ -99,10 +101,10 @@ const describeEngineError = (error: EngineErrorDto): string => {
       return `${componentName(error.component)}が、ない「${error.entity}」に付いています。`
     case "part-of-non-bonus":
       return `「${error.entity}」は「${error.of}」の内訳になっていますが、「${error.of}」はボーナスではありません。`
-    case "watch-of-non-bonus":
-      return `「${error.entity}」は「${error.of}」の中で見る場面になっていますが、「${error.of}」はボーナスではありません。`
+    case "watch-of-neither":
+      return `「${error.entity}」は「${error.of}」で見る場面になっていますが、「${error.of}」はボーナスでも手で数える出来事でもありません。`
     case "cue-of-non-watch":
-      return `「${error.entity}」は「${error.of}」の示唆になっていますが、「${error.of}」はボーナス中に見る場面ではありません。`
+      return `「${error.entity}」は「${error.of}」の示唆になっていますが、「${error.of}」は示唆を見る場面ではありません。`
     case "cues-exceed-one":
       return `「${error.entity}」の${settingLevel(error.settingLevel)}の示唆を全部足すと ${(error.sum * 100).toFixed(2)}% になり、100% を超えています。`
     case "watch-partly-whole":

@@ -62,6 +62,9 @@ export const averageSettingLevelText = (settingLevel: number): string => `設定
 /** How often something came up so far, as a counter shows it: `1/5.9`, or `1/--` before it has. */
 export const observedOneInText = (games: number, count: number): string => (count > 0 && games > 0 ? `1/${(games / count).toFixed(games / count < 10 ? 2 : 1)}` : "1/--")
 
+/** How large a share of the trials a count came to — a cue over a moment, 7 of 10 as 70.0% — or dashes while none was watched. */
+export const observedShareText = (trials: number, count: number): string => (trials > 0 ? `${((count / trials) * 100).toFixed(1)}%` : "--%")
+
 /** What an even prior is called wherever a 設定配分 would be named. */
 export const EVEN_PRIOR_NAME = "均等（全設定が同じ）"
 

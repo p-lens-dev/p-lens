@@ -62,22 +62,29 @@ fn overlap(spec: &NormalizedSpec, left: &EntityId, right: &EntityId) -> bool {
         })
 }
 
-/// Whether an id is a watch's cue, which no regular game comes up with.
-fn is_cue(table: &SettingLevelTable, id: &EntityId) -> bool {
-    table.cues.iter().any(|cue| cue.id == *id)
+/// Whether an id is counted by hand beside the games — a watch's cue, a
+/// moment or a sign — which no regular game comes up with.
+fn is_beside_games(spec: &NormalizedSpec, id: &EntityId) -> bool {
+    spec.moments.contains(id)
+        || spec.signs.contains(id)
+        || spec
+            .tables
+            .iter()
+            .any(|table| table.cues.iter().any(|cue| cue.id == *id))
 }
 
-/// How many of a bonus a stretch counted: the bonus itself, or its parts.
-fn bonuses_counted(table: &SettingLevelTable, segment: &Segment, bonus: &EntityId) -> u64 {
+/// How many of what a watch is over a stretch counted: a moment itself, a
+/// bonus itself, or its parts.
+fn counted_over(table: &SettingLevelTable, segment: &Segment, over: &EntityId) -> u64 {
     segment
         .counts
         .iter()
         .filter(|(id, _)| {
-            id == bonus
+            id == over
                 || table
                     .events
                     .iter()
-                    .any(|event| event.id == *id && event.group.as_ref() == Some(bonus))
+                    .any(|event| event.id == *id && event.group.as_ref() == Some(over))
         })
         .map(|(_, count)| u64::from(*count))
         .sum()
@@ -106,9 +113,9 @@ fn cues_counted(
 }
 
 /// The trials a stretch watched of a watch whose cues are not certain:
-/// every trial of each of its bonus counted.
+/// every trial of each of its bonus or moment counted.
 fn trials_watched(table: &SettingLevelTable, segment: &Segment, watch: &WatchRule) -> u64 {
-    bonuses_counted(table, segment, &watch.bonus) * u64::from(watch.trials.get())
+    counted_over(table, segment, watch.over.entity()) * u64::from(watch.trials.get())
 }
 
 fn check_cues(
@@ -145,7 +152,8 @@ fn check_segment(
     let known = |id: &EntityId| {
         spec.tables
             .iter()
-            .any(|table| is_cue(table, id) || table.events.iter().any(|event| event.answers_to(id)))
+            .any(|table| table.events.iter().any(|event| event.answers_to(id)))
+            || is_beside_games(spec, id)
     };
     if let Some((id, _)) = segment.counts.iter().find(|(id, _)| !known(id)) {
         return Err(InferenceError::UnknownCount {
@@ -173,7 +181,7 @@ fn check_segment(
     let counted: u64 = segment
         .counts
         .iter()
-        .filter(|(id, _)| !spec.tables.iter().any(|table| is_cue(table, id)))
+        .filter(|(id, _)| !is_beside_games(spec, id))
         .map(|(_, count)| u64::from(*count))
         .sum();
     if counted > u64::from(segment.games) {
@@ -223,21 +231,39 @@ fn watch_log_likelihood(table: &SettingLevelTable, segment: &Segment, watch: &Wa
     }
 }
 
+/// The log-likelihood of the signs a stretch counted under one setting's
+/// table: nothing where each may be seen under it, and none at all where
+/// one may not.
+fn sign_log_likelihood(spec: &NormalizedSpec, table: &SettingLevelTable, segment: &Segment) -> f64 {
+    let ruled_out = segment
+        .counts
+        .iter()
+        .any(|(id, count)| *count > 0 && spec.signs.contains(id) && !table.signs.contains(id));
+    if ruled_out { f64::NEG_INFINITY } else { 0.0 }
+}
+
 /// The multinomial log-likelihood of one stretch under one setting's table,
 /// without the coefficient, which is the same for every setting. The games
 /// that came up with nothing counted share what probability is left; each
-/// watch the stretch watched adds its own.
-fn log_likelihood(watches: &[WatchRule], table: &SettingLevelTable, segment: &Segment) -> f64 {
-    regular_log_likelihood(table, segment)
-        + watches
+/// watch the stretch watched adds its own, and each sign it saw rules out
+/// the settings it may not be seen under.
+fn log_likelihood(spec: &NormalizedSpec, table: &SettingLevelTable, segment: &Segment) -> f64 {
+    regular_log_likelihood(spec, table, segment)
+        + spec
+            .watches
             .iter()
             .map(|watch| watch_log_likelihood(table, segment, watch))
             .sum::<f64>()
+        + sign_log_likelihood(spec, table, segment)
 }
 
 /// The regular games' part of a stretch's log-likelihood: every count but
-/// a watch's cues.
-fn regular_log_likelihood(table: &SettingLevelTable, segment: &Segment) -> f64 {
+/// what is counted beside the games.
+fn regular_log_likelihood(
+    spec: &NormalizedSpec,
+    table: &SettingLevelTable,
+    segment: &Segment,
+) -> f64 {
     let chance = |id: &EntityId| -> f64 {
         table
             .events
@@ -249,7 +275,7 @@ fn regular_log_likelihood(table: &SettingLevelTable, segment: &Segment) -> f64 {
     let (counted, covered, log) = segment
         .counts
         .iter()
-        .filter(|(id, _)| !is_cue(table, id))
+        .filter(|(id, _)| !is_beside_games(spec, id))
         .fold((0_u64, 0.0, 0.0), |(counted, covered, log), (id, count)| {
             let probability = chance(id);
             (
@@ -316,7 +342,7 @@ pub fn posterior(
     weighed(spec, prior, |table| {
         segments
             .iter()
-            .map(|segment| log_likelihood(&spec.watches, table, segment))
+            .map(|segment| log_likelihood(spec, table, segment))
             .sum::<f64>()
             + path_log_likelihood(table, spec.at_rules.as_ref(), path)
     })

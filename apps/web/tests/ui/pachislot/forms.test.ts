@@ -71,7 +71,7 @@ describe("the 解析値 form", () => {
     const form = {
       settingLevels: [1, 6],
       bet: "3",
-      rows: [{ key: "big", label: "BIG", kind: "bonus" as const, of: "", trials: "", payout: "２５２", chances: { "1": "1/273.1", "6": "２５５" }, chanceKind: "combined" as const, ceiling: "", resetCeiling: "", atCeiling: "", resetAllotment: {}, success: {}, misses: "", net: "", unitCeiling: "", resetUnitCeiling: "", atUnitCeiling: "", trigger: "cz" as const, bonusShares: {}, bonusMiss: "counted" as const, forcedCz: "drawn" as const, ceilingAt: "outright" as const, ceilingPayout: "", ceilingAcrossBonuses: "", gates: [], redraw: {}, ceilingRedraw: {}, triggerChances: {}, directBonuses: {}, expiryGames: "", expiryTo: "", sinceAtCeiling: "", resetSinceAtCeiling: "", games: "", meterFull: "", meterGains: [], endings: [], endingAllotment: {}, law: EMPTY_LAW }],
+      rows: [{ key: "big", label: "BIG", kind: "bonus" as const, of: "", trials: "", seenUnder: [], payout: "２５２", chances: { "1": "1/273.1", "6": "２５５" }, chanceKind: "combined" as const, ceiling: "", resetCeiling: "", atCeiling: "", resetAllotment: {}, success: {}, misses: "", net: "", unitCeiling: "", resetUnitCeiling: "", atUnitCeiling: "", trigger: "cz" as const, bonusShares: {}, bonusMiss: "counted" as const, forcedCz: "drawn" as const, ceilingAt: "outright" as const, ceilingPayout: "", ceilingAcrossBonuses: "", gates: [], redraw: {}, ceilingRedraw: {}, triggerChances: {}, directBonuses: {}, expiryGames: "", expiryTo: "", sinceAtCeiling: "", resetSinceAtCeiling: "", games: "", meterFull: "", meterGains: [], endings: [], endingAllotment: {}, law: EMPTY_LAW }],
       base: "",
       bases: {},
       lcdRate: "",
@@ -686,6 +686,36 @@ describe("an AT machine typed in by hand", () => {
     expect(form.world.rows.find((row) => row.key === "m2")?.misses).toBe("2")
     expect(readManualForm(form)).toEqual({ ok: true, value: { spec: drawn, conditions: measured } })
     expect(resetCeiling?.["cz"]).toBe(300)
+  })
+
+  test("an AT machine's moment, a watch over it, its cue and a sign read back the same, and a sign needs a setting level", () => {
+    const madeUp = czSpec as SpecDto
+    const counted: SpecDto = {
+      ...madeUp,
+      entities: [...madeUp.entities, "cz-in-at", "cz-in-at-outcome", "cz-in-at-won", "six-sign"],
+      components: {
+        ...madeUp.components,
+        label: { ...madeUp.components.label, "cz-in-at": "AT中CZ", "cz-in-at-outcome": "AT中CZの結果", "cz-in-at-won": "AT中CZ成功", "six-sign": "設定6濃厚" },
+        chance: {
+          ...madeUp.components.chance,
+          "cz-in-at-won": [
+            { settingLevel: 1, value: { type: "percent", basisPoints: 5_000 } },
+            { settingLevel: 6, value: { type: "percent", basisPoints: 6_000 } },
+          ],
+        },
+        moment: ["cz-in-at"],
+        watch: { "cz-in-at-outcome": "cz-in-at" },
+        cue: { "cz-in-at-won": "cz-in-at-outcome" },
+        sign: { "six-sign": [6] },
+      },
+    }
+    const form = manualFormOf(counted, measured)
+    expect(form.world.rows.filter((row) => ["moment", "watch", "cue", "sign"].includes(row.kind)).map((row) => row.kind)).toEqual(["moment", "watch", "cue", "sign"])
+    expect(readManualForm(form)).toEqual({ ok: true, value: { spec: counted, conditions: measured } })
+    const unticked = readManualForm({ ...form, world: { ...form.world, rows: form.world.rows.map((row) => (row.kind === "sign" ? { ...row, seenUnder: [] } : row)) } })
+    expect(!unticked.ok && unticked.error).toContainEqual({ field: "設定6濃厚 出る設定", reason: "required" })
+    const astray = readManualForm({ ...form, world: { ...form.world, rows: form.world.rows.map((row) => (row.kind === "watch" ? { ...row, of: "cz" } : row)) } })
+    expect(!astray.ok && astray.error).toContainEqual({ field: "AT中CZの結果 どのボーナス・出来事で見るか", reason: "required" })
   })
 
   test("an AT machine's small win is its chance alone, to be counted, and reads back the same", () => {

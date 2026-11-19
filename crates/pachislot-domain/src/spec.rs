@@ -341,17 +341,25 @@ pub struct Components {
     /// included — rather than regular games alone. Given on any, the
     /// ceilings in games come that much sooner in regular games.
     pub games: BTreeMap<EntityId, NonZeroU32>,
-    /// A watch: what a player watches over each of a bonus, named by the
-    /// bonus — the BIG's games for a スイカ, the REG's side lamp — and never
-    /// a regular game's.
+    /// A watch: what a player watches over each of a bonus or a moment,
+    /// named by it — the BIG's games for a スイカ, the REG's side lamp, the
+    /// screen at each AT's end — and never a regular game's.
     pub watch: BTreeMap<EntityId, EntityId>,
-    /// The trials each of a watch's bonus gives it — a BIG's games for a
-    /// スイカ in them — one where it is left out.
+    /// The trials each of a watch's bonus or moment gives it — a BIG's games
+    /// for a スイカ in them — one where it is left out.
     pub trials: BTreeMap<EntityId, NonZeroU32>,
     /// A cue: one thing a watch may show on a trial — a スイカ, a lamp's
     /// colour — named by the watch. Its chance is a trial's, under each
     /// setting, and a watch's cues are never shown on the same trial.
     pub cue: BTreeMap<EntityId, EntityId>,
+    /// A moment: something a player counts by hand that is no regular
+    /// game's outcome — a CZ inside the AT, a CZ missed, an AT's end, a
+    /// meter run down — for watches to be over. It has no chance of its
+    /// own, and says nothing of the setting by itself.
+    pub moment: BTreeSet<EntityId>,
+    /// A sign: something that, seen, says the setting is among those it
+    /// names — 設定4以上濃厚, 偶数濃厚 — and nothing of how often it comes.
+    pub sign: BTreeMap<EntityId, BTreeSet<SettingLevel>>,
 }
 
 /// An AT paid in sets: so many medals for its first, and so many for each
@@ -401,6 +409,8 @@ pub enum Component {
     Watch,
     Trials,
     Cue,
+    Moment,
+    Sign,
     SinceAtCeiling,
     Direct,
     DirectBonus,
@@ -482,6 +492,8 @@ pub enum Element {
     Mode(Mode),
     Cz(Cz),
     Watch(Watch),
+    Moment(Moment),
+    Sign(Sign),
     Ending(Ending),
     SideBonus(SideBonus),
 }
@@ -532,18 +544,50 @@ pub struct Ending {
     pub share: PerSettingLevel<BasisPoints>,
 }
 
-/// A watch: what a player watches over each of a bonus — its games, or a
-/// lamp once — so many trials a bonus, and the cues a trial may show. A
-/// trial shows one cue at most; where under every setting it shows one
-/// certainly, a trial with none counted was not watched, and otherwise it
-/// showed none.
+/// A watch: what a player watches over each of a bonus or a moment — a
+/// bonus's games, a lamp once, the screen an AT ends on — so many trials
+/// each, and the cues a trial may show. A trial shows one cue at most;
+/// where under every setting it shows one certainly, a trial with none
+/// counted was not watched, and otherwise it showed none.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Watch {
     pub id: EntityId,
     pub label: String,
-    pub bonus: EntityId,
+    pub over: Over,
     pub trials: NonZeroU32,
     pub cues: Vec<Cue>,
+}
+
+/// What a watch is over: each of a bonus, or each of a moment counted.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Over {
+    Bonus(EntityId),
+    Moment(EntityId),
+}
+
+impl Over {
+    /// The bonus or the moment.
+    pub fn entity(&self) -> &EntityId {
+        match self {
+            Self::Bonus(entity) | Self::Moment(entity) => entity,
+        }
+    }
+}
+
+/// Something counted by hand for watches to be over, which by itself says
+/// nothing of the setting.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Moment {
+    pub id: EntityId,
+    pub label: String,
+}
+
+/// Something that, seen, says the setting is among those it names.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Sign {
+    pub id: EntityId,
+    pub label: String,
+    pub setting_levels: BTreeSet<SettingLevel>,
 }
 
 /// One thing a watch may show on a trial, and how often it does under each

@@ -1510,17 +1510,30 @@ only the primitives, the core and the application.
   `MissingComponent`, `ConflictingComponents`, `StrayComponent`,
   `PartOfNonBonus` — and a component table the engine does not know is
   refused by its name rather than misread.
-- **What is watched over a bonus is a watch and its cues.** A `watch` names
-  the bonus it is watched over — a BIG's games for a スイカ, a REG's side
-  lamp — `trials` the times each of the bonus gives it (one where left out),
-  and a `cue` one thing it may show on a trial, with its `chance` per trial.
-  None is a regular game's: cues never count towards the games played, and
-  sit beside a table's events as its `cues`. A stretch watched a watch where
-  it counts any of its cues, a cue counted none included. Where a trial shows
-  a cue certainly under every setting level (a lamp's colours), the cues
-  counted are weighed among themselves; otherwise every trial of the bonus
-  counted in the stretch is weighed, those with no cue as showing none, and
-  more cues than trials is `CuesExceedTrials`.
+- **What is watched over a bonus or a moment is a watch and its cues.** A
+  `moment` is something a player counts by hand that is no regular game's
+  outcome — a CZ inside the AT, a CZ missed, an AT's end, a meter run down —
+  with no chance of its own, saying nothing of the setting by itself; an AT
+  machine, which has no bonus beside its AT, watches over moments. A `watch`
+  names the bonus or the moment it is watched over — a BIG's games for a
+  スイカ, a REG's side lamp, the screen an AT ends on, a CZ inside the AT won
+  or not — `trials` the times each of it gives (one where left out), and a
+  `cue` one thing it may show on a trial, with its `chance` per trial. None
+  is a regular game's: moments and cues never count towards the games
+  played, the moments sit in the spec's `moments` and the cues beside a
+  table's events as its `cues`, and the counter counts them in an AT as out
+  of one. A stretch watched a watch where it counts any of its cues, a cue
+  counted none included. Where a trial shows a cue certainly under every
+  setting level (a lamp's colours), the cues counted are weighed among
+  themselves; otherwise every trial of the bonus or moment counted in the
+  stretch is weighed, those with no cue as showing none, and more cues than
+  trials is `CuesExceedTrials`. A watch over anything else is
+  `WatchOfNeither`.
+- **A sign rules setting levels out.** A `sign` — 設定4以上濃厚, 偶数濃厚 —
+  names the setting levels it may be seen under and nothing of how often:
+  each table lists the signs it may show (`signs`), and a stretch that counts
+  one gives the levels it is never seen under no likelihood at all. Like a
+  cue it is no regular game's.
 - **設定 is a setting level** — `SettingLevel`, `settingLevels` — in full
   everywhere: 6 is the highest and the best, and "settings" would read as the
   app's own. A machine lists the setting levels it has (`1, 2, 4, 5, 6` is

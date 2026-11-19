@@ -18,7 +18,7 @@ use pachislot_domain::probability::{BasisPoints, Denominator, Probability, Proba
 use pachislot_domain::setting_level::{PerSettingLevel, SettingLevel};
 use pachislot_domain::spec::{
     Base, CeilingUnit, Component, Components, EntityId, Gate as SpecGate, LcdRate, Medals, Meter,
-    MeterGain, OtherNet, PayoutRow, Redraw, Resources, Sets, Spec, SpecExpiry,
+    MeterGain, OtherNet, Over, PayoutRow, Redraw, Resources, Sets, Spec, SpecExpiry,
 };
 use pachislot_domain::version::{SchemaVersion, SpecVersion};
 use pachislot_engine::analysis::Analysis;
@@ -282,6 +282,14 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
             NonZeroU32::new(*count).ok_or_else(|| invalid(at))
         })?,
         cue: table(&dto.cue, "spec.components.cue", |of, at| id(of, at))?,
+        moment: listed(&dto.moment, "spec.components.moment")?,
+        sign: table(&dto.sign, "spec.components.sign", |levels, at| {
+            levels
+                .iter()
+                .enumerate()
+                .map(|(index, level)| setting_level(*level, &format!("{at}[{index}]")))
+                .collect()
+        })?,
         direct: table(&dto.direct, "spec.components.direct", |values, at| {
             probabilities(values, at)
         })?,
@@ -848,6 +856,7 @@ pub fn normalized_spec(dto: &NormalizedSpecDto) -> Result<NormalizedSpec, ErrorD
                         .enumerate()
                         .map(|(position, each)| cue(each, &format!("{at}.cues[{position}]")))
                         .collect::<Result<_, _>>()?,
+                    signs: ids(&table.signs, &format!("{at}.signs"))?,
                 })
             })
             .collect::<Result<_, _>>()?,
@@ -862,7 +871,17 @@ pub fn normalized_spec(dto: &NormalizedSpecDto) -> Result<NormalizedSpec, ErrorD
             .enumerate()
             .map(|(index, each)| watch_rule(each, &format!("normalized.watches[{index}]")))
             .collect::<Result<_, _>>()?,
+        moments: ids(&dto.moments, "normalized.moments")?,
+        signs: ids(&dto.signs, "normalized.signs")?,
     })
+}
+
+fn ids(names: &[String], field: &str) -> Result<Vec<EntityId>, ErrorDto> {
+    names
+        .iter()
+        .enumerate()
+        .map(|(index, name)| id(name, &format!("{field}[{index}]")))
+        .collect()
 }
 
 /// A stored spec whose tables each allot the modes after every ending its
@@ -897,7 +916,11 @@ fn cue(dto: &CueDto, field: &str) -> Result<CueChance, ErrorDto> {
 fn watch_rule(dto: &WatchDto, field: &str) -> Result<WatchRule, ErrorDto> {
     Ok(WatchRule {
         id: id(&dto.id, &format!("{field}.id"))?,
-        bonus: id(&dto.bonus, &format!("{field}.bonus"))?,
+        over: match (&dto.bonus, &dto.moment) {
+            (Some(bonus), None) => Over::Bonus(id(bonus, &format!("{field}.bonus"))?),
+            (None, Some(moment)) => Over::Moment(id(moment, &format!("{field}.moment"))?),
+            _ => return Err(invalid(&format!("{field}.bonus"))),
+        },
         trials: NonZeroU32::new(dto.trials).ok_or_else(|| invalid(&format!("{field}.trials")))?,
         whole: dto.whole,
     })
@@ -912,6 +935,20 @@ fn event_kind_dto(kind: EventKind) -> EventKindDto {
             payout: payout.map(Medals::get),
         },
         EventKind::Replay => EventKindDto::Replay,
+    }
+}
+
+fn watch_dto(watch: &WatchRule) -> WatchDto {
+    let (bonus, moment) = match &watch.over {
+        Over::Bonus(bonus) => (Some(named(bonus)), None),
+        Over::Moment(moment) => (None, Some(named(moment))),
+    };
+    WatchDto {
+        id: named(&watch.id),
+        bonus,
+        moment,
+        trials: watch.trials.get(),
+        whole: watch.whole,
     }
 }
 
@@ -944,18 +981,12 @@ pub fn normalized_dto(spec: &NormalizedSpec) -> NormalizedSpecDto {
                         chance: cue.chance.value(),
                     })
                     .collect(),
+                signs: table.signs.iter().map(named).collect(),
             })
             .collect(),
-        watches: spec
-            .watches
-            .iter()
-            .map(|watch| WatchDto {
-                id: named(&watch.id),
-                bonus: named(&watch.bonus),
-                trials: watch.trials.get(),
-                whole: watch.whole,
-            })
-            .collect(),
+        watches: spec.watches.iter().map(watch_dto).collect(),
+        moments: spec.moments.iter().map(named).collect(),
+        signs: spec.signs.iter().map(named).collect(),
         at_rules: spec.at_rules.as_ref().map(|rules| AtRulesDto {
             base: rules.base.games(),
             at: named(&rules.at),
@@ -1327,6 +1358,8 @@ fn component_name(component: Component) -> String {
         Component::Watch => "watch",
         Component::Trials => "trials",
         Component::Cue => "cue",
+        Component::Moment => "moment",
+        Component::Sign => "sign",
         Component::SinceAtCeiling => "sinceAtCeiling",
         Component::Direct => "direct",
         Component::DirectBonus => "directBonus",
@@ -1397,7 +1430,7 @@ pub fn spec_error_dto(error: &SpecError) -> ErrorDto {
             entity: named(entity),
             of: named(of),
         },
-        SpecError::WatchOfNonBonus { entity, of } => ErrorDto::WatchOfNonBonus {
+        SpecError::WatchOfNeither { entity, of } => ErrorDto::WatchOfNeither {
             entity: named(entity),
             of: named(of),
         },

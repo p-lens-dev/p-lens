@@ -20,15 +20,17 @@ export const ALL_SETTING_LEVELS: readonly number[] = [1, 2, 3, 4, 5, 6]
 export const OFFERED_SETTING_LEVELS: readonly number[] = [-1, 0, ...ALL_SETTING_LEVELS, 7, 8]
 
 /** What a row of the 解析値 is. */
-export type EntityKindName = "bonus" | "part" | "role" | "replay" | "at" | "cz" | "mode" | "watch" | "cue" | "side"
+export type EntityKindName = "bonus" | "part" | "role" | "replay" | "at" | "cz" | "mode" | "moment" | "watch" | "cue" | "sign" | "side"
 
 /**
  * One entity of the world as typed: a bonus, a part of one, a small win, a
  * replay, an AT or a CZ, with its chance under each setting level — an AT's
  * or a CZ's being its 初当たり as published, ceilings included; an AT a CZ
  * brings has none — a mode, whose `chances` are its 振り分け after an AT,
- * in percent, or what a player watches over each of a bonus — a watch, with
- * no chance of its own, and its cues, each with its chance on a trial. Its key is its entity's id, made once when the row is and kept
+ * in percent, something counted by hand — a moment, with no chance of its
+ * own — what a player watches over each of a bonus or a moment — a watch,
+ * with no chance of its own, and its cues, each with its chance on a trial
+ * — or a sign, with the setting levels it may be seen under. Its key is its entity's id, made once when the row is and kept
  * however it is relabelled, so the counts a play files under it stay where
  * they are.
  */
@@ -36,10 +38,12 @@ export interface EntityRow {
   readonly key: string
   readonly label: string
   readonly kind: EntityKindName
-  /** The key of the row it belongs to: a part's bonus or a watch's, a cue's watch. */
+  /** The key of the row it belongs to: a part's bonus, a watch's bonus or moment, a cue's watch. */
   readonly of: string
-  /** A watch's trials each of its bonus gives, as typed: a BIG's games for a スイカ; empty for one. */
+  /** A watch's trials each of its bonus or moment gives, as typed: a BIG's games for a スイカ; empty for one. */
   readonly trials: string
+  /** A sign's setting levels it may be seen under, as ticked. */
+  readonly seenUnder: readonly number[]
   readonly payout: string
   /** Each setting level's chance as typed — `1/273.1`, `273.1`, `16%` — by the level. */
   readonly chances: Readonly<Record<string, string>>
@@ -220,6 +224,7 @@ const row = (key: string, label: string, kind: EntityKindName, payout = ""): Ent
   kind,
   of: "",
   trials: "",
+  seenUnder: [],
   payout,
   chances: {},
   chanceKind: "combined",
@@ -561,6 +566,8 @@ interface ReadRow {
   readonly misses: number | undefined
   /** A watch's trials, where more than one. */
   readonly trials: number | undefined
+  /** A sign's setting levels it may be seen under. */
+  readonly seenUnder: readonly number[] | undefined
   /** A CZ that is a bonus: its 純増, where given. */
   readonly net: number | undefined
   /** A CZ's ceiling counted from the last AT, or a mode's own, where given. */
@@ -682,18 +689,24 @@ const readLaw = (form: WorldForm, entity: EntityRow, name: string): Result<ReadL
   })
 }
 
-/** What a row that belongs to another must name: a part and a watch a bonus, a cue a watch. */
-const OWNERS: Partial<Readonly<Record<EntityKindName, { readonly kind: EntityKindName; readonly field: string }>>> = {
-  part: { kind: "bonus", field: "どのボーナスの内訳か" },
-  watch: { kind: "bonus", field: "どのボーナスで見るか" },
-  cue: { kind: "watch", field: "どの場面の示唆か" },
+/** What a row that belongs to another must name: a part a bonus, a watch a bonus or a moment, a cue a watch. */
+const OWNERS: Partial<Readonly<Record<EntityKindName, { readonly kinds: readonly EntityKindName[]; readonly field: string }>>> = {
+  part: { kinds: ["bonus"], field: "どのボーナスの内訳か" },
+  watch: { kinds: ["bonus", "moment"], field: "どのボーナス・出来事で見るか" },
+  cue: { kinds: ["watch"], field: "どの場面の示唆か" },
 }
 
 /** The row a row belongs to, where it is one that belongs to another. */
 const ofRead = (form: WorldForm, entity: EntityRow, name: string): Read<string> => {
   const owner = OWNERS[entity.kind]
   if (owner === undefined) return Ok("")
-  return form.rows.some((other) => other.key === entity.of && other.kind === owner.kind) ? Ok(entity.of) : Err({ field: `${name} ${owner.field}`, reason: "required" })
+  return form.rows.some((other) => other.key === entity.of && owner.kinds.includes(other.kind)) ? Ok(entity.of) : Err({ field: `${name} ${owner.field}`, reason: "required" })
+}
+
+/** A sign's setting levels, those of the machine ticked, at least one. */
+const seenUnderOf = (form: WorldForm, entity: EntityRow, name: string): Read<readonly number[]> => {
+  const ticked = form.settingLevels.filter((level) => entity.seenUnder.includes(level)).toSorted((left, right) => left - right)
+  return ticked.length > 0 ? Ok(ticked) : Err({ field: `${name} 出る設定`, reason: "required" })
 }
 
 /** A watch's trials: empty for one, else a whole number above none; one is left out of the world. */
@@ -723,7 +736,9 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const brought = entity.kind === "at" && hasCz(form)
   const isWatch = entity.kind === "watch"
   const isSide = entity.kind === "side"
-  const hasChance = !isMode && !isWatch && !brought && !(entity.kind === "bonus" && splitBonuses(form).has(entity.key))
+  const isSign = entity.kind === "sign"
+  const besideGames = isWatch || isSign || entity.kind === "moment"
+  const hasChance = !isMode && !besideGames && !brought && !(entity.kind === "bonus" && splitBonuses(form).has(entity.key))
   const chances: readonly Read<BySettingLevelDto<ProbabilityDto>>[] = hasChance
     ? form.settingLevels.map((level) => {
         const read = chanceOf(entity.chances[String(level)] ?? "", `${name}${chanceWord(entity)} ${settingLevelText(level)}`)
@@ -773,7 +788,8 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const payout: Read<number | undefined> =
     rule === "none" || (rule === "optional" && tidyTyped(entity.payout) === "") ? Ok(undefined) : medalsOf(entity.payout, `${name} 枚数`)
   const of = ofRead(form, entity, name)
-  const trials = isWatch ? trialsOf(entity.trials, `${name} ボーナス1回の回数`) : Ok(undefined)
+  const trials = isWatch ? trialsOf(entity.trials, `${name} 1回あたりの回数`) : Ok(undefined)
+  const seenUnder = isSign ? seenUnderOf(form, entity, name) : Ok(undefined)
   const ceiling = entity.kind === "at" || isCz || isMode || isSide ? ceilingOf(entity.ceiling, `${name} ${brought ? "AT間天井" : "天井"}`) : Ok(undefined)
   const resetCeiling =
     (entity.kind === "at" && !hasModes(form)) || isCz ? ceilingOf(entity.resetCeiling, `${name} ${brought ? "リセット後のAT間天井" : "リセット後の天井"}`) : Ok(undefined)
@@ -790,7 +806,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
   const problems = [
     ...endings.flatMap((read) => (read.ok ? [] : read.error)),
     ...problemsOf(endingAllotment),
-    ...problemsOf([label, payout, of, trials, net, sinceAtCeiling, resetSinceAtCeiling, games, meter, ceilingAcrossBonuses, ceilingPayout, ...direct, ...directBonus, ceiling, resetCeiling, atCeiling, unitCeiling, resetUnitCeiling, atUnitCeiling, misses, ...chances, ...(allotment ?? []), ...(resetAllotment ?? []), ...success, ...bonusShare, ...gates, ...redraw, ...ceilingRedraw, ...triggerChance, expiry]),
+    ...problemsOf([label, payout, of, trials, seenUnder, net, sinceAtCeiling, resetSinceAtCeiling, games, meter, ceilingAcrossBonuses, ceilingPayout, ...direct, ...directBonus, ceiling, resetCeiling, atCeiling, unitCeiling, resetUnitCeiling, atUnitCeiling, misses, ...chances, ...(allotment ?? []), ...(resetAllotment ?? []), ...success, ...bonusShare, ...gates, ...redraw, ...ceilingRedraw, ...triggerChance, expiry]),
     ...(law.ok ? [] : law.error),
   ]
   if (problems.length > 0 || !law.ok) return Err(problems)
@@ -817,6 +833,7 @@ const readRow = (form: WorldForm, entity: EntityRow, payoutRule: (entity: Entity
     gates: gates.length > 0 ? valuesOf(gates) : undefined,
     misses: misses.ok ? misses.value : undefined,
     trials: trials.ok ? trials.value : undefined,
+    seenUnder: seenUnder.ok ? seenUnder.value : undefined,
     net: net.ok ? net.value : undefined,
     sinceAtCeiling: sinceAtCeiling.ok ? sinceAtCeiling.value : undefined,
     resetSinceAtCeiling: resetSinceAtCeiling.ok ? resetSinceAtCeiling.value : undefined,
@@ -862,6 +879,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
   const watches = owned("watch")
   const cues = owned("cue")
   const trials = keyed((read) => read.trials)
+  const signs = keyed((read) => read.seenUnder)
   const sinceAtCeilings = keyed((read) => read.sinceAtCeiling)
   const resetSinceAtCeilings = keyed((read) => read.resetSinceAtCeiling)
   const games = keyed((read) => read.games)
@@ -902,7 +920,7 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
     entities: rows.flatMap((read) => [read.entity.key, ...(read.endings ?? []).map((ending) => ending.key)]),
     components: {
       label: { ...keyed((read) => read.entity.label.trim()), ...Object.fromEntries(endings.map((ending) => [ending.key, ending.label])) },
-      ...(rows.some((read) => !published(read) && !isMode(read) && read.entity.kind !== "watch") ? { chance: keyed((read) => (published(read) ? undefined : read.chance)) } : {}),
+      ...(rows.some((read) => !published(read) && !isMode(read) && !["watch", "moment", "sign"].includes(read.entity.kind)) ? { chance: keyed((read) => (published(read) ? undefined : read.chance)) } : {}),
       ...(rows.some((read) => read.payout !== undefined) ? { payout: keyed((read) => read.payout) } : {}),
       ...(bonuses.length > 0 ? { bonus: bonuses } : {}),
       ...(listed("replay").length > 0 ? { replay: listed("replay") } : {}),
@@ -937,6 +955,8 @@ const worldOf = (form: WorldForm, bet: number, at: MachineResources | undefined,
       ...(Object.keys(watches).length > 0 ? { watch: watches } : {}),
       ...(Object.keys(trials).length > 0 ? { trials } : {}),
       ...(Object.keys(cues).length > 0 ? { cue: cues } : {}),
+      ...(listed("moment").length > 0 ? { moment: listed("moment") } : {}),
+      ...(Object.keys(signs).length > 0 ? { sign: signs } : {}),
       ...(Object.keys(sinceAtCeilings).length > 0 ? { sinceAtCeiling: sinceAtCeilings } : {}),
       ...(Object.keys(resetSinceAtCeilings).length > 0 ? { resetSinceAtCeiling: resetSinceAtCeilings } : {}),
       ...(Object.keys(games).length > 0 ? { games } : {}),
@@ -1026,6 +1046,8 @@ const kindOf = (spec: SpecDto, entity: string): EntityKindName => {
   if (components.replay?.includes(entity) === true) return "replay"
   if (components.watch?.[entity] !== undefined) return "watch"
   if (components.cue?.[entity] !== undefined) return "cue"
+  if (components.moment?.includes(entity) === true) return "moment"
+  if (components.sign?.[entity] !== undefined) return "sign"
   return components.partOf?.[entity] === undefined ? "role" : "part"
 }
 
@@ -1120,6 +1142,7 @@ export const worldFormOf = (spec: SpecDto): WorldForm => ({
     kind: kindOf(spec, entity),
     of: spec.components.partOf?.[entity] ?? spec.components.watch?.[entity] ?? spec.components.cue?.[entity] ?? "",
     trials: spec.components.trials?.[entity] === undefined ? "" : String(spec.components.trials[entity]),
+    seenUnder: spec.components.sign?.[entity] ?? [],
     payout: spec.components.payout?.[entity] === undefined ? "" : String(spec.components.payout[entity]),
     chances: Object.fromEntries([
       ...(spec.components.chance?.[entity] ?? spec.components.firstHit?.[entity] ?? spec.components.direct?.[entity] ?? []).map((each) => [String(each.settingLevel), chanceText(each.value)]),

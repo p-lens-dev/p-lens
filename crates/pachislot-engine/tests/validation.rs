@@ -234,7 +234,7 @@ fn a_watch_normalises_into_its_rule_and_each_settings_cues() {
         .map(|watch| {
             (
                 watch.id.as_str(),
-                watch.bonus.as_str(),
+                watch.over.entity().as_str(),
                 watch.trials.get(),
                 watch.whole,
             )
@@ -269,12 +269,12 @@ fn a_watch_normalises_into_its_rule_and_each_settings_cues() {
 }
 
 #[test]
-fn a_watch_is_over_a_bonus_and_has_a_cue() {
+fn a_watch_is_over_a_bonus_or_a_moment_and_has_a_cue() {
     let mut astray = watched_spec();
     astray.components.watch.insert(id("big-games"), id("grape"));
     assert_eq!(
         normalize(&astray),
-        Err(SpecError::WatchOfNonBonus {
+        Err(SpecError::WatchOfNeither {
             entity: id("big-games"),
             of: id("grape")
         })

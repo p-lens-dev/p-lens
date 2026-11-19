@@ -55,8 +55,8 @@ pub enum SpecError {
         entity: EntityId,
         of: EntityId,
     },
-    /// A watch over something that is not a bonus.
-    WatchOfNonBonus {
+    /// A watch over something that is neither a bonus nor a moment.
+    WatchOfNeither {
         entity: EntityId,
         of: EntityId,
     },

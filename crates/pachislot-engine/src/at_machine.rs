@@ -45,6 +45,8 @@ fn element_id(element: &Element) -> &EntityId {
         Element::Mode(mode) => &mode.id,
         Element::Cz(cz) => &cz.id,
         Element::Watch(watch) => &watch.id,
+        Element::Moment(moment) => &moment.id,
+        Element::Sign(sign) => &sign.id,
         Element::Ending(ending) => &ending.id,
         Element::SideBonus(side) => &side.id,
     }
@@ -697,6 +699,8 @@ pub(crate) fn at_machine<'a>(
         | Element::Role(_)
         | Element::Replay(_)
         | Element::Watch(_)
+        | Element::Moment(_)
+        | Element::Sign(_)
         | Element::Ending(_)
         | Element::SideBonus(_) => false,
         Element::Bonus(_) => true,

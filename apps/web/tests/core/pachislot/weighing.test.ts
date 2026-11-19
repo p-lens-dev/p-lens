@@ -231,3 +231,35 @@ describe("the cues watched for over a bonus", () => {
     expect(outOf("lamp-blue")).toBe(3)
   })
 })
+
+/** The made-up machine with a CZ inside the AT counted by hand, each won or not, and a sign seen under setting 6 alone. */
+const counted: NormalizedSpecDto = {
+  ...spec,
+  tables: spec.tables.map((table) => ({
+    ...table,
+    cues: [{ id: "cz-in-at-won", watch: "cz-in-at-outcome", chance: table.settingLevel === 1 ? 0.5 : 0.6 }],
+    ...(table.settingLevel === 6 ? { signs: ["six-sign"] } : {}),
+  })),
+  watches: [{ id: "cz-in-at-outcome", moment: "cz-in-at", trials: 1, whole: false }],
+  moments: ["cz-in-at"],
+  signs: ["six-sign"],
+}
+
+describe("moments and signs counted beside the games", () => {
+  test("are tiles after what a game comes to, each said for what it is", () => {
+    const countables = countablesOf({ ...formula, normalized: counted })
+    expect(countables.slice(-3).map((each) => [each.id, each.kind])).toEqual([
+      ["cz-in-at", "moment"],
+      ["cz-in-at-won", "cue-of-moment"],
+      ["six-sign", "sign"],
+    ])
+    expect(countables.at(0)?.kind).toBe("game")
+  })
+
+  test("a cue over a moment comes up out of the moments counted; a moment and a sign out of the games", () => {
+    const outOf = countedOutOf(counted, { "cz-in-at": 10, "cz-in-at-won": 7, "six-sign": 1 }, 900)
+    expect(outOf("cz-in-at-won")).toBe(10)
+    expect(outOf("cz-in-at")).toBe(900)
+    expect(outOf("six-sign")).toBe(900)
+  })
+})

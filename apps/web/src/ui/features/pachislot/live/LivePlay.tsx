@@ -17,7 +17,7 @@ import {
 } from "../../../../core/pachislot/reading"
 import { withStepsMerged, type Span } from "../../../../core/pachislot/merging"
 import { stepsOf, withStepRemoved, type RevisionRefusal } from "../../../../core/pachislot/revision"
-import { counterBonusesOf, counterBonusOf, countablesOf, countedOutOf, type Countable, type Weighing } from "../../../../core/pachislot/weighing"
+import { besideGames, counterBonusesOf, counterBonusOf, countablesOf, countedOutOf, type Countable, type Tappable, type Weighing } from "../../../../core/pachislot/weighing"
 import { parsePlayLog, type Checkpoint, type PlayLogError, type Counts } from "../../../../core/play-log/checkpoint"
 import { liveSummary } from "../../../../core/play-log/live"
 import { heldNowOf } from "../../../../core/play-log/held-now"
@@ -244,22 +244,26 @@ function ReadingComposer(props: { readonly bonuses: readonly Countable[]; readon
  * readings: a tile for everything the formula has, counted over the play
  * from its first game. A tap is kept at once; the next reading of the
  * counter says how many games the counting has covered. On an AT machine only regular
- * games are counted in, so a press while it is in an AT is passed over,
- * and that is said. A play another device holds is counted there: its
- * tiles show the counts, faint, and a press here does nothing.
+ * games are counted in, so a press of what a regular game comes up with
+ * while it is in an AT is passed over, and that is said; a moment, a sign
+ * or a cue is counted beside the games, in an AT as out of one — a CZ
+ * inside the AT is counted there. A play another device holds is counted
+ * there: its tiles show the counts, faint, and a press here does nothing.
  */
 function Counting(props: { readonly weighing: Weighing; readonly ordered: readonly Checkpoint[]; readonly hold: PlayHold; readonly write: Write; readonly post: Post }): JSX.Element {
   const app = useApp()
   const inAtNow = (): boolean => props.weighing.formula.normalized.atRules !== undefined && inAt(props.ordered)
-  const inert = (): boolean => inAtNow() || props.hold.type !== "held"
+  const countables = (): readonly Tappable[] => countablesOf(props.weighing.formula)
+  const inert = (tappable: Tappable): boolean => props.hold.type !== "held" || (inAtNow() && !besideGames(tappable.kind))
   const [failure, setFailure] = createSignal<ApplicationError | undefined>(undefined)
   const kept = (written: Written<never>): void => {
     setFailure(written.type === "failed" ? written.error : undefined)
   }
   props.post(() => ((error) => (error === undefined ? undefined : { tone: "failed", said: describeError(error) }))(failure()))
-  /** A tap, counted over the play from its first game. None while the tiles are inert. */
+  /** A tap, counted over the play from its first game. None while its tile is inert. */
   const count = (id: string, by: 1 | -1): void => {
-    if (inert()) return
+    const tapped = countables().find((each) => each.id === id)
+    if (tapped === undefined || inert(tapped)) return
     const at = app.services.now()
     void props.write((ordered) => Ok([countCheckpoint(ordered, id, by, at)])).then(kept)
   }
@@ -270,14 +274,14 @@ function Counting(props: { readonly weighing: Weighing; readonly ordered: readon
         <span class="ml-2 font-normal normal-case text-text-muted">長押しで1つ戻します</span>
       </h3>
       <RoleCounter
-        countables={countablesOf(props.weighing.formula)}
+        countables={countables()}
         counts={countsNowOf(props.ordered)}
         outOf={countedOutOf(props.weighing.formula.normalized, countsNowOf(props.ordered), countedGamesOf(props.ordered))}
-        inert={inert()}
+        inert={inert}
         onCount={count}
       />
       <Show when={inAtNow()}>
-        <p class="text-xs text-text-muted">AT中は数えません。ATのあとのゲーム数を記録すると、また数えられます。</p>
+        <p class="text-xs text-text-muted">AT中は小役を数えません。ATのあとのゲーム数を記録すると、また数えられます。出来事・示唆・確定演出はAT中も数えられます。</p>
       </Show>
     </section>
   )

@@ -8,8 +8,8 @@ use std::num::NonZeroU32;
 use pachislot_domain::probability::ProbabilitySource;
 use pachislot_domain::setting_level::PerSettingLevel;
 use pachislot_domain::spec::{
-    At, Bonus, Chance, Component, Cue, Cz, Element, Ending, EntityId, GivenChance, Mode, Part,
-    Replay, Role, SideBonus, Spec, Watch,
+    At, Bonus, Chance, Component, Cue, Cz, Element, Ending, EntityId, GivenChance, Mode, Moment,
+    Over, Part, Replay, Role, SideBonus, Sign, Spec, Watch,
 };
 
 use crate::error::SpecError;
@@ -87,6 +87,8 @@ fn check_entities(spec: &Spec) -> Result<(), SpecError> {
         .chain(keyed(&components.watch, Component::Watch))
         .chain(keyed(&components.trials, Component::Trials))
         .chain(keyed(&components.cue, Component::Cue))
+        .chain(listed(&components.moment, Component::Moment))
+        .chain(keyed(&components.sign, Component::Sign))
         .chain(keyed(
             &components.since_at_ceiling,
             Component::SinceAtCeiling,
@@ -162,6 +164,14 @@ fn kinds_of(spec: &Spec, entity: &EntityId) -> Vec<Component> {
             .side_bonus
             .contains(entity)
             .then_some(Component::SideBonus),
+        components
+            .moment
+            .contains(entity)
+            .then_some(Component::Moment),
+        components
+            .sign
+            .contains_key(entity)
+            .then_some(Component::Sign),
     ]
     .into_iter()
     .flatten()
@@ -510,22 +520,44 @@ fn cue(spec: &Spec, entity: &EntityId) -> Result<Cue, SpecError> {
     })
 }
 
-/// A watch: the bonus it is watched over, its trials, and its cues, at
-/// least one; no chance a regular game of its own, nor anything it pays.
-fn watch(spec: &Spec, entity: &EntityId, bonus: &EntityId) -> Result<Watch, SpecError> {
+/// Nothing a regular game comes up with or pays: no chance a regular game,
+/// no payout.
+fn no_game_of_its_own(
+    spec: &Spec,
+    entity: &EntityId,
+    component: Component,
+) -> Result<(), SpecError> {
+    if spec.components.chance.contains_key(entity) {
+        return Err(conflict(entity, component, Component::Chance));
+    }
+    if spec.components.payout.contains_key(entity) {
+        return Err(conflict(entity, component, Component::Payout));
+    }
+    Ok(())
+}
+
+/// What a watch is over: a bonus or a moment.
+fn over(spec: &Spec, entity: &EntityId, of: &EntityId) -> Result<Over, SpecError> {
     let components = &spec.components;
-    if components.chance.contains_key(entity) {
-        return Err(conflict(entity, Component::Watch, Component::Chance));
+    if components.moment.contains(of) {
+        return Ok(Over::Moment(of.clone()));
     }
-    if components.payout.contains_key(entity) {
-        return Err(conflict(entity, Component::Watch, Component::Payout));
+    if components.bonus.contains(of) {
+        return Ok(Over::Bonus(of.clone()));
     }
-    if !components.bonus.contains(bonus) {
-        return Err(SpecError::WatchOfNonBonus {
-            entity: entity.clone(),
-            of: bonus.clone(),
-        });
-    }
+    Err(SpecError::WatchOfNeither {
+        entity: entity.clone(),
+        of: of.clone(),
+    })
+}
+
+/// A watch: the bonus or the moment it is watched over, its trials, and its
+/// cues, at least one; no chance a regular game of its own, nor anything it
+/// pays.
+fn watch(spec: &Spec, entity: &EntityId, of: &EntityId) -> Result<Watch, SpecError> {
+    let components = &spec.components;
+    no_game_of_its_own(spec, entity, Component::Watch)?;
+    let over = over(spec, entity, of)?;
     let cues = spec
         .entities
         .iter()
@@ -538,13 +570,31 @@ fn watch(spec: &Spec, entity: &EntityId, bonus: &EntityId) -> Result<Watch, Spec
     Ok(Watch {
         id: entity.clone(),
         label: label_of(spec, entity),
-        bonus: bonus.clone(),
+        over,
         trials: components
             .trials
             .get(entity)
             .copied()
             .unwrap_or(NonZeroU32::MIN),
         cues,
+    })
+}
+
+/// A sign: the settings it may be seen under, at least one; nothing a
+/// regular game comes up with or pays.
+fn sign(spec: &Spec, entity: &EntityId) -> Result<Sign, SpecError> {
+    no_game_of_its_own(spec, entity, Component::Sign)?;
+    let setting_levels = spec
+        .components
+        .sign
+        .get(entity)
+        .filter(|setting_levels| !setting_levels.is_empty())
+        .cloned()
+        .ok_or_else(|| missing(entity, Component::Sign))?;
+    Ok(Sign {
+        id: entity.clone(),
+        label: label_of(spec, entity),
+        setting_levels,
     })
 }
 
@@ -567,6 +617,13 @@ fn element_of(spec: &Spec, entity: &EntityId) -> Result<Option<Element>, SpecErr
         [Component::SideBonus] => {
             side_bonus(spec, entity).map(|side| Some(Element::SideBonus(side)))
         }
+        [Component::Moment] => no_game_of_its_own(spec, entity, Component::Moment).map(|()| {
+            Some(Element::Moment(Moment {
+                id: entity.clone(),
+                label: label_of(spec, entity),
+            }))
+        }),
+        [Component::Sign] => sign(spec, entity).map(|sign| Some(Element::Sign(sign))),
         [Component::Watch] => match components.watch.get(entity) {
             Some(bonus) => watch(spec, entity, bonus).map(|watch| Some(Element::Watch(watch))),
             None => Err(missing(entity, Component::Watch)),
@@ -621,8 +678,9 @@ fn element_of(spec: &Spec, entity: &EntityId) -> Result<Option<Element>, SpecErr
 /// When an entity is listed twice or a component names one the world lacks,
 /// an entity lacks its chance or a small win its payout, two components
 /// conflict, a part belongs to something that is not a bonus, a watch is
-/// over something that is not one or has no cue, or a cue belongs to
-/// something that is not a watch.
+/// over something that is neither a bonus nor a moment or has no cue, a
+/// cue belongs to something that is not a watch, or a sign names no
+/// setting.
 pub fn elements(spec: &Spec) -> Result<Vec<Element>, SpecError> {
     check_entities(spec)?;
     spec.entities

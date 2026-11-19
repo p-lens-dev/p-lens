@@ -25,8 +25,10 @@ const KIND_NAMES: Readonly<Record<EntityKindName, string>> = {
   at: "AT",
   cz: "CZ",
   mode: "モード",
+  moment: "出来事",
   watch: "見る場面",
   cue: "示唆",
+  sign: "確定演出",
   side: "別枠ボーナス",
 }
 

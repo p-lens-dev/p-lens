@@ -2,7 +2,7 @@ use crate::probability::Probability;
 use crate::setting_level::SettingLevel;
 use std::num::NonZeroU32;
 
-use crate::spec::{Base, EntityId, Medals};
+use crate::spec::{Base, EntityId, Medals, Over};
 
 /// What an AT gains, as a law over its medals under one setting: a fixed
 /// figure — its average, where nothing more is known — so many for its
@@ -32,18 +32,23 @@ pub struct NormalizedSpec {
     /// How a machine of an AT plays between ATs; none for one of bonuses
     /// and small wins.
     pub at_rules: Option<AtRules>,
-    /// What a player watches over each of a bonus, whose cues each table
-    /// gives the chances of.
+    /// What a player watches over each of a bonus or a moment, whose cues
+    /// each table gives the chances of.
     pub watches: Vec<WatchRule>,
+    /// What a player counts by hand for watches to be over.
+    pub moments: Vec<EntityId>,
+    /// What says, seen, that the setting is among some; each table lists
+    /// those it may be seen under.
+    pub signs: Vec<EntityId>,
 }
 
-/// A watch as the engine weighs it: the bonus it is watched over, the
-/// trials each of the bonus gives, and whether a trial shows one of its
+/// A watch as the engine weighs it: the bonus or the moment it is watched
+/// over, the trials each of it gives, and whether a trial shows one of its
 /// cues certainly — then a trial with none counted was not watched.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WatchRule {
     pub id: EntityId,
-    pub bonus: EntityId,
+    pub over: Over,
     pub trials: NonZeroU32,
     pub whole: bool,
 }
@@ -370,6 +375,8 @@ pub struct SettingLevelTable {
     pub at: Option<AtTable>,
     /// What each watch's cues come up with on a trial.
     pub cues: Vec<CueChance>,
+    /// The signs that may be seen under this setting.
+    pub signs: Vec<EntityId>,
 }
 
 /// One outcome of a regular game.

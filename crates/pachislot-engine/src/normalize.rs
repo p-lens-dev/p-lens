@@ -6,7 +6,7 @@ use pachislot_domain::normalized::{
 use pachislot_domain::probability::{Probability, ProbabilityError, ProbabilitySource};
 use pachislot_domain::setting_level::{PerSettingLevel, SettingLevel};
 use pachislot_domain::spec::{
-    CeilingUnit, Chance, Component, Element, EntityId, LcdRate, Spec, Watch,
+    CeilingUnit, Chance, Component, Element, EntityId, LcdRate, Sign, Spec, Watch,
 };
 
 use pachislot_domain::version::SchemaVersion;
@@ -64,6 +64,8 @@ fn outcomes(element: &Element) -> Vec<Outcome<'_>> {
         | Element::Mode(_)
         | Element::Cz(_)
         | Element::Watch(_)
+        | Element::Moment(_)
+        | Element::Sign(_)
         | Element::Ending(_)
         | Element::SideBonus(_) => Vec::new(),
     }
@@ -171,6 +173,7 @@ fn table(
         events,
         at: None,
         cues: Vec::new(),
+        signs: Vec::new(),
     })
 }
 
@@ -307,7 +310,7 @@ fn watch_of(
     Ok((
         WatchRule {
             id: watch.id.clone(),
-            bonus: watch.bonus.clone(),
+            over: watch.over.clone(),
             trials: watch.trials,
             whole: wholes.contains(&true),
         },
@@ -351,6 +354,43 @@ fn watches_of(
         )
 }
 
+/// Every sign, with the settings it may be seen under; refused where it
+/// names a setting the machine lacks.
+fn signs_of<'a>(
+    elements: &'a [Element],
+    setting_levels: &[SettingLevel],
+) -> Result<Vec<&'a Sign>, SpecError> {
+    elements
+        .iter()
+        .filter_map(|element| match element {
+            Element::Sign(sign) => Some(sign),
+            _ => None,
+        })
+        .map(|sign| {
+            sign.setting_levels
+                .iter()
+                .find(|setting_level| !setting_levels.contains(setting_level))
+                .map_or(Ok(sign), |setting_level| {
+                    Err(SpecError::UnknownSettingLevel {
+                        at: sign.id.clone(),
+                        setting_level: *setting_level,
+                    })
+                })
+        })
+        .collect()
+}
+
+/// Every moment, in the order its entity was made.
+fn moments_of(elements: &[Element]) -> Vec<EntityId> {
+    elements
+        .iter()
+        .filter_map(|element| match element {
+            Element::Moment(moment) => Some(moment.id.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// Checks a spec and reads it into one table per setting: of a regular
 /// game's outcomes, or of an AT machine's trigger and modes.
 ///
@@ -359,8 +399,9 @@ fn watches_of(
 /// a bonus, small win, replay, AT, CZ or mode of each entity, a chance leaves
 /// a setting without a value or gives one for a setting the machine lacks, a
 /// probability is impossible, a game's outcomes or a watch's cues exceed
-/// certainty, a watch's cues are certain under some settings alone, or an
-/// AT machine's figures do not make one.
+/// certainty, a watch's cues are certain under some settings alone, a sign
+/// names a setting the machine lacks, or an AT machine's figures do not
+/// make one.
 pub fn normalize(spec: &Spec) -> Result<NormalizedSpec, SpecError> {
     let setting_levels = &spec.resources.setting_levels;
     check_setting_levels(setting_levels)?;
@@ -373,15 +414,29 @@ pub fn normalize(spec: &Spec) -> Result<NormalizedSpec, SpecError> {
         (outcome_tables(&elements, setting_levels)?, None)
     };
     let (watches, cues) = watches_of(&elements, setting_levels)?;
+    let signs = signs_of(&elements, setting_levels)?;
+    let seen_under = |setting_level: SettingLevel| -> Vec<EntityId> {
+        signs
+            .iter()
+            .filter(|sign| sign.setting_levels.contains(&setting_level))
+            .map(|sign| sign.id.clone())
+            .collect()
+    };
     Ok(NormalizedSpec {
         schema_version: SchemaVersion::CURRENT,
         bet: spec.resources.bet.get(),
         tables: tables
             .into_iter()
             .zip(cues)
-            .map(|(table, cues)| SettingLevelTable { cues, ..table })
+            .map(|(table, cues)| SettingLevelTable {
+                cues,
+                signs: seen_under(table.setting_level),
+                ..table
+            })
             .collect(),
         at_rules,
         watches,
+        moments: moments_of(&elements),
+        signs: signs.iter().map(|sign| sign.id.clone()).collect(),
     })
 }
