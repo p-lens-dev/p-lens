@@ -251,7 +251,7 @@ describe("pachislot in the one catalog", () => {
     expect((await put(`/formulas/${formulaId}/marks/adoption`)).status).toBe(204)
     expect((await put(`/formulas/${second.body.id}/marks/adoption`)).status).toBe(204)
     expect((await put(`/formulas/${formulaId}/marks/verification`)).status).toBe(204)
-    expect((await put(`/formulas/${second.body.id}/marks/verification`)).body.error).toEqual({ type: "not-verifiable" })
+    expect((await put(`/formulas/${second.body.id}/marks/verification`)).status).toBe(204)
     expect((await put(`/distributions/${distribution.body.id}/marks/adoption`)).status).toBe(204)
     expect((await put(`/distributions/${distribution.body.id}/marks/favorite`)).status).toBe(204)
     expect((await put(`/distributions/${distribution.body.id}/marks/verification`)).body.error).toEqual({ type: "not-markable", mark: "verification" })
@@ -262,7 +262,7 @@ describe("pachislot in the one catalog", () => {
     const detail = (await client.call("GET", `/machines/${machineId}`)).body
     expect(detail.formulas.map((each: { standing: unknown }) => each.standing)).toEqual([
       { verifications: 1, refutations: 0, adoptions: 0, rejections: 0, favorites: 0, uses: 1 },
-      { verifications: 0, refutations: 0, adoptions: 1, rejections: 0, favorites: 0, uses: 0 },
+      { verifications: 1, refutations: 0, adoptions: 1, rejections: 0, favorites: 0, uses: 0 },
     ])
     expect(detail.distributions[0].standing).toEqual({ verifications: 0, refutations: 0, adoptions: 1, rejections: 0, favorites: 1, uses: 1 })
     expect((await client.call("DELETE", `/distributions/${distribution.body.id}/marks/favorite`, { as: BOB })).status).toBe(204)

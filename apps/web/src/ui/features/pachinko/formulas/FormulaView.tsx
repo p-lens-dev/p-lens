@@ -173,7 +173,14 @@ export function FormulaView(props: { readonly place: Place; readonly machineId: 
                   </Button>
                   <Show
                     when={basisOf(formula()) !== undefined}
-                    fallback={<p class="text-sm text-text-muted">手入力の算出条件です。計算根拠と期待値基礎値はありません。</p>}
+                    fallback={
+                      <>
+                        <p class="text-sm text-text-muted">手入力の算出条件です。計算根拠と期待値基礎値はありません。</p>
+                        <NerdproLink class="text-sm" onClick={() => moves.go({ kind: "pachinko-formula-basis", machineId: found.machine.id, formulaId: formula().id })}>
+                          検証する ›
+                        </NerdproLink>
+                      </>
+                    }
                   >
                     <NerdproLink class="text-sm" onClick={() => moves.go({ kind: "pachinko-formula-grounds", machineId: found.machine.id, formulaId: formula().id })}>
                       計算根拠を見る ›

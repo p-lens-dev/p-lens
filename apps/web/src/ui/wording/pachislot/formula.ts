@@ -11,6 +11,7 @@ import { seal } from "../../../mummer"
 import type { TriggerWords } from "./trigger"
 import { settingLevelText } from "./setting-level"
 import { discriminationGradeOf, discriminationPointsOf } from "../../../core/pachislot/discrimination"
+import type { TappableKind } from "../../../core/pachislot/weighing"
 
 const KIND_NAMES: Readonly<Record<FormulaKind, string>> = { manual: "手入力", simulated: "解析値から計算", sampled: "シミュレータ" }
 
@@ -65,6 +66,41 @@ export const observedOneInText = (games: number, count: number): string => (coun
 
 /** How large a share of the trials a count came to — a cue over a moment, 7 of 10 as 70.0% — or dashes while none was watched. */
 export const observedShareText = (trials: number, count: number): string => (trials > 0 ? `${((count / trials) * 100).toFixed(1)}%` : "--%")
+
+/** How long after its newest formula a machine is still marked as updated in a list, in days. */
+const FRESH_DAYS = 30
+
+const HOUR_MILLIS = 3_600_000
+
+/** How long ago a formula came, where it came within the month: within the hour, so many hours, so many days; nothing past the month. */
+const updatedText = (updatedAt: string | undefined, now: string): string => {
+  if (updatedAt === undefined) return ""
+  const hours = Math.floor((Date.parse(now) - Date.parse(updatedAt)) / HOUR_MILLIS)
+  if (hours < 1) return "1時間以内更新・"
+  if (hours < 24) return `${String(hours)}時間前更新・`
+  const days = Math.floor(hours / 24)
+  return days > FRESH_DAYS ? "" : `${String(days)}日前更新・`
+}
+
+/**
+ * What a pachislot machine's line in a list says beside its release: the
+ * grade of what its best counter tells — 判別力B, or dashes where it has no
+ * formula — and, where a formula was registered for it in the last month,
+ * how long ago, so a machine whose analysis has just grown stands out —
+ * before the grade, which ends every line so the grades of a list stand in
+ * one column: 5時間前更新・判別力B, 3日前更新・判別力B.
+ */
+export const machineDiscriminationText = (discrimination: number | undefined, updatedAt: string | undefined, now: string): string =>
+  `${updatedText(updatedAt, now)}判別力${discrimination === undefined ? "--" : discriminationGradeOf(discrimination)}`
+
+/** What each kind of tile on a formula's counter is called, where a formula's screen lists them: a cue over a bonus and one over a moment alike. */
+export const TAPPABLE_KIND_NAMES: Readonly<Record<TappableKind, string>> = {
+  game: "小役・ボーナス",
+  moment: "出来事",
+  "cue-of-bonus": "示唆",
+  "cue-of-moment": "示唆",
+  sign: "確定演出",
+}
 
 /** A formula's power to tell setting levels apart, as its list shows it: its grade and its points out of a hundred — 判別力 S（85点）. */
 export const discriminationText = (discrimination: number): string => `判別力 ${discriminationGradeOf(discrimination)}（${String(discriminationPointsOf(discrimination))}点）`

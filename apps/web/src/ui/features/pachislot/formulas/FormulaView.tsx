@@ -23,6 +23,7 @@ import { kindName, UNCHECKED } from "../../../wording/pachislot/formula"
 import { useBookFavorites } from "../../live/book-favorites"
 import { useStartForm } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
+import { CounterList } from "./CounterList"
 import { FiguresTable } from "./FiguresTable"
 import { HuntTable } from "./HuntTable"
 import { remadeIn } from "./remaking"
@@ -83,6 +84,7 @@ export function FormulaView(props: { readonly place: Place; readonly machineId: 
             return (
               <div class="flex flex-col gap-5 p-4">
                 <FiguresTable figures={formula().figures} sampling={samplingOf(formula())} />
+                <CounterList formula={formula()} />
                 <Show when={huntable(formula())}>
                   <HuntTable basis={formula().basis} brought={props.huntShown} />
                 </Show>

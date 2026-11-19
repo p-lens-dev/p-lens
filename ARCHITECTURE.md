@@ -934,11 +934,10 @@ Picking a machine picks a formula (`core/formula/standing.ts`):
    - then by score: how it was made, verifications less refutations,
      adoptions less rejections and uses, each by its weight, summed
      (`scoreOf`: a check is worth five adoptions, a hundred uses half of
-     one; worked out from a basis sixteen points, sampled three, typed in
-     none — a step is a point more than all a maker can give the formula
-     below, their adoption and, where it has a basis, their check, so
-     their own marks never lift a formula over the making above, and one
-     more person's adoption does; uses weigh at most a hundredth short of
+     one; worked out from a basis sixteen points, sampled thirteen, typed
+     in none — a sampled one a point more than all a maker can give one
+     typed in, their adoption and their check, so their own marks never
+     lift it over one sampled, and one more person's adoption does; uses weigh at most a hundredth short of
      sixteen points, however many they are). In rank (`rankScoreOf`) a
      pachislot formula's or 設定配分's uses count half for each stage of
      its machine's publication passed since it was made — 10, 21, 40, 70
@@ -963,7 +962,7 @@ Six marks, each kept apart, never merged with anything else:
 | お気に入り (favourite) | anyone, on the card; kept in the book | per person per formula |
 | イチオシ (adoption) | semi-pros, on the 算出条件 screen | one per person per machine; a new one replaces the old |
 | 非推奨 (rejection) | anyone, on the 算出条件 screen; counts against adoptions | per person per formula; it and an adoption may stand together |
-| 検証OK (verification) | pros, on the 期待値基礎値 screen; from a basis only | one per person per formula, never taken back |
+| 検証OK (verification) | pros, on the 期待値基礎値 screen — one typed in has it too, its figures what is checked | one per person per formula, never taken back |
 | 検証NG (refutation) | pros, the same place; counts against verifications — a person's own too | one per person per formula, as above; it and a verification may stand together |
 | 利用回数 (uses) | starting a play with it | every time |
 
@@ -1274,7 +1273,7 @@ users ─┬─ machines (game_kind ∈ pachinko | pachislot) ── machine_key
        │     └─ distributions   (immutable 設定配分; pachislot only)
        ├─ formula_adoptions / distribution_adoptions (one per user per machine)
        ├─ formula_rejections    (one per user per formula)
-       ├─ formula_verifications (verdict ±1, one of each per user per formula; simulated or sampled)
+       ├─ formula_verifications (verdict ±1, one of each per user per formula; any formula)
        ├─ formula_favorites / distribution_favorites (one per user per target)
        ├─ formula_uses / distribution_uses           (one row per use)
        ├─ machine_favorites     (one per user per machine)

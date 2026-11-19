@@ -19,6 +19,7 @@ import type {
 import { machineMatches } from "./description"
 import type { IsoDate } from "../calendar/calendar"
 import { regularChanceOf } from "../pachinko"
+import { discriminationOf } from "../pachislot"
 import type * as Pachinko from "../pachinko"
 import type { MachineId } from "../machine/machine"
 import type { FormulaListing, Mark, Ranked, Standing } from "../formula/standing"
@@ -112,6 +113,17 @@ const formulaHitChancesOf = (detail: MachineDetailDto): readonly ProbabilityDto[
   return oneInOf(hardest) - oneInOf(likeliest) > ONE_IN_SPREAD ? [likeliest, hardest] : [hardest]
 }
 
+/** When a machine's newest formula was registered, none where it has none. */
+const formulaUpdatedAtOf = (detail: MachineDetailDto): string | undefined =>
+  (detail.formulas as readonly { readonly createdAt: string }[]).map((formula) => formula.createdAt).toSorted().at(-1)
+
+/** The most a pachislot machine's formulas' counters tell setting levels apart; none for pachinko, or where it has no formula. */
+const discriminationOfMachine = (detail: MachineDetailDto): number | undefined => {
+  if (detail.machine.gameKind !== "pachislot") return undefined
+  const told = (detail.formulas as readonly PachislotContract.FormulaDto[]).map((formula) => discriminationOf(formula.basis.normalized, formula.figures))
+  return told.length === 0 ? undefined : Math.max(...told)
+}
+
 /** A delivered machine as a search finds it. A delivery kept from before machines had words to be searched by has none. */
 const summaryOf = (detail: MachineDetailDto): MachineSummary => ({
   id: detail.machine.id as MachineId,
@@ -123,6 +135,8 @@ const summaryOf = (detail: MachineDetailDto): MachineSummary => ({
   formulaHitChances: formulaHitChancesOf(detail),
   releasedOn: detail.machine.releasedOn as IsoDate,
   formulaCount: detail.machine.formulaCount,
+  formulaUpdatedAt: formulaUpdatedAtOf(detail),
+  discrimination: discriminationOfMachine(detail),
 })
 
 /** A delivered machine as the screens take it, in its game's shape. */
@@ -188,10 +202,9 @@ export const distributionDto = (distribution: NewSettingDistribution): Pachislot
   ...(distribution.derivedFrom === undefined ? {} : { derivedFrom: distribution.derivedFrom }),
 })
 
-/** Where a mark lands in the delivered catalog: the machine it hangs on, and whether it was worked out from a basis there is to check. */
+/** Where a mark lands in the delivered catalog: the machine it hangs on. */
 export interface Located {
   readonly machineId: string
-  readonly checkable: boolean
 }
 
 /** A formula or 設定配分 found in the delivered catalog, or none if it has not been delivered. */
@@ -199,10 +212,10 @@ export const locate = (machines: readonly MachineDetailDto[], target: CatalogTar
   const found = machines.flatMap((detail): readonly Located[] => {
     if (target.type === "formula") {
       const formula = (detail.formulas as readonly { readonly id: string; readonly kind: string }[]).find((each) => each.id === target.id)
-      return formula === undefined ? [] : [{ machineId: detail.machine.id, checkable: formula.kind !== "manual" }]
+      return formula === undefined ? [] : [{ machineId: detail.machine.id }]
     }
     const distributions = detail.machine.gameKind === "pachislot" ? (detail as Extract<MachineDetailDto, { readonly distributions: readonly PachislotContract.SettingDistributionDto[] }>).distributions : []
-    return distributions.some((each) => each.id === target.id) ? [{ machineId: detail.machine.id, checkable: false }] : []
+    return distributions.some((each) => each.id === target.id) ? [{ machineId: detail.machine.id }] : []
   })
   return found[0]
 }
@@ -210,5 +223,5 @@ export const locate = (machines: readonly MachineDetailDto[], target: CatalogTar
 /** Whether a mark can be put on what it is on: a 設定配分 is adopted or favoured, never rejected or checked. */
 export const markable = (target: CatalogTarget, mark: Mark): boolean => target.type === "formula" || mark === "adoption" || mark === "favorite"
 
-/** Whether a mark is a check either way, which only a formula worked out from a basis can take. */
+/** Whether a mark is a check either way, which any formula can take — one typed in by its figures — and no 設定配分. */
 export const checks = (mark: Mark): boolean => mark === "verification" || mark === "refutation"

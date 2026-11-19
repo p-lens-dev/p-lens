@@ -73,9 +73,10 @@ function Standing(props: {
 
 /**
  * One pachislot formula at a glance: its 機械割 from the lowest setting level
- * to the highest, which is its name, its id under it, each level's rate and
- * odds — its 合算 where that says more than its bonuses, else each bonus's,
- * a CZ's beside an AT's — and what people have done with it.
+ * to the highest, which is its name, its id under it, its 判別力 — what it
+ * ranks by first — each level's rate and odds — its 合算 where that says
+ * more than its bonuses, else each bonus's, a CZ's beside an AT's — and
+ * what people have done with it.
  */
 export function FormulaCard(props: {
   readonly listing: FormulaListing<Formula>
@@ -109,6 +110,9 @@ export function FormulaCard(props: {
           <QuestionIcon />
         </button>
       </header>
+      <p class="text-xs tabular-nums text-text-secondary" title="カウンターを1日（通常時8000G）付けたとき、高設定域と低設定域をどれだけ見分けられるか（100点満点）">
+        {discriminationText(discriminationOf(props.listing.formula.basis.normalized, props.listing.formula.figures))}
+      </p>
       <ul class="flex flex-col gap-y-1 whitespace-nowrap text-xs tabular-nums text-text-secondary">
         <Index each={props.listing.formula.figures}>
           {(figures) => (
@@ -121,9 +125,6 @@ export function FormulaCard(props: {
           )}
         </Index>
       </ul>
-      <p class="text-xs tabular-nums text-text-secondary" title="カウンターを1日（通常時8000G）付けたとき、高設定域と低設定域をどれだけ見分けられるか（100点満点）">
-        {discriminationText(discriminationOf(props.listing.formula.basis.normalized, props.listing.formula.figures))}
-      </p>
       <Standing listing={props.listing} mine={props.mine} favorite={props.favorite} verifiable onUse={props.onUse} />
     </article>
   )

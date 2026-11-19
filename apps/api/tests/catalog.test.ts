@@ -184,12 +184,12 @@ describe("marks on a formula", () => {
     expect(standing).toEqual({ [manualId]: 0, [simulatedId]: 2 })
   })
 
-  test("only a formula with a basis can be checked; a device checks one once each way, and neither is taken back", async () => {
+  test("any formula can be checked, one typed in too; a device checks one once each way, and neither is taken back", async () => {
     const { client, machineId, manualId, simulatedId } = await registered(ALICE)
-    const refused = await client.call("PUT", `/formulas/${manualId}/marks/verification`, { as: BOB })
-    expect(refused.status).toBe(400)
-    expect(refused.body.error).toEqual({ type: "not-verifiable" })
-    expect((await client.call("PUT", `/formulas/${manualId}/marks/refutation`, { as: BOB })).body.error).toEqual({ type: "not-verifiable" })
+    expect((await client.call("PUT", `/formulas/${manualId}/marks/verification`, { as: BOB })).status).toBe(204)
+    expect((await client.call("PUT", `/formulas/${manualId}/marks/refutation`, { as: CAROL })).status).toBe(204)
+    const typed = (await formulasOf(client, machineId)).find((each) => each.id === manualId).standing
+    expect([typed.verifications, typed.refutations]).toEqual([1, 1])
     const standing = async () => (await formulasOf(client, machineId)).find((each) => each.id === simulatedId).standing
     await client.call("PUT", `/formulas/${simulatedId}/marks/verification`, { as: BOB })
     await client.call("PUT", `/formulas/${simulatedId}/marks/verification`, { as: BOB })

@@ -11,13 +11,14 @@ const DEPTHS: readonly Depth[] = ["machine", "formula", "grounds", "basis"]
 
 /**
  * The breadcrumb from starting a play down to a depth: the machine, its
- * 算出条件, the 計算根拠, the 期待値基礎値. Each step but the last goes back.
+ * 算出条件, the 計算根拠 — which one typed in has none of — the 期待値基礎値.
+ * Each step but the last goes back.
  */
 export const trailTo = (
   moves: Moves,
   depth: Depth,
   machine: { readonly id: string; readonly name: string },
-  formula: Pick<Formula, "id" | "figures"> | undefined,
+  formula: Pick<Formula, "id" | "figures" | "kind"> | undefined,
 ): readonly Crumb[] => {
   const reach = DEPTHS.indexOf(depth)
   const steps: readonly (Crumb | undefined)[] = [
@@ -26,7 +27,7 @@ export const trailTo = (
     formula === undefined || reach < 1
       ? undefined
       : { label: `算出条件「${formulaText(formula.figures)}」`, onSelect: () => moves.go({ kind: "pachinko-formula", machineId: machine.id, formulaId: formula.id }) },
-    formula === undefined || reach < 2
+    formula === undefined || reach < 2 || formula.kind === "manual"
       ? undefined
       : { label: "計算根拠", onSelect: () => moves.go({ kind: "pachinko-formula-grounds", machineId: machine.id, formulaId: formula.id }) },
     formula === undefined || reach < 3 ? undefined : { label: "期待値基礎値" },

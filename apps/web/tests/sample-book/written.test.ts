@@ -33,7 +33,7 @@ const summaryOf = (
   hitChance: undefined,
   formulaHitChances: [],
   releasedOn: machine.releasedOn,
-  formulaCount: 1,
+  formulaCount: 1, formulaUpdatedAt: undefined, discrimination: undefined,
 })
 
 const SUMMARIES: readonly MachineSummary[] = [...LINEUP.pachinko.map((machine) => summaryOf(machine, "pachinko")), ...LINEUP.pachislot.map((machine) => summaryOf(machine, "pachislot"))]

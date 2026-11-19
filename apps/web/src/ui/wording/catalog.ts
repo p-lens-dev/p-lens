@@ -92,8 +92,6 @@ export const describeCatalogError = (error: CatalogError): string => {
       return `型式名「${error.modelName}」の機種はもう登録されています。その機種に算出条件を追加してください。`
     case "name-taken":
       return `「${error.name}」はもう登録されています。その機種に算出条件を追加してください。`
-    case "not-verifiable":
-      return "解析値から計算していない算出条件は、検証できません。"
     case "check-stands":
       return "検証は取り消せません。考えが変わったら、もう一方を押してください。"
     case "not-markable":

@@ -177,26 +177,21 @@ export function BasisView(props: { readonly place: Place; readonly machineId: st
                     <Show when={failure()} keyed>
                       {(error) => <p role="alert" class="text-sm text-negative">{describeError(error)}</p>}
                     </Show>
-                    <Show
-                      when={formula().kind !== "manual"}
-                      fallback={<p class="text-sm text-text-muted">手入力の算出条件は、機械割をそのまま使うため検証できません。</p>}
-                    >
-                      <div class="flex flex-col gap-2">
-                        <span class="text-xs text-text-muted">解析値を出典と照らし合わせて確かめたら、合っていれば検証OK、合っていなければ検証NGを押してください。それぞれ1回だけ押せて、取り消せません。考えが変わったら、もう一方を押すと打ち消し合います。</span>
-                        <div class="flex flex-wrap items-center gap-2">
-                          <Show when={!actions.mine(formula().id).verified} fallback={<span class="text-sm font-medium text-semipro-ink">検証OK済み</span>}>
-                            <Button variant="semipro" onClick={() => actions.check(formula(), "verification", setFailure, () => setThanked("verified"))}>
-                              検証OK
-                            </Button>
-                          </Show>
-                          <Show when={!actions.mine(formula().id).refuted} fallback={<span class="text-sm font-medium text-nerdpro-ink">検証NG済み</span>}>
-                            <Button variant="nerdpro" onClick={() => actions.check(formula(), "refutation", setFailure, () => setThanked("refuted"))}>
-                              検証NG
-                            </Button>
-                          </Show>
-                        </div>
+                    <div class="flex flex-col gap-2">
+                      <span class="text-xs text-text-muted">解析値を出典と照らし合わせて確かめたら、合っていれば検証OK、合っていなければ検証NGを押してください。それぞれ1回だけ押せて、取り消せません。考えが変わったら、もう一方を押すと打ち消し合います。</span>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Show when={!actions.mine(formula().id).verified} fallback={<span class="text-sm font-medium text-semipro-ink">検証OK済み</span>}>
+                          <Button variant="semipro" onClick={() => actions.check(formula(), "verification", setFailure, () => setThanked("verified"))}>
+                            検証OK
+                          </Button>
+                        </Show>
+                        <Show when={!actions.mine(formula().id).refuted} fallback={<span class="text-sm font-medium text-nerdpro-ink">検証NG済み</span>}>
+                          <Button variant="nerdpro" onClick={() => actions.check(formula(), "refutation", setFailure, () => setThanked("refuted"))}>
+                            検証NG
+                          </Button>
+                        </Show>
                       </div>
-                    </Show>
+                    </div>
                   </div>
                 }
               >

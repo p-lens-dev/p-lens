@@ -14,10 +14,12 @@ import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { slashDay } from "../../../wording/dates"
 import { modelNameText, UNDELIVERED, UNDELIVERED_TITLE } from "../../../wording/catalog"
+import { machineDiscriminationText } from "../../../wording/pachislot/formula"
 import { useStartForm } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
 
 function MachineList(props: { readonly machines: readonly MachineSummary[]; readonly onChoose: (machine: MachineSummary) => void }): JSX.Element {
+  const app = useApp()
   return (
     <ul class="flex flex-col gap-0.5">
       <For each={props.machines}>
@@ -32,7 +34,10 @@ function MachineList(props: { readonly machines: readonly MachineSummary[]; read
                 <span class="break-words font-bold text-text-primary">{machine.name}</span>
                 <span class="truncate text-xs text-text-muted">{modelNameText(machine.modelName)}</span>
               </span>
-              <span class="shrink-0 text-xs tabular-nums text-text-muted">{slashDay(machine.releasedOn)}</span>
+              <span class="flex shrink-0 flex-col items-end text-xs tabular-nums text-text-muted">
+                <span>{slashDay(machine.releasedOn)}</span>
+                <span>{machineDiscriminationText(machine.discrimination, machine.formulaUpdatedAt, app.services.now())}</span>
+              </span>
             </button>
           </li>
         )}

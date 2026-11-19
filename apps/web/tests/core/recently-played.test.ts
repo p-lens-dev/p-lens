@@ -7,7 +7,7 @@ import type { MachineId } from "../../src/core/machine/machine"
 
 const ids = (...given: readonly string[]): readonly MachineId[] => given as MachineId[]
 
-const machine = (id: string): MachineSummary => ({ id: id as MachineId, gameKind: "pachinko", name: id, modelName: undefined, keywords: [], hitChance: undefined, formulaHitChances: [], formulaCount: 1, releasedOn: "2026-01-01" as IsoDate })
+const machine = (id: string): MachineSummary => ({ id: id as MachineId, gameKind: "pachinko", name: id, modelName: undefined, keywords: [], hitChance: undefined, formulaHitChances: [], formulaCount: 1, formulaUpdatedAt: undefined, discrimination: undefined, releasedOn: "2026-01-01" as IsoDate })
 
 describe("the machines played lately", () => {
   test("put the one just played at the head", () => {

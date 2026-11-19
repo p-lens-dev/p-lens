@@ -107,7 +107,7 @@ describe("the form a play followed live at a parlor is recorded with", () => {
 })
 
 describe("the machines a play followed live may name", () => {
-  const STEINS: MachineSummary = { id: "m1" as MachineId, gameKind: "pachinko", name: "Pシュタインズ・ゲート・ゼロ まゆしぃば~じょん", modelName: "PA STEINS;GATE0", keywords: [], hitChance: "1/99.9", formulaHitChances: [], releasedOn: "2025-01-01" as IsoDate, formulaCount: 1 }
+  const STEINS: MachineSummary = { id: "m1" as MachineId, gameKind: "pachinko", name: "Pシュタインズ・ゲート・ゼロ まゆしぃば~じょん", modelName: "PA STEINS;GATE0", keywords: [], hitChance: "1/99.9", formulaHitChances: [], releasedOn: "2025-01-01" as IsoDate, formulaCount: 1 , formulaUpdatedAt: undefined, discrimination: undefined}
 
   test("are the catalog's, and keep the one it was followed on where the catalog lacks it", () => {
     expect(machineChoicesOf([STEINS], "海物語").map((option) => option.value)).toEqual(["海物語", "PA STEINS；GATE0"])

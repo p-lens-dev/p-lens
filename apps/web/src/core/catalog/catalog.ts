@@ -39,6 +39,10 @@ export interface MachineSummary {
   readonly formulaHitChances: readonly ProbabilityDto[]
   readonly releasedOn: IsoDate
   readonly formulaCount: number
+  /** When its newest formula was registered, an ISO time; none where it has none. */
+  readonly formulaUpdatedAt: string | undefined
+  /** A pachislot machine's: the most any of its formulas' counters tell setting levels apart (`discriminationOf`); none for pachinko, or where it has no formula. */
+  readonly discrimination: number | undefined
 }
 
 /**

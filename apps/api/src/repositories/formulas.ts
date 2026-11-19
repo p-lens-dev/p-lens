@@ -207,11 +207,11 @@ const clearStatement = (database: Database, user: UserId, target: MarkTarget, id
 }
 
 /**
- * Set or clear a device's mark on a formula or a 設定配分. Only a formula
- * worked out from a basis — simulated or sampled — can be verified or
- * refuted; one typed in has nothing to have checked. A verdict given
- * stands: it is not cleared, only answered with the other. A 設定配分 is
- * only adopted and favoured.
+ * Set or clear a device's mark on a formula or a 設定配分. Any formula can
+ * be verified or refuted — one typed in by the figures it was typed with,
+ * held against where they came from. A verdict given stands: it is not
+ * cleared, only answered with the other. A 設定配分 is only adopted and
+ * favoured.
  */
 export const setMark = async (
   database: Database,
@@ -227,7 +227,6 @@ export const setMark = async (
   if (!markable(target, mark)) return Err({ type: "not-markable", mark })
   if (mark === "verification" || mark === "refutation") {
     if (!on) return Err({ type: "check-stands" })
-    if (head.value.kind === "manual") return Err({ type: "not-verifiable" })
     const checked = await executeAll(database, setStatements(database, effects, user, target, id, head.value, mark))
     return checked.ok ? Ok(undefined) : Err(unexpected(checked.error))
   }

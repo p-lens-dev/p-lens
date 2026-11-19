@@ -220,7 +220,7 @@ describe("a mark pressed in a book", () => {
         refresh: unused,
         unsentMarks: unused,
         mark: async (target, mark, on, voter) => {
-          if (target.id === "typed" && mark === "verification") return Err({ type: "not-verifiable" })
+          if (target.id === "typed" && mark === "verification") return Err({ type: "check-stands" })
           told.push(`${voter} ${on ? "sets" : "clears"} ${mark} on ${target.id}`)
           return Ok(undefined)
         },
@@ -248,7 +248,7 @@ describe("a mark pressed in a book", () => {
     const { session, storage } = await setUp()
     await ensureFirstBook(session, make("mine"))
     const { catalog } = takingMarks()
-    expect(await pressMark(session, catalog, voterOf, "mine" as BookId, line("1", "verification-given", "typed"))).toEqual({ ok: false, error: { type: "catalog", error: { type: "not-verifiable" } } })
+    expect(await pressMark(session, catalog, voterOf, "mine" as BookId, line("1", "verification-given", "typed"))).toEqual({ ok: false, error: { type: "catalog", error: { type: "check-stands" } } })
     expect(storage.peek("mine" as BookId)?.files[MARKS_LOG]).toBeUndefined()
   })
 })

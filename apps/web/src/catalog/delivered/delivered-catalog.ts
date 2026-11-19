@@ -102,7 +102,6 @@ const fromApi = (failure: ApiFailure, sending: Sending): CatalogError => {
       if (error.type === "conflict" && sending.type === "registering")
         return { type: "name-taken", name: sending.machine.name, existing: machineNamed(sending.machines, sending.machine.name, sending.machine.gameKind) }
       if (error.type === "not-found" && sending.type === "to-machine") return { type: "machine-missing", id: sending.machineId }
-      if (error.type === "not-verifiable") return { type: "not-verifiable" }
       if (sending.type !== "other" && tooHeavy(failure)) return { type: "too-heavy" }
       if (sending.type !== "other" && failure.status === 503 && failure.error.type === "unexpected") return { type: "gave-up" }
       if (error.type === "check-stands") return { type: "check-stands" }
@@ -220,7 +219,6 @@ export const createDeliveredCatalog = (database: Connection, api: CatalogApi, ef
     const located = locate(delivered.value, target)
     if (located === undefined) return Err(missing(target))
     if (checks(kind) && !on) return Err({ type: "check-stands" })
-    if (checks(kind) && !located.checkable) return Err({ type: "not-verifiable" })
     const db = await opened()
     if (!db.ok) return db
     const transaction = db.value.transaction(CATALOG_OUTBOX, "readwrite")

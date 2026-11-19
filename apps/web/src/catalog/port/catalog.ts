@@ -44,8 +44,6 @@ export type CatalogError =
   | { readonly type: "name-taken"; readonly name: string; readonly existing: MachineId | undefined }
   /** A machine already in the catalog has this model name: a model name is one machine's. */
   | { readonly type: "model-name-taken"; readonly modelName: string }
-  /** Only a formula worked out from a basis can be verified or refuted: there is nothing else to check. */
-  | { readonly type: "not-verifiable" }
   /** A check given stands: it is not taken back, only answered with the other. */
   | { readonly type: "check-stands" }
   /** A mark that cannot be put on what it was put on: rejecting or verifying a 設定配分. */

@@ -39,7 +39,7 @@ describe("the form of a tally in tokens, setting a recorded tally right", () => 
 })
 
 describe("the machines a tally at a parlor may name", () => {
-  const STEINS: MachineSummary = { id: "m1" as MachineId, gameKind: "pachinko", name: "Pシュタインズ・ゲート・ゼロ まゆしぃば~じょん", modelName: "PA STEINS;GATE0", keywords: [], hitChance: "1/99.9", formulaHitChances: [], releasedOn: "2025-01-01" as IsoDate, formulaCount: 1 }
+  const STEINS: MachineSummary = { id: "m1" as MachineId, gameKind: "pachinko", name: "Pシュタインズ・ゲート・ゼロ まゆしぃば~じょん", modelName: "PA STEINS;GATE0", keywords: [], hitChance: "1/99.9", formulaHitChances: [], releasedOn: "2025-01-01" as IsoDate, formulaCount: 1 , formulaUpdatedAt: undefined, discrimination: undefined}
 
   test("are the catalog's, each by the name the halls call it and kept as its book name", () => {
     expect(machineChoicesOf([STEINS], "PA STEINS；GATE0")).toEqual([{ value: "PA STEINS；GATE0", label: "Pシュタインズ・ゲート・ゼロ まゆしぃば~じょん", note: "1/99.9" }])

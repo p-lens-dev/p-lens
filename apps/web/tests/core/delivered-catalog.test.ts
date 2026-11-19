@@ -102,9 +102,9 @@ describe("the delivered catalog", () => {
   })
 
   test("locates what a mark is on, and whether it has a basis to check", () => {
-    expect(locate(DELIVERED, { type: "formula", id: "mori-typed" })).toEqual({ machineId: "mori", checkable: false })
-    expect(locate(DELIVERED, { type: "formula", id: "mori-basis" })).toEqual({ machineId: "mori", checkable: true })
-    expect(locate(DELIVERED, { type: "distribution", id: "weekday" })).toEqual({ machineId: "pierrot", checkable: false })
+    expect(locate(DELIVERED, { type: "formula", id: "mori-typed" })).toEqual({ machineId: "mori" })
+    expect(locate(DELIVERED, { type: "formula", id: "mori-basis" })).toEqual({ machineId: "mori" })
+    expect(locate(DELIVERED, { type: "distribution", id: "weekday" })).toEqual({ machineId: "pierrot" })
     expect(locate(DELIVERED, { type: "formula", id: "not-yet" })).toBeUndefined()
   })
 

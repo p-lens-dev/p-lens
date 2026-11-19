@@ -58,7 +58,7 @@ const watchTells = (watch: WatchDto, low: readonly TableDto[], high: readonly Ta
  * trials a day. Signs, whose chances nobody gives, and the formula's own
  * first hits, which every formula of a machine shares, count for nothing.
  */
-export const discriminationOf = (normalized: NormalizedSpecDto, figures: readonly SettingLevelFigures[]): number => {
+export const discriminationOf = (normalized: NormalizedSpecDto, figures: readonly Pick<SettingLevelFigures, "combinedOneIn">[]): number => {
   const tables = normalized.tables
   const { low, high } = halvesOf(tables)
   if (low.length === 0) return 0

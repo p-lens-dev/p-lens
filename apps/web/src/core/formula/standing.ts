@@ -170,17 +170,15 @@ const MOST_FROM_FILLED = 500
 /**
  * What a formula's making weighs in its score before anyone has done
  * anything with it, in the same hundredths: one worked out from a basis
- * sixteen points, one sampled by the simulator three, and one typed in
- * nothing. A basis can be read and checked and typed figures cannot, and
- * what is worked out from one is exact where what is sampled is an
- * estimate. Each step is a point more than all its maker can give the
- * formula below: whoever makes a formula may adopt it, and check it where
- * it has a basis, so one typed in can gain two points of its maker and a
- * sampled one twelve. Their own marks never lift a formula over the
- * making above, and one more person's adoption does, over one nobody
- * marked.
+ * sixteen points, one sampled by the simulator thirteen, and one typed in
+ * nothing. What is worked out from a basis is exact where what is sampled
+ * is an estimate, and typed figures are taken on trust. A sampled one is a
+ * point more than all its maker can give one typed in: whoever makes a
+ * formula may adopt it and check it, twelve points, so their own marks
+ * never lift one typed in over one sampled, and one more person's
+ * adoption does, over one nobody marked.
  */
-const MAKING_WEIGHTS: Readonly<Record<Making, number>> = { manual: 0, sampled: 300, simulated: 1_600 }
+const MAKING_WEIGHTS: Readonly<Record<Making, number>> = { manual: 0, sampled: 1_300, simulated: 1_600 }
 
 /**
  * A formula's score from its making and its marks:

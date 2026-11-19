@@ -23,10 +23,10 @@ describe("ranking formulas", () => {
 
   const made = (id: string, kind: Making, standing: Partial<Standing>): FormulaListing<Ranked> => ({ ...listing(id, standing), formula: { id, createdAt: "2026-10-01T00:00:00.000Z", kind, derivedFrom: undefined } })
 
-  test("how a formula was made weighs too: worked out from a basis sixteen points, sampled three, typed in none, and a 設定配分 none", () => {
-    expect([scoreOf(made("m", "manual", {})), scoreOf(made("s", "sampled", {})), scoreOf(made("b", "simulated", {})), scoreOf(listing("d", {}))]).toEqual([0, 300, 1_600, 0])
+  test("how a formula was made weighs too: worked out from a basis sixteen points, sampled thirteen, typed in none, and a 設定配分 none", () => {
+    expect([scoreOf(made("m", "manual", {})), scoreOf(made("s", "sampled", {})), scoreOf(made("b", "simulated", {})), scoreOf(listing("d", {}))]).toEqual([0, 1_300, 1_600, 0])
     expect(ids(ranked([made("typed", "manual", {}), made("sampled", "sampled", {}), made("worked", "simulated", {})], sameWorth))).toEqual(["worked", "sampled", "typed"])
-    expect(ids(ranked([made("sampled", "sampled", {}), made("typed", "manual", { uses: 299 })], sameWorth))).toEqual(["sampled", "typed"])
+    expect(ids(ranked([made("sampled", "sampled", {}), made("typed", "manual", { uses: 1_299 })], sameWorth))).toEqual(["sampled", "typed"])
   })
 
   test("uses weigh at most a hundredth short of sixteen points, however many they are", () => {
@@ -36,14 +36,11 @@ describe("ranking formulas", () => {
     expect([1_598, 1_599, 1_600].map((uses) => usesWeighTheirMost(listing("x", { uses }).standing))).toEqual([false, true, true])
   })
 
-  test("all a maker can give their own formula never lifts it over the making above, and one more person's adoption does over one nobody marked", () => {
-    const ownTyped = { adoptions: 1 }
-    const ownSampled = { adoptions: 1, verifications: 1 }
+  test("all a maker can give one typed in never lifts it over one sampled, and one more person's adoption does over one nobody marked", () => {
+    const ownTyped = { adoptions: 1, verifications: 1 }
     expect(ids(ranked([made("typed", "manual", ownTyped), made("sampled", "sampled", {})], sameWorth))).toEqual(["sampled", "typed"])
-    expect(ids(ranked([made("sampled", "sampled", ownSampled), made("worked", "simulated", {})], sameWorth))).toEqual(["worked", "sampled"])
-    expect(ids(ranked([made("sampled", "sampled", {}), made("typed", "manual", { adoptions: 2 })], sameWorth))).toEqual(["typed", "sampled"])
-    expect(ids(ranked([made("worked", "simulated", {}), made("sampled", "sampled", { adoptions: 2, verifications: 1 })], sameWorth))).toEqual(["sampled", "worked"])
-    expect(ids(ranked([made("worked", "simulated", {}), made("sampled", "sampled", { verifications: 2 })], sameWorth))).toEqual(["sampled", "worked"])
+    expect(ids(ranked([made("sampled", "sampled", {}), made("typed", "manual", { adoptions: 2, verifications: 1 })], sameWorth))).toEqual(["typed", "sampled"])
+    expect(ids(ranked([made("worked", "simulated", {}), made("sampled", "sampled", { adoptions: 2 })], sameWorth))).toEqual(["sampled", "worked"])
     expect(ids(ranked([made("worked", "simulated", {}), made("typed", "manual", { adoptions: 7 })], sameWorth))).toEqual(["worked", "typed"])
     expect(ids(ranked([made("worked", "simulated", {}), made("typed", "manual", { adoptions: 9 })], sameWorth))).toEqual(["typed", "worked"])
   })

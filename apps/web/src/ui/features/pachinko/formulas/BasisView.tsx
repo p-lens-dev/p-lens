@@ -9,7 +9,7 @@ import type { FormulaListing } from "../../../../core/formula/standing"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
 import { ShieldIcon, ShieldOffIcon } from "../../../primitives/icons"
-import { EmptyState, Loaded } from "../../../primitives/states"
+import { Loaded } from "../../../primitives/states"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { describeError } from "../../../wording/errors"
@@ -58,8 +58,9 @@ function CheckThanks(props: { readonly verdict: Verdict; readonly onUse: () => v
 
 /**
  * A formula's 期待値基礎値: the spec values and conditions its simulation was
- * run from, and the normalised combo the engine made of them. The deepest
- * level, and the only place a formula is verified.
+ * run from, and the normalised combo the engine made of them — or, for one
+ * typed in, that it has none and its figures are what is checked. The
+ * deepest level, and the only place a formula is verified.
  */
 export function BasisView(props: { readonly place: Place; readonly machineId: string; readonly formulaId: string }): JSX.Element {
   const app = useApp()
@@ -71,11 +72,9 @@ export function BasisView(props: { readonly place: Place; readonly machineId: st
     () => ({ machineId: props.machineId, formulaId: props.formulaId, revision: app.revision() }),
     (source) => loadFormula(app.services.catalog, source.machineId, source.formulaId),
   )
-  const simulated = (): { readonly listing: FormulaListing<Formula>; readonly basis: Basis } | undefined => {
+  const listed = (): { readonly listing: FormulaListing<Formula>; readonly basis: Basis | undefined } | undefined => {
     const found = detail()
-    const listing = found?.ok === true ? found.value.listing : undefined
-    const basis = listing === undefined ? undefined : basisOf(listing.formula)
-    return listing === undefined || basis === undefined ? undefined : { listing, basis }
+    return found?.ok === true ? { listing: found.value.listing, basis: basisOf(found.value.listing.formula) } : undefined
   }
   const trail = () => {
     const found = detail()
@@ -86,23 +85,33 @@ export function BasisView(props: { readonly place: Place; readonly machineId: st
       <div class="max-w-5xl">
         <Loaded outcome={missingUndelivered(detail(), app.delivery.state())}>
           {() => (
-            <Show when={simulated()} keyed fallback={<EmptyState title="期待値基礎値はありません">手入力の算出条件には、期待値基礎値がありません。</EmptyState>}>
+            <Show when={listed()} keyed>
               {(found) => (
                 <Show
                   when={thanked()}
                   keyed
                   fallback={
                     <div class="flex flex-col gap-5 p-4">
-                      <SpecReadout basis={found.basis} bonuses={found.listing.formula.bonuses} spinsPerHour={found.listing.formula.figures.spinsPerHour} />
-                      <details class="text-sm text-text-secondary">
-                        <summary class="cursor-pointer text-text-muted">エンジンが解いた状態遷移（スキーマ v{found.basis.engineSchemaVersion}）</summary>
-                        <pre class="mt-2 overflow-x-auto rounded-md bg-surface-0 p-3 font-mono text-xs leading-relaxed">{JSON.stringify(found.basis.normalized, null, 2)}</pre>
-                      </details>
+                      <Show
+                        when={found.basis}
+                        keyed
+                        fallback={<p class="text-sm text-text-secondary">手入力の算出条件です。期待値基礎値はありません。算出条件の画面に出ている数字（大当り確率・出玉・ボーダー）が、確かめる対象です。</p>}
+                      >
+                        {(basis) => (
+                          <>
+                            <SpecReadout basis={basis} bonuses={found.listing.formula.bonuses} spinsPerHour={found.listing.formula.figures.spinsPerHour} />
+                            <details class="text-sm text-text-secondary">
+                              <summary class="cursor-pointer text-text-muted">エンジンが解いた状態遷移（スキーマ v{basis.engineSchemaVersion}）</summary>
+                              <pre class="mt-2 overflow-x-auto rounded-md bg-surface-0 p-3 font-mono text-xs leading-relaxed">{JSON.stringify(basis.normalized, null, 2)}</pre>
+                            </details>
+                          </>
+                        )}
+                      </Show>
                       <Show when={failure()} keyed>
                         {(error) => <p role="alert" class="text-sm text-negative">{describeError(error)}</p>}
                       </Show>
                       <section class="flex flex-col gap-2 rounded-lg border border-border px-4 py-3">
-                        <p class="text-sm text-text-secondary">期待値基礎値と計算根拠を自分で確かめたときだけ押してください。合っていれば検証OK、合っていなければ検証NG。それぞれ1回だけ押せて、取り消せません。考えが変わったら、もう一方を押すと打ち消し合います。</p>
+                        <p class="text-sm text-text-secondary">{found.basis === undefined ? "数字を出典と照らし合わせて" : "期待値基礎値と計算根拠を"}自分で確かめたときだけ押してください。合っていれば検証OK、合っていなければ検証NG。それぞれ1回だけ押せて、取り消せません。考えが変わったら、もう一方を押すと打ち消し合います。</p>
                         <div class="flex flex-wrap items-center gap-2">
                           <Show when={!actions.mine(found.listing.formula.id).verified} fallback={<span class="text-sm font-medium text-semipro-ink">検証OK済み</span>}>
                             <Button variant="semipro" onClick={() => actions.check(found.listing, "verification", setFailure, () => setThanked("verified"))}>

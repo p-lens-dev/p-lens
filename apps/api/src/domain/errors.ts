@@ -29,8 +29,6 @@ export type ApiError =
   | { readonly type: "not-for-game"; readonly what: "distribution" }
   /** A mark that cannot be put on what it was put on: rejecting or verifying a 設定配分. */
   | { readonly type: "not-markable"; readonly mark: string }
-  /** Verifying a formula that has no basis to check. */
-  | { readonly type: "not-verifiable" }
   /** Taking back a check: one given stands, and is answered only with the other. */
   | { readonly type: "check-stands" }
   | { readonly type: "storage"; readonly detail: string }
@@ -42,7 +40,6 @@ export const statusOf = (error: ApiError): number => {
     case "method-not-allowed":
       return 405
     case "invalid-body":
-    case "not-verifiable":
     case "check-stands":
     case "not-for-game":
     case "not-markable":
