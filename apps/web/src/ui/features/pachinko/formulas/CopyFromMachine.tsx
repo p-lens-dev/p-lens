@@ -4,12 +4,13 @@ import { findMachines } from "../../../../application/catalog"
 import type { ApplicationError } from "../../../../application/errors"
 import { loadMachine } from "../../../../application/pachinko/formulas"
 import { ranked } from "../../../../core/formula/standing"
-import { worthOf, type Formula } from "../../../../core/pachinko/formula"
+import type { Formula } from "../../../../core/pachinko/formula"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
 import { Combobox, type ComboboxOption } from "../../../primitives/combobox"
 import { describeError } from "../../../wording/errors"
 import { startedFrom } from "./remaking"
+import { measure } from "../../../../core/pachinko/measure"
 
 /** Where copying from another machine is: not asked for, a machine being looked for, one found with nothing to copy, or failed. */
 type Copying =
@@ -48,7 +49,7 @@ export function CopyFromMachine(props: { readonly onCopied: (formula: Formula, f
       setCopying({ type: "failed", error: detail.error })
       return
     }
-    const formula = startedFrom(ranked(detail.value.formulas, worthOf).map((listing) => listing.formula))
+    const formula = startedFrom(ranked(detail.value.formulas, measure).map((listing) => listing.formula))
     if (formula === undefined) {
       setCopying({ type: "nothing-to-copy", name: detail.value.machine.name })
       return

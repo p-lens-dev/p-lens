@@ -40,6 +40,12 @@ export const previousDay = (date: IsoDate): IsoDate => {
   return formatUtcDay(utcDayOf(year, month, day - 1))
 }
 
+/** The day so many days after a date. */
+export const daysAfter = (date: IsoDate, days: number): IsoDate => {
+  const [year = 0, month = 0, day = 0] = date.split("-").map(Number)
+  return formatUtcDay(utcDayOf(year, month, day + days))
+}
+
 export const monthOf = (date: IsoDate): IsoMonth => date.slice(0, 7) as IsoMonth
 
 /**

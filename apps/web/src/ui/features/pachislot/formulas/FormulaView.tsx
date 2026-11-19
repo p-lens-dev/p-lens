@@ -31,6 +31,7 @@ import { useActions } from "./use-actions"
 import { ValueSheet } from "./ValueSheet"
 import { isMine, OWN_LINES, paintOf } from "./vote-fill"
 import { missingUndelivered } from "../../catalog/undelivered"
+import { distributionMeasureOf } from "../../../../core/pachislot/measure"
 
 const samplingOf = (formula: Formula): Sampling | undefined => (formula.kind === "sampled" ? formula.sampling : undefined)
 
@@ -70,7 +71,7 @@ export function FormulaView(props: { readonly place: Place; readonly machineId: 
     const kept = favorites.keptAmong(found.distributions.map((listing) => listing.formula.id))
     const chosen = start.form().pachislot
     const byHand = chosen.machine.type === "catalog" && chosen.machine.machineId === found.machine.id ? chosen.prior : undefined
-    return kept === undefined ? undefined : selectPrior(found.distributions, byHand, kept).prior
+    return kept === undefined ? undefined : selectPrior(found.distributions, distributionMeasureOf(found.machine.releasedOn, app.services.now()), byHand, kept).prior
   }
   return (
     <MainContent header={<ViewHeader place={props.place} title="算出条件" trail={trail()} />}>

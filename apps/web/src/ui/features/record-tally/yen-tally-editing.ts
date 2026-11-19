@@ -227,7 +227,7 @@ export const createYenTallyEditing = (given: YenTallyEditingGiven): YenTallyEdit
   /** The formula a pachislot machine chosen reads its setting level by. */
   const [inferableFound] = createResource(
     () => (form().gameKind === "pachislot" ? machineId() : undefined),
-    (chosen) => loadInferable(app.services.catalog, chosen),
+    (chosen) => loadInferable(app.services.catalog, chosen, app.services.now()),
   )
   const inferable = (): Inferable | undefined => ((found) => (found?.ok === true ? found.value : undefined))(inferableFound())
   const counterBonuses = (): readonly Pachislot.Countable[] => ((found) => (found?.type === "inferable" ? Pachislot.counterBonusesOf(found.formula) : []))(inferable())

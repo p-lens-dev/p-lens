@@ -5,7 +5,6 @@ import type { ApplicationError } from "../../../../application/errors"
 import { loadMachine } from "../../../../application/pachinko/formulas"
 import { bookNameOf } from "../../../../core/catalog/catalog"
 import { ranked } from "../../../../core/formula/standing"
-import { worthOf } from "../../../../core/pachinko/formula"
 import { SunkButton } from "../../../../sunk"
 import { useApp } from "../../../context"
 import { CirclePlusIcon } from "../../../primitives/icons"
@@ -23,6 +22,7 @@ import { trailTo } from "./trail"
 import { useActions } from "./use-actions"
 import { missingUndelivered } from "../../catalog/undelivered"
 import { useUnsentMarks } from "../../catalog/unsent-marks"
+import { measure } from "../../../../core/pachinko/measure"
 
 /** Every formula of a machine, best first by verification, then adoption. */
 export function MachineView(props: { readonly place: Place; readonly machineId: string }): JSX.Element {
@@ -56,7 +56,7 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
                   title="算出条件を作る"
                   class="flex size-8 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
                   onClick={() => {
-                    const from = startedFrom(ranked(found.formulas, worthOf).map((listing) => listing.formula))
+                    const from = startedFrom(ranked(found.formulas, measure).map((listing) => listing.formula))
                     start.updatePachinko({ machine: { type: "catalog", machineId: found.machine.id, name: bookNameOf(found.machine) }, remakeFrom: from?.id })
                     moves.go({ kind: "pachinko-formula-new", tab: from === undefined ? "manual" : remadeIn(from) })
                   }}
@@ -70,7 +70,7 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
               <Show when={found.formulas.some((listing) => unsent().has(listing.formula.id))}>
                 <p class="text-xs text-text-muted">{MARKS_UNSENT}</p>
               </Show>
-              <For each={ranked(found.formulas, worthOf)}>
+              <For each={ranked(found.formulas, measure)}>
                 {(listing) => (
                   <FormulaCard
                     listing={listing}

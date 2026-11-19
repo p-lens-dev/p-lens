@@ -1,6 +1,6 @@
 import { Show, type JSX } from "solid-js"
 
-import { ranked, sameWorth, type Selection } from "../../../../core/formula/standing"
+import { ranked, type Selection } from "../../../../core/formula/standing"
 import type { Formula, FormulaId, SettingDistributionId } from "../../../../core/pachislot/formula"
 import { STOCK_SPREADS, type ChosenPrior, type PriorSelection, type StockSpreadKey } from "../../../../core/pachislot/prior"
 import type { PachislotMachineDetail } from "../../../../core/catalog/catalog"
@@ -13,6 +13,8 @@ import { toast } from "../../../primitives/toast"
 import { useMoves } from "../../../navigation/moves"
 import { EVEN_PRIOR_NAME, formulaHandle, formulaNameAmong, STOCK_SPREAD_NAMES } from "../../../wording/pachislot/formula"
 import { KindMark } from "../formulas/KindMark"
+import { distributionMeasureOf } from "../../../../core/pachislot/measure"
+import { useApp } from "../../../context"
 
 type Reason = Selection<Formula>["by"] | PriorSelection["by"]
 
@@ -148,13 +150,14 @@ export function PriorPicker(props: {
   readonly onChoose: (prior: ChosenPrior) => void
   readonly onWaitingOnMachine: () => void
 }): JSX.Element {
+  const app = useApp()
   const options = (): readonly SelectOption[] => {
     const detail = props.detail
     if (detail === undefined || props.selection === undefined) return []
     return [
       ...STOCK_SPREADS.map((key) => ({ value: stockValue(key), label: STOCK_SPREAD_NAMES[key] })),
       { value: EVEN, label: EVEN_PRIOR_NAME },
-      ...ranked(detail.distributions, sameWorth).map((listing) => ({ value: listing.formula.id, label: listing.formula.label })),
+      ...ranked(detail.distributions, distributionMeasureOf(detail.machine.releasedOn, app.services.now())).map((listing) => ({ value: listing.formula.id, label: listing.formula.label })),
     ]
   }
   const chosen = (): string | undefined => {

@@ -922,21 +922,38 @@ Picking a machine picks a formula (`core/formula/standing.ts`):
 1. the formula a book keeps as a favourite for that machine, if any — the
    device's books asked from the top, the first to keep one of the machine's
    formulas having the say (`keptAmong`);
-2. otherwise the best ranked, by score: how it was made, verifications
-   less refutations, adoptions less rejections and uses, each by its
-   weight, summed (`scoreOf`: a check is worth five adoptions, a hundred
-   uses half of one; worked out from a basis sixteen points, sampled
-   three, typed in none — a step is a point more than all a maker can
-   give the formula below, their adoption and, where it has a basis,
-   their check, so their own marks never lift a formula over the making
-   above, and one more person's adoption does; uses weigh at most a
-   hundredth short of sixteen points, however many they are).
-   A favourite weighs nothing: it is its book's alone. Between two of
-   the same score, the one that makes a play worth less comes first
-   (`worthOf`: a pachinko formula's balls a spin, a pachislot one's 機械割
-   over its setting levels) — where nobody has said which is right, the
-   harsher figures are the safer to go by — and then the older, so a new
-   formula rises only by being checked and adopted;
+2. otherwise the best ranked (`ranked`, by its game's `Measure`):
+   - first by tier. A pachislot formula's tier is the grade of its power
+     to tell setting levels apart (`core/pachislot/discrimination`: what a
+     day of 8000 regular games counted tells the upper half of its setting
+     levels from the lower — small wins by their chance a game, cues by
+     their chance a trial, a moment's trials one a first hit; S from six
+     times likelier, A three, B one and a half, C below), shown on its
+     card; one refuted more than verified ranks below every grade. A
+     pachinko formula and a 設定配分 have one tier for all;
+   - then by score: how it was made, verifications less refutations,
+     adoptions less rejections and uses, each by its weight, summed
+     (`scoreOf`: a check is worth five adoptions, a hundred uses half of
+     one; worked out from a basis sixteen points, sampled three, typed in
+     none — a step is a point more than all a maker can give the formula
+     below, their adoption and, where it has a basis, their check, so
+     their own marks never lift a formula over the making above, and one
+     more person's adoption does; uses weigh at most a hundredth short of
+     sixteen points, however many they are). In rank (`rankScoreOf`) a
+     pachislot formula's or 設定配分's uses count half for each stage of
+     its machine's publication passed since it was made — 10, 21, 40, 70
+     and 100 days after release, the maker publishing 小役確率, モードの特徴,
+     移行率, 特定条件のAT当選率 and 詳細な設定差 in turn — and a fork, remade
+     from a listing of the same machine (a copy from another derives from
+     nothing), gains an adoption's two points, and a pachinko one a point
+     for each kind of component it fills that the one it was remade from
+     left empty, five at most. A favourite weighs nothing: it is its
+     book's alone;
+   - then the newer, a formula made since being most likely made to put
+     the older right or to say more; then, between two made at once, the
+     one that makes a play worth less (`worthOf`: a pachinko formula's
+     balls a spin, a pachislot one's 機械割 over its setting levels), the
+     harsher figures being the safer to go by;
 3. whichever you choose by hand overrides both for that play.
 
 Six marks, each kept apart, never merged with anything else:

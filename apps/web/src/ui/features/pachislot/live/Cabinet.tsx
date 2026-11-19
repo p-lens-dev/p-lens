@@ -9,7 +9,7 @@ import { bookNameOf, shownNameOf, type MachineSummary } from "../../../../core/c
 import { machineMatches } from "../../../../core/catalog/description"
 import { autoSelect, selectById, type Selection } from "../../../../core/formula/standing"
 import type { MachineChange, PachislotDraft } from "../../../../core/live-play/draft"
-import { worthOf, type Formula } from "../../../../core/pachislot/formula"
+import type { Formula } from "../../../../core/pachislot/formula"
 import { selectPrior } from "../../../../core/pachislot/prior"
 import { snapshotOf } from "../../../../core/pachislot/snapshot"
 import { readableBy } from "../../../../core/pachislot/weighing"
@@ -36,6 +36,7 @@ import { ViewHeader } from "../../shell/ViewHeader"
 import { ChoiceReason } from "../start/ChoiceFields"
 import { cabinetFieldMasked } from "../../../wording/cabinet"
 import { seal } from "../../../../mummer"
+import { distributionMeasureOf, measureOf } from "../../../../core/pachislot/measure"
 
 /** Where saying a play's cabinet anew is: being typed, being kept, or failed to be kept. */
 type Saving = { readonly type: "typing" } | { readonly type: "keeping" } | { readonly type: "failed"; readonly error: ApplicationError }
@@ -85,7 +86,7 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachislo
     const kept = found?.ok === true ? favorites.keptAmong(found.value.formulas.map((listing) => listing.formula.id)) : undefined
     if (found?.ok !== true || kept === undefined || found.value.machine.id !== machineId()) return undefined
     const byHand = formulaId()
-    return (byHand === undefined ? undefined : selectById(found.value.formulas, byHand)) ?? autoSelect(found.value.formulas, worthOf, kept)
+    return (byHand === undefined ? undefined : selectById(found.value.formulas, byHand)) ?? autoSelect(found.value.formulas, measureOf(found.value.machine.releasedOn, app.services.now()), kept)
   })
   const formulas = (): readonly Formula[] => {
     const found = detail()
@@ -101,7 +102,7 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachislo
     const before = props.draft.pachislot
     if (found?.ok !== true || formula === undefined || formula.id === before?.formula.id) return undefined
     const kept = favorites.keptAmong(found.value.distributions.map((listing) => listing.formula.id))
-    const prior = before !== undefined && before.formula.machineId === found.value.machine.id ? before.prior : kept === undefined ? undefined : selectPrior(found.value.distributions, undefined, kept).prior
+    const prior = before !== undefined && before.formula.machineId === found.value.machine.id ? before.prior : kept === undefined ? undefined : selectPrior(found.value.distributions, distributionMeasureOf(found.value.machine.releasedOn, app.services.now()), undefined, kept).prior
     const read = parsePlayLog(props.draft.log)
     return prior === undefined ? undefined : { type: "pachislot", name: bookNameOf(found.value.machine), weighing: { formula: snapshotOf(formula), prior }, readings: read.ok ? readableBy(snapshotOf(formula), read.value) : undefined }
   }

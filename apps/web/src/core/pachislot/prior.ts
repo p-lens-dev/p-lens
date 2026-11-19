@@ -1,6 +1,6 @@
 import type { BySettingLevelDto, DistributionDto } from "@p-lens/contracts/pachislot"
 
-import { ranked, sameWorth, type FormulaListing } from "../formula/standing"
+import { ranked, type FormulaListing, type Measure } from "../formula/standing"
 import { Err, Ok, type Result } from "../result/result"
 import type { SettingDistribution, SettingDistributionId, SettingLevelShare } from "./formula"
 
@@ -96,12 +96,12 @@ const stockPrior = (key: StockSpreadKey): Prior => ({ type: "stock", key, shares
 /** The prior nobody has said one in place of: an ordinary day's stock spread. */
 export const DEFAULT_PRIOR: Prior = stockPrior(ORDINARY)
 
-export const selectPrior = (listings: readonly FormulaListing<SettingDistribution>[], chosen: ChosenPrior | undefined, favorites: ReadonlySet<string>): PriorSelection => {
+export const selectPrior = (listings: readonly FormulaListing<SettingDistribution>[], measure: Measure<SettingDistribution>, chosen: ChosenPrior | undefined, favorites: ReadonlySet<string>): PriorSelection => {
   if (chosen?.type === "even") return { prior: { type: "even" }, by: "person" }
   if (chosen?.type === "stock" && isStockSpread(chosen.key)) return { prior: stockPrior(chosen.key), by: "person" }
   const byHand = chosen?.type === "distribution" ? listings.find((listing) => listing.formula.id === chosen.id) : undefined
   if (byHand !== undefined) return { prior: priorOf(byHand.formula), by: "person" }
-  const favorite = ranked(listings, sameWorth).find((listing) => favorites.has(listing.formula.id))
+  const favorite = ranked(listings, measure).find((listing) => favorites.has(listing.formula.id))
   return favorite === undefined ? { prior: DEFAULT_PRIOR, by: "default" } : { prior: priorOf(favorite.formula), by: "favorite" }
 }
 

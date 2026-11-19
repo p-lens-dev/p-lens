@@ -4,8 +4,7 @@ import { MainContent } from "solid-gathering-shell"
 import type { ApplicationError } from "../../../../application/errors"
 import { loadMachine } from "../../../../application/pachislot/formulas"
 import { bookNameOf } from "../../../../core/catalog/catalog"
-import { ranked, sameWorth } from "../../../../core/formula/standing"
-import { worthOf } from "../../../../core/pachislot/formula"
+import { ranked } from "../../../../core/formula/standing"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
 import { CirclePlusIcon } from "../../../primitives/icons"
@@ -23,6 +22,7 @@ import { trailTo } from "./trail"
 import { useActions } from "./use-actions"
 import { missingUndelivered } from "../../catalog/undelivered"
 import { useUnsentMarks } from "../../catalog/unsent-marks"
+import { distributionMeasureOf, measureOf } from "../../../../core/pachislot/measure"
 
 const SECTION_TITLE = "text-xs font-bold uppercase tracking-wide text-text-secondary"
 
@@ -68,7 +68,7 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
                     title="算出条件を作る"
                     class="flex size-8 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
                     onClick={() => {
-                      const from = startedFrom(ranked(found.formulas, worthOf).map((listing) => listing.formula))
+                      const from = startedFrom(ranked(found.formulas, measureOf(found.machine.releasedOn, app.services.now())).map((listing) => listing.formula))
                       start.updatePachislot({ machine: { type: "catalog", machineId: found.machine.id, name: bookNameOf(found.machine) }, remakeFrom: from?.id })
                       moves.go({ kind: "pachislot-formula-new", tab: from === undefined ? "manual" : remadeIn(from) })
                     }}
@@ -76,7 +76,7 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
                     <CirclePlusIcon />
                   </button>
                 </div>
-                <For each={ranked(found.formulas, worthOf)}>
+                <For each={ranked(found.formulas, measureOf(found.machine.releasedOn, app.services.now()))}>
                   {(listing) => (
                     <FormulaCard
                       listing={listing}
@@ -98,7 +98,7 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
                 </div>
                 <p class="text-sm text-text-muted">店が設定をどう使っているかの見立てです。何も選ばなければ、全設定が均等として推測します。</p>
                 <Show when={found.distributions.length > 0} fallback={<EmptyState title="設定配分はまだありません">平日・イベント日など、見立てを登録できます。</EmptyState>}>
-                  <For each={ranked(found.distributions, sameWorth)}>
+                  <For each={ranked(found.distributions, distributionMeasureOf(found.machine.releasedOn, app.services.now()))}>
                     {(listing) => (
                       <SettingDistributionCard
                         listing={listing}

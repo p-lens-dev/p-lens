@@ -10,6 +10,7 @@ import { amountText, formatCount, signedAmountText, UNSEEN_THEORETICAL, type Amo
 import { seal } from "../../../mummer"
 import type { TriggerWords } from "./trigger"
 import { settingLevelText } from "./setting-level"
+import { discriminationGradeOf, discriminationPointsOf } from "../../../core/pachislot/discrimination"
 
 const KIND_NAMES: Readonly<Record<FormulaKind, string>> = { manual: "手入力", simulated: "解析値から計算", sampled: "シミュレータ" }
 
@@ -64,6 +65,9 @@ export const observedOneInText = (games: number, count: number): string => (coun
 
 /** How large a share of the trials a count came to — a cue over a moment, 7 of 10 as 70.0% — or dashes while none was watched. */
 export const observedShareText = (trials: number, count: number): string => (trials > 0 ? `${((count / trials) * 100).toFixed(1)}%` : "--%")
+
+/** A formula's power to tell setting levels apart, as its list shows it: its grade and its points out of a hundred — 判別力 S（85点）. */
+export const discriminationText = (discrimination: number): string => `判別力 ${discriminationGradeOf(discrimination)}（${String(discriminationPointsOf(discrimination))}点）`
 
 /** What an even prior is called wherever a 設定配分 would be named. */
 export const EVEN_PRIOR_NAME = "均等（全設定が同じ）"

@@ -173,8 +173,8 @@ export function CornerTerms(props: { readonly draft: PlayDraft; readonly hold: P
     const parts = venueParts("pachislot", props.draft.venue.terms, parlorOf(props.draft))
     return (
       <>
-        <span class="shrink-0">{parts.rate}</span>
-        <span class={PARLOR}>{parts.parlor}</span>
+        <span class="shrink-0">{parts.rateText}</span>
+        <span class={PARLOR}>{parts.parlorText}</span>
       </>
     )
   }

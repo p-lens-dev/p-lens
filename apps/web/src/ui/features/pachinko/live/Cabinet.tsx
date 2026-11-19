@@ -9,7 +9,7 @@ import { bookNameOf, shownNameOf, type MachineSummary } from "../../../../core/c
 import { machineMatches } from "../../../../core/catalog/description"
 import { autoSelect, selectById, type Selection } from "../../../../core/formula/standing"
 import { jackpotCountingOf, tokenValueOfDraft, withOverEntry, type MachineChange, type PachinkoDraft } from "../../../../core/live-play/draft"
-import { assumedSettingLevelOf, supportGainOf, worthOf, type Formula } from "../../../../core/pachinko/formula"
+import { assumedSettingLevelOf, supportGainOf, type Formula } from "../../../../core/pachinko/formula"
 import { borderOf } from "../../../../core/pachinko/theoretical-value"
 import { withJackpotsUntold } from "../../../../core/pachinko/revision"
 import { snapshotOf } from "../../../../core/pachinko/snapshot"
@@ -38,6 +38,7 @@ import { ViewHeader } from "../../shell/ViewHeader"
 import { SelectionReason } from "../formulas/SelectionReason"
 import { cabinetFieldMasked } from "../../../wording/cabinet"
 import { seal } from "../../../../mummer"
+import { measure } from "../../../../core/pachinko/measure"
 
 /** A usual over-entry as typed, in balls a round, signed: none where nothing is typed, or nought; `unread` where it is not a whole number. */
 const overEntryTyped = (typed: string): number | undefined | "unread" => {
@@ -98,7 +99,7 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachinko
     const kept = found?.ok === true ? favorites.keptAmong(found.value.formulas.map((listing) => listing.formula.id)) : undefined
     if (found?.ok !== true || kept === undefined || found.value.machine.id !== machineId()) return undefined
     const byHand = formulaId()
-    return (byHand === undefined ? undefined : selectById(found.value.formulas, byHand)) ?? autoSelect(found.value.formulas, worthOf, kept)
+    return (byHand === undefined ? undefined : selectById(found.value.formulas, byHand)) ?? autoSelect(found.value.formulas, measure, kept)
   })
   const formulas = (): readonly Formula[] => {
     const found = detail()

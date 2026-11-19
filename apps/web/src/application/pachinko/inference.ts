@@ -3,7 +3,7 @@ import type { InferenceSummaryDto, WayDto } from "@p-lens/contracts/pachinko"
 import type { Catalog } from "../../catalog/port/catalog"
 import type { PachinkoMachineDetail } from "../../core/catalog/catalog"
 import { ranked } from "../../core/formula/standing"
-import { basisOf, worthOf, type Basis, type Formula } from "../../core/pachinko/formula"
+import { basisOf, type Basis, type Formula } from "../../core/pachinko/formula"
 import { TRIALS_BEYOND, ballsPerSpinOf, beliefOf, PACE_BY_DEFAULT, RENTED_PER_THOUSAND, scaledBallValueOf, seedOf, toldDtoOf, verdictOf, type Told, type Verdict, type Weighed, type WeighingTerms } from "../../core/pachinko/inference"
 import type { PlayId } from "../../core/play/play"
 import type { EngineClient, RunningRun } from "../../pachinko-engine/client/client"
@@ -12,6 +12,7 @@ import { Err } from "../../core/result/result"
 import type { ApplicationError } from "../errors"
 import { fromPachinkoEngine } from "../lift"
 import { loadMachine } from "./formulas"
+import { measure } from "../../core/pachinko/measure"
 
 /** A formula a told play can be weighed by: one made from a basis, which the machine can be played out from. */
 export interface Weighable {
@@ -26,7 +27,7 @@ export interface Weighable {
  * machine has only figures typed in, which nothing can be played out from.
  */
 export const weighableOf = (machine: PachinkoMachineDetail): Weighable | undefined =>
-  ranked(machine.formulas, worthOf)
+  ranked(machine.formulas, measure)
     .flatMap((listing) => ((basis) => (basis === undefined ? [] : [{ formula: listing.formula, basis }]))(basisOf(listing.formula)))
     .at(0)
 

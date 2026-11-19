@@ -1,11 +1,12 @@
 import { Index, Show, type JSX } from "solid-js"
 
 import { netAdoptions, netVerifications, usesWeighTheirMost, type FormulaListing, type Mark, type MyMarks } from "../../../../core/formula/standing"
+import { discriminationOf } from "../../../../core/pachislot/discrimination"
 import { combinedTellsMore } from "../../../../core/pachislot/figures"
 import type { Formula, SettingDistribution } from "../../../../core/pachislot/formula"
 import { BoltIcon, HandIcon, HeartIcon, QuestionIcon, ShieldIcon } from "../../../primitives/icons"
 import { formulaIdLabel } from "../../../wording/catalog"
-import { oddsText, formulaText, payoutRateText, sharesText, UNCHECKED } from "../../../wording/pachislot/formula"
+import { discriminationText, oddsText, formulaText, payoutRateText, sharesText, UNCHECKED } from "../../../wording/pachislot/formula"
 import { KindMark } from "./KindMark"
 import { isMine, OWN_LINES, ownPaintOf } from "./vote-fill"
 
@@ -120,6 +121,9 @@ export function FormulaCard(props: {
           )}
         </Index>
       </ul>
+      <p class="text-xs tabular-nums text-text-secondary" title="カウンターを1日（通常時8000G）付けたとき、高設定域と低設定域をどれだけ見分けられるか（100点満点）">
+        {discriminationText(discriminationOf(props.listing.formula.basis.normalized, props.listing.formula.figures))}
+      </p>
       <Standing listing={props.listing} mine={props.mine} favorite={props.favorite} verifiable onUse={props.onUse} />
     </article>
   )

@@ -3,7 +3,6 @@ import type { PlayDto, PlayedDto, PosteriorRequest, WeightDto } from "@p-lens/co
 import type { Catalog } from "../../catalog/port/catalog"
 import { ranked } from "../../core/formula/standing"
 import { DEFAULT_PRIOR, priorFor } from "../../core/pachislot/prior"
-import { worthOf } from "../../core/pachislot/formula"
 import { snapshotOf, type FormulaSnapshot } from "../../core/pachislot/snapshot"
 import { atGamesOf, playedGamesOf, playTermsOf, segmentOf, toldAtPathOf, toldPathOf, type MedalTerms, type SettingTold } from "../../core/pachislot/told"
 import { pricedPlayOf, settingLevelsOf } from "../../core/pachislot/weighing"
@@ -12,6 +11,7 @@ import type { EngineClient } from "../../pachislot-engine/client/client"
 import type { ApplicationError, Outcome } from "../errors"
 import { fromPachislotEngine } from "../lift"
 import { loadMachine } from "./formulas"
+import { measureOf } from "../../core/pachislot/measure"
 
 /**
  * The formula a told play of a machine is read by: the best ranked of its
@@ -21,9 +21,9 @@ import { loadMachine } from "./formulas"
 export type Inferable = { readonly type: "inferable"; readonly formula: FormulaSnapshot } | { readonly type: "no-formula" }
 
 /** The formula a machine's told plays are read by, looked up in the catalog. */
-export const loadInferable = async (catalog: Catalog, machineId: string): Promise<Outcome<Inferable>> =>
+export const loadInferable = async (catalog: Catalog, machineId: string, now: string): Promise<Outcome<Inferable>> =>
   mapOk(await loadMachine(catalog, machineId), (detail): Inferable => {
-    const best = ranked(detail.formulas, worthOf).at(0)
+    const best = ranked(detail.formulas, measureOf(detail.machine.releasedOn, now)).at(0)
     return best === undefined ? { type: "no-formula" } : { type: "inferable", formula: snapshotOf(best.formula) }
   })
 

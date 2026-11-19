@@ -18,7 +18,8 @@
  *   as many as deserve it. A person may hold both on one formula.
  * - `uses` — plays started with it. Nobody says anything: a statistic,
  *   counted every time, weighing next to nothing a play and never past
- *   its most.
+ *   its most, and less for a formula made before its machine was
+ *   published whole.
  * - `favorites` (お気に入り) — what a person keeps for themselves, in their
  *   book. It chooses the formula their own play opens with and ranks
  *   nothing.
@@ -74,14 +75,16 @@ export const netAdoptions = (standing: Standing): number => standing.adoptions -
 /**
  * Anything people register for a machine and stand behind the way they do a
  * formula: a pachinko 算出条件, a pachislot one, a pachislot 設定配分. Ranked
- * by the score of how it was made and what has been done with it, then by
- * what it makes a play worth, then by age.
+ * by its game's tier, then by the score of how it was made and what has
+ * been done with it, then by age (`ranked`).
  */
 export interface Ranked {
   readonly id: string
   readonly createdAt: string
   /** How a formula was made; a 設定配分 is made no way, and has none. */
   readonly kind?: Making
+  /** The one it was remade from, where it was: a fork when that one is of the same machine. */
+  readonly derivedFrom: string | undefined
 }
 
 /** How a formula was made: typed in, worked out exactly from a basis, or sampled from one by the simulator. */
@@ -99,8 +102,28 @@ export interface FormulaListing<F extends Ranked> {
  */
 export type Worth<F> = (formula: F) => number
 
-/** For what is worth nothing either way, so worth decides nothing between two of it: a 設定配分. */
-export const sameWorth: Worth<unknown> = () => 0
+/**
+ * How a game sets a machine's listings against each other beside what
+ * people have done with them:
+ *
+ * - `tier` — what ranks before any score, a higher tier first: a pachislot
+ *   formula's power to tell setting levels apart, one refuted more than
+ *   verified below them all; one tier for all where the game has none.
+ * - `details` — the kinds of detail a listing fills, for what a fork adds
+ *   over the one it was remade from; none where the game says it in its
+ *   tier instead.
+ * - `stagesPassed` — the days, already past, on which a maker publishes
+ *   more of a machine (小役確率 a week after release, モード移行率 a month,
+ *   詳細な設定差 three): the uses of a listing made before each count half.
+ *   None where a machine is published whole at once.
+ * - `worth` — what it makes a play worth, between two made at once.
+ */
+export interface Measure<F extends Ranked> {
+  readonly tier: (listing: FormulaListing<F>) => number
+  readonly details: (formula: F) => ReadonlySet<string>
+  readonly stagesPassed: readonly string[]
+  readonly worth: Worth<F>
+}
 
 /**
  * What a check, an adoption and a use each weigh in a formula's score, in
@@ -134,6 +157,17 @@ const MOST_FROM_USES = 1_599
 export const usesWeighTheirMost = (standing: Standing): boolean => standing.uses * WEIGHTS.use >= MOST_FROM_USES
 
 /**
+ * What being a fork weighs — remade from a formula of the same machine,
+ * most likely to put it right or to say more: an adoption's two points.
+ * A copy from another machine is no fork; it derives from nothing.
+ */
+const FORK_BONUS = 200
+
+/** What each kind of detail a fork fills that the one it was remade from left empty weighs, and the most they weigh together. */
+const FILLED_DETAIL = 100
+const MOST_FROM_FILLED = 500
+
+/**
  * What a formula's making weighs in its score before anyone has done
  * anything with it, in the same hundredths: one worked out from a basis
  * sixteen points, one sampled by the simulator three, and one typed in
@@ -149,7 +183,7 @@ export const usesWeighTheirMost = (standing: Standing): boolean => standing.uses
 const MAKING_WEIGHTS: Readonly<Record<Making, number>> = { manual: 0, sampled: 300, simulated: 1_600 }
 
 /**
- * A formula's score, the first thing its rank goes by:
+ * A formula's score from its making and its marks:
  *
  *     making + (検証OK − 検証NG) × 10 + (イチオシ − 非推奨) × 2 + min(利用 × 0.01, 15.99)
  *
@@ -159,7 +193,8 @@ const MAKING_WEIGHTS: Readonly<Record<Making, number>> = { manual: 0, sampled: 3
  * adoptions can outweigh another's one check; a formula refuted as often
  * as it was verified has nothing from its checks, and one refuted more
  * goes below zero. Eight rejections outweigh all that uses can ever give.
- * Favourites weigh nothing.
+ * Favourites weigh nothing. Its rank adds to it what its machine's other
+ * listings and its game say (`rankScoreOf`).
  */
 export const scoreOf = <F extends Ranked>(listing: FormulaListing<F>): number =>
   (listing.formula.kind === undefined ? 0 : MAKING_WEIGHTS[listing.formula.kind]) +
@@ -167,22 +202,46 @@ export const scoreOf = <F extends Ranked>(listing: FormulaListing<F>): number =>
   netAdoptions(listing.standing) * WEIGHTS.adoption +
   Math.min(listing.standing.uses * WEIGHTS.use, MOST_FROM_USES)
 
-/**
- * Which of two formulas ranks first: the one of the higher score. Between
- * two of the same score, the one that makes a play worth less comes first:
- * where nobody has said which is right, the harsher figures are the safer
- * to go by. Then the older: a new formula does not rise for being new,
- * only by being checked and adopted — and the order never shuffles.
- */
-const compareListings =
-  <F extends Ranked>(worth: Worth<F>) =>
-  (left: FormulaListing<F>, right: FormulaListing<F>): number =>
-    scoreOf(right) - scoreOf(left) ||
-    worth(left.formula) - worth(right.formula) ||
-    left.formula.createdAt.localeCompare(right.formula.createdAt) ||
-    left.formula.id.localeCompare(right.formula.id)
+/** The stages of publication a formula was made before, of those passed. */
+const stagesMissed = (formula: Ranked, stagesPassed: readonly string[]): number => stagesPassed.filter((stage) => formula.createdAt.slice(0, 10) < stage).length
 
-export const ranked = <F extends Ranked>(listings: readonly FormulaListing<F>[], worth: Worth<F>): readonly FormulaListing<F>[] => listings.toSorted(compareListings(worth))
+/** What a formula's uses weigh in its rank: their weight in its score, halved for each stage of publication it was made before. */
+const usesInRank = <F extends Ranked>(listing: FormulaListing<F>, stagesPassed: readonly string[]): number =>
+  Math.floor(Math.min(listing.standing.uses * WEIGHTS.use, MOST_FROM_USES) / 2 ** stagesMissed(listing.formula, stagesPassed))
+
+/** What being a fork weighs: the bonus, and each kind of detail it fills that the one it was remade from left empty; nothing where it is no fork of the machine's. */
+const forkWeight = <F extends Ranked>(formula: F, among: readonly FormulaListing<F>[], measure: Measure<F>): number => {
+  const parent = among.find((other) => other.formula.id === formula.derivedFrom)?.formula
+  if (parent === undefined) return 0
+  const before = measure.details(parent)
+  const filled = [...measure.details(formula)].filter((detail) => !before.has(detail)).length
+  return FORK_BONUS + Math.min(filled * FILLED_DETAIL, MOST_FROM_FILLED)
+}
+
+/** A listing's score in its machine's rank: its score with its uses halved by the stages it missed, and what being a fork weighs. */
+export const rankScoreOf = <F extends Ranked>(listing: FormulaListing<F>, among: readonly FormulaListing<F>[], measure: Measure<F>): number =>
+  scoreOf(listing) - Math.min(listing.standing.uses * WEIGHTS.use, MOST_FROM_USES) + usesInRank(listing, measure.stagesPassed) + forkWeight(listing.formula, among, measure)
+
+/**
+ * A machine's listings in rank: the higher tier first, then the higher
+ * score in rank. Between two of the same, the newer: a formula made since
+ * was most likely made to put the older right or to say more, and nobody
+ * has yet said otherwise. Between two made at once, the one that makes a
+ * play worth less, the harsher figures being the safer to go by, and then
+ * by id, so the order never shuffles.
+ */
+export const ranked = <F extends Ranked>(listings: readonly FormulaListing<F>[], measure: Measure<F>): readonly FormulaListing<F>[] =>
+  listings
+    .map((listing) => ({ listing, tier: measure.tier(listing), score: rankScoreOf(listing, listings, measure) }))
+    .toSorted(
+      (left, right) =>
+        right.tier - left.tier ||
+        right.score - left.score ||
+        right.listing.formula.createdAt.localeCompare(left.listing.formula.createdAt) ||
+        measure.worth(left.listing.formula) - measure.worth(right.listing.formula) ||
+        left.listing.formula.id.localeCompare(right.listing.formula.id),
+    )
+    .map((each) => each.listing)
 
 /**
  * Which formula a machine opens with, and why: the one a book of the
@@ -194,8 +253,8 @@ export type Selection<F extends Ranked> =
   | { readonly by: "ranking"; readonly listing: FormulaListing<F> }
   | { readonly by: "person"; readonly listing: FormulaListing<F> }
 
-export const autoSelect = <F extends Ranked>(listings: readonly FormulaListing<F>[], worth: Worth<F>, favorites: ReadonlySet<string>): Selection<F> | undefined => {
-  const order = ranked(listings, worth)
+export const autoSelect = <F extends Ranked>(listings: readonly FormulaListing<F>[], measure: Measure<F>, favorites: ReadonlySet<string>): Selection<F> | undefined => {
+  const order = ranked(listings, measure)
   const favorite = order.find((listing) => favorites.has(listing.formula.id))
   const best = order.at(0)
   return favorite !== undefined ? { by: "favorite", listing: favorite } : best === undefined ? undefined : { by: "ranking", listing: best }

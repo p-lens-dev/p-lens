@@ -18,6 +18,8 @@ import {
 import { counterBonusesOf, counterBonusOf, countablesOf, countedOutOf, GAMES_PER_HOUR, huntPlayOf, playOf, settingLevelsOf } from "../../../src/core/pachislot/weighing"
 import { tokenValueOf, type PlayTerms } from "../../../src/core/parlor/terms"
 import type { Checkpoint } from "../../../src/core/play-log/checkpoint"
+import type { IsoDate } from "../../../src/core/calendar/calendar"
+import { distributionMeasureOf } from "../../../src/core/pachislot/measure"
 
 const spec: NormalizedSpecDto = normalized as NormalizedSpecDto
 
@@ -89,6 +91,7 @@ describe("a pachislot prior", () => {
 })
 
 describe("choosing a play's prior", () => {
+  const measure = distributionMeasureOf("2026-06-01" as IsoDate, "2026-11-20T00:00:00Z")
   const listing = (id: string, adoptions: number): FormulaListing<SettingDistribution> => ({
     formula: { id: id as SettingDistributionId, machineId: "m" as MachineId, label: id, shares: [], derivedFrom: undefined, createdAt: "2026-10-05T00:00:00Z" },
     standing: { verifications: 0, refutations: 0, adoptions, rejections: 0, favorites: 0, uses: 0 },
@@ -104,20 +107,20 @@ describe("choosing a play's prior", () => {
     expect(average("collecting")).toBeLessThan(1.3)
     expect([average("ordinary-harsh"), average("ordinary")].every((level) => level > 1.2 && level < 1.7)).toBe(true)
     expect(priorFor({ type: "stock", key: "collecting", shares: stockSharesOf("collecting") }, [1, 6])).toEqual({ ok: true, value: { shares: [{ settingLevel: 1, value: 9976 }, { settingLevel: 6, value: 24 }] } })
-    expect(selectPrior([], { type: "stock", key: "event" }, new Set())).toEqual({ prior: { type: "stock", key: "event", shares: stockSharesOf("event") }, by: "person" })
-    expect(selectPrior([], { type: "stock", key: "no such spread" }, new Set()).by).toBe("default")
+    expect(selectPrior([], measure, { type: "stock", key: "event" }, new Set())).toEqual({ prior: { type: "stock", key: "event", shares: stockSharesOf("event") }, by: "person" })
+    expect(selectPrior([], measure, { type: "stock", key: "no such spread" }, new Set()).by).toBe("default")
   })
 
   test("is the harshest stock spread by default, however well a 設定配分 ranks", () => {
-    expect(selectPrior([listing("weekday", 12)], undefined, new Set())).toEqual({ prior: { type: "stock", key: "ordinary", shares: stockSharesOf("ordinary") }, by: "default" })
+    expect(selectPrior([listing("weekday", 12)], measure, undefined, new Set())).toEqual({ prior: { type: "stock", key: "ordinary", shares: stockSharesOf("ordinary") }, by: "default" })
   })
 
   test("is the favourite when one is kept, and what was chosen by hand over either", () => {
     const listings = [listing("weekday", 12), listing("event", 0)]
     const kept = new Set(["event"])
-    expect(selectPrior(listings, undefined, kept)).toMatchObject({ prior: { type: "distribution", id: "event" }, by: "favorite" })
-    expect(selectPrior(listings, { type: "distribution", id: "weekday" as SettingDistributionId }, kept)).toMatchObject({ prior: { id: "weekday" }, by: "person" })
-    expect(selectPrior(listings, { type: "even" }, kept)).toEqual({ prior: { type: "even" }, by: "person" })
+    expect(selectPrior(listings, measure, undefined, kept)).toMatchObject({ prior: { type: "distribution", id: "event" }, by: "favorite" })
+    expect(selectPrior(listings, measure, { type: "distribution", id: "weekday" as SettingDistributionId }, kept)).toMatchObject({ prior: { id: "weekday" }, by: "person" })
+    expect(selectPrior(listings, measure, { type: "even" }, kept)).toEqual({ prior: { type: "even" }, by: "person" })
   })
 })
 

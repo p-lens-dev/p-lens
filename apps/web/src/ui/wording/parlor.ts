@@ -46,9 +46,9 @@ export const rateText = (gameKind: PlayGameKind, terms: PlayTerms): string => `$
  * short, then its parlor, which may be — `4円・` and
  * `マレハン東京皇国第8支店` — or that it has no rate.
  */
-export const venueParts = (gameKind: PlayGameKind, terms: PlayTerms | undefined, parlor: Parlor | undefined): { readonly rate: string; readonly parlor: string } => ({
-  rate: `${terms === undefined ? "レート指定なし" : tierOf(gameKind, terms)}・`,
-  parlor: parlorText(parlor),
+export const venueParts = (gameKind: PlayGameKind, terms: PlayTerms | undefined, parlor: Parlor | undefined): { readonly rateText: string; readonly parlorText: string } => ({
+  rateText: `${terms === undefined ? "レート指定なし" : tierOf(gameKind, terms)}・`,
+  parlorText: parlorText(parlor),
 })
 
 /** A distance as a person reads it: metres up close, kilometres beyond. */

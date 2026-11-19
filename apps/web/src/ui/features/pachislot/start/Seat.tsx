@@ -3,7 +3,7 @@ import { createMemo, createResource, Index, Show, type Accessor, type JSX } from
 import { loadMachine } from "../../../../application/pachislot/formulas"
 import { weighPlay } from "../../../../application/pachislot/weighing"
 import { autoSelect, selectById, type Selection } from "../../../../core/formula/standing"
-import { type Formula, worthOf } from "../../../../core/pachislot/formula"
+import { type Formula } from "../../../../core/pachislot/formula"
 import { snapshotOf } from "../../../../core/pachislot/snapshot"
 import { selectPrior, type PriorSelection } from "../../../../core/pachislot/prior"
 import { atModesOf, hasCz, resetMatters, type AtMode } from "../../../../core/pachislot/path"
@@ -24,6 +24,7 @@ import { useBookFavorites } from "../../live/book-favorites"
 import { useStartForm } from "../../live/start-form"
 import { OutlookPanel } from "../live/OutlookPanel"
 import { readSeat, type Seat, type SeatForm, type SeatProblem, seatLineOf } from "./seat-form"
+import { distributionMeasureOf, measureOf } from "../../../../core/pachislot/measure"
 
 /** What the pachislot start form has come to for a machine from the catalog: what it is weighed by, and the seat's counter as read. */
 export interface SeatState {
@@ -78,12 +79,12 @@ export const useSeat = (): SeatState => {
     const chosen = chosenFormula()
     const kept = found === undefined ? undefined : favorites.keptAmong(found.formulas.map((listing) => listing.formula.id))
     if (found === undefined || kept === undefined) return undefined
-    return (chosen === undefined ? undefined : selectById(found.formulas, chosen)) ?? autoSelect(found.formulas, worthOf, kept)
+    return (chosen === undefined ? undefined : selectById(found.formulas, chosen)) ?? autoSelect(found.formulas, measureOf(found.machine.releasedOn, app.services.now()), kept)
   })
   const priorSelection = createMemo((): PriorSelection | undefined => {
     const found = detail()
     const kept = found === undefined ? undefined : favorites.keptAmong(found.distributions.map((listing) => listing.formula.id))
-    return found === undefined || kept === undefined ? undefined : selectPrior(found.distributions, chosenPrior(), kept)
+    return found === undefined || kept === undefined ? undefined : selectPrior(found.distributions, distributionMeasureOf(found.machine.releasedOn, app.services.now()), chosenPrior(), kept)
   })
   const weighing = createMemo((): Weighing | undefined => {
     const formula = formulaSelection()?.listing.formula

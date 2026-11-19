@@ -4,12 +4,13 @@ import { findMachines } from "../../../../application/catalog"
 import type { ApplicationError } from "../../../../application/errors"
 import { loadMachine } from "../../../../application/pachislot/formulas"
 import { ranked } from "../../../../core/formula/standing"
-import { worthOf, type Formula } from "../../../../core/pachislot/formula"
+import type { Formula } from "../../../../core/pachislot/formula"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
 import { Combobox, type ComboboxOption } from "../../../primitives/combobox"
 import { describeError } from "../../../wording/errors"
 import { startedFrom } from "./remaking"
+import { measureOf } from "../../../../core/pachislot/measure"
 
 /** Where copying from another machine is: not asked for, a machine being looked for, one found with nothing to copy, or failed. */
 type Copying =
@@ -48,7 +49,7 @@ export function CopyFromMachine(props: { readonly onCopied: (formula: Formula, f
       setCopying({ type: "failed", error: detail.error })
       return
     }
-    const formula = startedFrom(ranked(detail.value.formulas, worthOf).map((listing) => listing.formula))
+    const formula = startedFrom(ranked(detail.value.formulas, measureOf(detail.value.machine.releasedOn, app.services.now())).map((listing) => listing.formula))
     if (formula === undefined) {
       setCopying({ type: "nothing-to-copy", name: detail.value.machine.name })
       return

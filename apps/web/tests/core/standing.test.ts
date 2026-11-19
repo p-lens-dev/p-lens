@@ -2,12 +2,15 @@ import { describe, expect, test } from "bun:test"
 
 import { worthOf as pachinkoWorthOf } from "../../src/core/pachinko/formula"
 import { worthOf as pachislotWorthOf } from "../../src/core/pachislot/formula"
-import { autoSelect, ranked, sameWorth, scoreOf, selectById, usesWeighTheirMost, type FormulaListing, type Making, type Ranked, type Standing } from "../../src/core/formula/standing"
+import { autoSelect, ranked, scoreOf, selectById, usesWeighTheirMost, type FormulaListing, type Making, type Measure, type Ranked, type Standing } from "../../src/core/formula/standing"
 
 const listing = (id: string, standing: Partial<Standing>, createdAt = "2026-10-01T00:00:00.000Z"): FormulaListing<Ranked> => ({
-  formula: { id, createdAt },
+  formula: { id, createdAt, derivedFrom: undefined },
   standing: { verifications: 0, refutations: 0, adoptions: 0, rejections: 0, favorites: 0, uses: 0, ...standing },
 })
+
+/** One tier for all, nothing filled, every use counted whole and worth deciding nothing. */
+const sameWorth: Measure<Ranked> = { tier: () => 0, details: () => new Set(), stagesPassed: [], worth: () => 0 }
 
 describe("ranking formulas", () => {
   const ids = (order: readonly FormulaListing<Ranked>[]): readonly string[] => order.map((each) => each.formula.id)
@@ -18,7 +21,7 @@ describe("ranking formulas", () => {
     expect(scoreOf(listing("x", { verifications: 3, refutations: 3, adoptions: 2, rejections: 2, favorites: 900 }))).toBe(0)
   })
 
-  const made = (id: string, kind: Making, standing: Partial<Standing>): FormulaListing<Ranked> => ({ ...listing(id, standing), formula: { id, createdAt: "2026-10-01T00:00:00.000Z", kind } })
+  const made = (id: string, kind: Making, standing: Partial<Standing>): FormulaListing<Ranked> => ({ ...listing(id, standing), formula: { id, createdAt: "2026-10-01T00:00:00.000Z", kind, derivedFrom: undefined } })
 
   test("how a formula was made weighs too: worked out from a basis sixteen points, sampled three, typed in none, and a 設定配分 none", () => {
     expect([scoreOf(made("m", "manual", {})), scoreOf(made("s", "sampled", {})), scoreOf(made("b", "simulated", {})), scoreOf(listing("d", {}))]).toEqual([0, 300, 1_600, 0])
@@ -64,19 +67,48 @@ describe("ranking formulas", () => {
     expect(ids(order)).toEqual(["held", "refuted", "adopted", "rejected"])
   })
 
-  test("between two of the same score, the harsher comes first, then the older", () => {
-    const worth: Readonly<Record<string, number>> = { kind: 15.2, harsh: 14.6, harshAndNewer: 14.6, harshAndOlder: 14.6 }
+  test("between two of the same score, the newer comes first; between two made at once, the harsher", () => {
+    const worth: Readonly<Record<string, number>> = { kind: 15.2, harsh: 14.6, harshTwin: 14.6 }
     const order = ranked(
       [
-        listing("kind", { verifications: 1 }, "2026-09-01T00:00:00.000Z"),
-        listing("harshAndNewer", { verifications: 1 }, "2026-10-03T00:00:00.000Z"),
-        listing("harsh", { verifications: 1 }, "2026-10-02T00:00:00.000Z"),
-        listing("harshAndOlder", { verifications: 1 }, "2026-10-01T00:00:00.000Z"),
-        listing("kindButUsed", { verifications: 1, uses: 1 }, "2026-10-04T00:00:00.000Z"),
+        listing("older", { verifications: 1 }, "2026-09-01T00:00:00.000Z"),
+        listing("kind", { verifications: 1 }, "2026-10-03T00:00:00.000Z"),
+        listing("harshTwin", { verifications: 1 }, "2026-10-03T00:00:00.000Z"),
+        listing("harsh", { verifications: 1 }, "2026-10-03T00:00:00.000Z"),
+        listing("used", { verifications: 1, uses: 1 }, "2026-08-01T00:00:00.000Z"),
       ],
-      (formula) => worth[formula.id] ?? 99,
+      { ...sameWorth, worth: (formula) => worth[formula.id] ?? 99 },
     )
-    expect(ids(order)).toEqual(["kindButUsed", "harshAndOlder", "harsh", "harshAndNewer", "kind"])
+    expect(ids(order)).toEqual(["used", "harsh", "harshTwin", "kind", "older"])
+  })
+
+  test("a higher tier ranks first, whatever the score", () => {
+    const tiers: Readonly<Record<string, number>> = { telling: 2, checked: 1 }
+    const order = ranked([listing("checked", { verifications: 3 }), listing("telling", {})], { ...sameWorth, tier: (each) => tiers[each.formula.id] ?? 0 })
+    expect(ids(order)).toEqual(["telling", "checked"])
+  })
+
+  test("uses made before a stage of publication count half for each such stage passed", () => {
+    const early = listing("early", { uses: 800 }, "2026-06-01T09:00:00.000Z")
+    const late = listing("late", { uses: 300 }, "2026-07-20T09:00:00.000Z")
+    const order = (stagesPassed: readonly string[]) => ids(ranked([early, late], { ...sameWorth, stagesPassed }))
+    expect(order([])).toEqual(["early", "late"])
+    expect(order(["2026-06-11"])).toEqual(["early", "late"])
+    expect(order(["2026-06-11", "2026-06-22"])).toEqual(["late", "early"])
+  })
+
+  test("a fork of the machine's own gains an adoption's two points and one for each kind of detail it fills, five at most; a copy from another machine none", () => {
+    const parent = listing("parent", { adoptions: 1, uses: 150 }, "2026-09-01T00:00:00.000Z")
+    const fork = { ...listing("fork", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "fork", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "parent" } }
+    const stranger = { ...listing("copy", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "copy", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "elsewhere" } }
+    expect(ids(ranked([parent, stranger], sameWorth))).toEqual(["parent", "copy"])
+    expect(ids(ranked([parent, fork], sameWorth))).toEqual(["parent", "fork"])
+    const details: Readonly<Record<string, ReadonlySet<string>>> = { parent: new Set(["regularGame"]), fork: new Set(["regularGame", "allotment", "supportGain"]) }
+    expect(ids(ranked([parent, fork], { ...sameWorth, details: (each) => details[each.id] ?? new Set() }))).toEqual(["fork", "parent"])
+    const filledMany = { ...listing("many", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "many", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "parent" } }
+    const plenty = new Set(["a", "b", "c", "d", "e", "f", "g", "h"])
+    const checked = { ...parent, standing: { ...parent.standing, verifications: 1 } }
+    expect(ids(ranked([checked, filledMany], { ...sameWorth, details: (each) => (each.id === "many" ? plenty : new Set()) }))).toEqual(["parent", "many"])
   })
 })
 

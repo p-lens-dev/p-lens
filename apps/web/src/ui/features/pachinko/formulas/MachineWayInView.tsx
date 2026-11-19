@@ -5,13 +5,13 @@ import type { Outcome } from "../../../../application/errors"
 import { loadMachine } from "../../../../application/pachinko/formulas"
 import { hyenaHuntOf } from "../../../../application/pachinko/hyena-hunt"
 import { ranked } from "../../../../core/formula/standing"
-import { worthOf } from "../../../../core/pachinko/formula"
 import { useApp, type DeliveryState } from "../../../context"
 import { Loaded } from "../../../primitives/states"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { ViewHeader } from "../../shell/ViewHeader"
 import { missingUndelivered } from "../../catalog/undelivered"
+import { measure } from "../../../../core/pachinko/measure"
 
 /** A machine not found while the catalog is still being delivered: not yet known to be missing, so still loading. */
 const stillComing = <T,>(outcome: Outcome<T> | undefined, delivery: DeliveryState): Outcome<T> | undefined =>
@@ -42,11 +42,9 @@ export function MachineWayInView(props: { readonly place: Place; readonly machin
     const found = detail()
     if (found?.ok !== true) return
     const machineId = found.value.machine.id
-    const best = ranked(found.value.formulas, worthOf)[0]
-    const bestHunted = ranked(
-      found.value.formulas.filter((listing) => hyenaHuntOf(listing.formula) !== undefined),
-      worthOf,
-    )[0]
+    const order = ranked(found.value.formulas, measure)
+    const best = order[0]
+    const bestHunted = order.find((listing) => hyenaHuntOf(listing.formula) !== undefined)
     moves.replace(
       best === undefined
         ? { kind: "pachinko-machine", machineId }

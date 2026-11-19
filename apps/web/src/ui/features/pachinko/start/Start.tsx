@@ -8,7 +8,7 @@ import { rememberPlayed } from "../../../../application/recently-played"
 import { loadMachine, playSnapshotOf } from "../../../../application/pachinko/formulas"
 import { reliefDriveOf } from "../../../../application/pachinko/hyena-hunt"
 import { borderOf } from "../../../../core/pachinko/theoretical-value"
-import { assumedSettingLevelOf, basisOf, supportGainOf, type Basis, type FormulaId, type Formula, worthOf } from "../../../../core/pachinko/formula"
+import { assumedSettingLevelOf, basisOf, supportGainOf, type Basis, type FormulaId, type Formula } from "../../../../core/pachinko/formula"
 import { type Figures } from "../../../../core/pachinko/figures"
 import { autoSelect, selectById, type Selection } from "../../../../core/formula/standing"
 import type { PlayDraft, PlayVenue } from "../../../../core/live-play/draft"
@@ -56,6 +56,7 @@ import { seal } from "../../../../mummer"
 import { cabinetFieldMasked } from "../../../wording/cabinet"
 import { leaveFor, stayWhileOffline } from "../../../primitives/leaving"
 import { locateFailedText, SURVEY_OFFLINE } from "../../../wording/parlor"
+import { measure } from "../../../../core/pachinko/measure"
 
 /**
  * The machine, as a field that only opens the machine search: it shows what
@@ -475,7 +476,7 @@ export function Start(props: {
     const kept = found?.ok === true ? favorites.keptAmong(found.value.formulas.map((listing) => listing.formula.id)) : undefined
     if (found?.ok !== true || kept === undefined) return undefined
     const chosen = chosenFormulaId()
-    return (chosen === undefined ? undefined : selectById(found.value.formulas, chosen)) ?? autoSelect(found.value.formulas, worthOf, kept)
+    return (chosen === undefined ? undefined : selectById(found.value.formulas, chosen)) ?? autoSelect(found.value.formulas, measure, kept)
   })
   const openMachine = (machineId: string): void => moves.go({ kind: "pachinko-machine", machineId })
   const machineMissing = (): boolean => chosenMachine() === undefined
