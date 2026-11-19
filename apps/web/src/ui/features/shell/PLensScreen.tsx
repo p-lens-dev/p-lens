@@ -71,13 +71,17 @@ import { ODD_PRIZE_CALCULATOR_LABEL } from "../../wording/odd-prize-calculator"
 import { bookTitle } from "../../wording/book"
 
 /**
- * Where the panes are shown one at a time: a window below this width, or
- * one whose rail, list and detail would leave the main content less than
- * this — a tablet held sideways with a detail open — where the screens,
- * laid out for a phone first and wider by the window's width, would be
- * squeezed into a column narrower than either.
+ * Where the panes are shown one at a time: a window below this width, a
+ * touch screen below this height — a phone held sideways, a Pixel's 915 by
+ * some 360 wide enough for the rail and the list but too short to read
+ * beside them, where the counter wants the whole screen; an iPad mini's 744
+ * tall stays wide, and a desktop window keeps its panes however short — or
+ * one whose rail, list and detail would leave the main content
+ * less than this — a tablet held sideways with a detail open — where the
+ * screens, laid out for a phone first and wider by the window's width,
+ * would be squeezed into a column narrower than either.
  */
-const ARRANGEMENT_BOUNDS = { narrowBelow: 768, contentAtLeast: 480 } as const
+const ARRANGEMENT_BOUNDS = { narrowBelow: 768, shortBelow: 500, contentAtLeast: 480 } as const
 
 
 /** What the main pane shows for a place that is not itself a screen of its own. */
