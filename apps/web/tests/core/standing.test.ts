@@ -107,6 +107,13 @@ describe("ranking formulas", () => {
     const checked = { ...parent, standing: { ...parent.standing, verifications: 1 } }
     expect(ids(ranked([checked, filledMany], { ...sameWorth, details: (each) => (each.id === "many" ? plenty : new Set()) }))).toEqual(["parent", "many"])
   })
+
+  test("a fork remade in turn gives its weight up to the one remade from it, so the newest of a line rises, uses aside", () => {
+    const base = listing("base", {}, "2026-09-01T00:00:00.000Z")
+    const first = { ...listing("first", { uses: 1 }, "2026-09-10T00:00:00.000Z"), formula: { id: "first", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "base" } }
+    const second = { ...listing("second", {}, "2026-09-20T00:00:00.000Z"), formula: { id: "second", createdAt: "2026-09-20T00:00:00.000Z", derivedFrom: "first" } }
+    expect(ids(ranked([base, first, second], sameWorth))).toEqual(["second", "first", "base"])
+  })
 })
 
 describe("choosing a machine's formula", () => {

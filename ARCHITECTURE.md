@@ -944,7 +944,8 @@ Picking a machine picks a formula (`core/formula/standing.ts`):
      and 100 days after release, the maker publishing 小役確率, モードの特徴,
      移行率, 特定条件のAT当選率 and 詳細な設定差 in turn — and a fork, remade
      from a listing of the same machine (a copy from another derives from
-     nothing), gains an adoption's two points, and a pachinko one a point
+     nothing), gains an adoption's two points — given up once it is
+     remade in turn, so the newest of a line of remakes is lifted — and a pachinko one a point
      for each kind of component it fills that the one it was remade from
      left empty, five at most. A favourite weighs nothing: it is its
      book's alone;

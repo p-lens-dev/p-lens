@@ -159,7 +159,9 @@ export const usesWeighTheirMost = (standing: Standing): boolean => standing.uses
 /**
  * What being a fork weighs — remade from a formula of the same machine,
  * most likely to put it right or to say more: an adoption's two points.
- * A copy from another machine is no fork; it derives from nothing.
+ * A copy from another machine is no fork; it derives from nothing. A fork
+ * remade in turn gives its weight up to the one remade from it, so the
+ * newest of a line of remakes is the one lifted.
  */
 const FORK_BONUS = 200
 
@@ -207,10 +209,10 @@ const stagesMissed = (formula: Ranked, stagesPassed: readonly string[]): number 
 const usesInRank = <F extends Ranked>(listing: FormulaListing<F>, stagesPassed: readonly string[]): number =>
   Math.floor(Math.min(listing.standing.uses * WEIGHTS.use, MOST_FROM_USES) / 2 ** stagesMissed(listing.formula, stagesPassed))
 
-/** What being a fork weighs: the bonus, and each kind of detail it fills that the one it was remade from left empty; nothing where it is no fork of the machine's. */
+/** What being a fork weighs: the bonus, and each kind of detail it fills that the one it was remade from left empty; nothing where it is no fork of the machine's, or was itself remade there. */
 const forkWeight = <F extends Ranked>(formula: F, among: readonly FormulaListing<F>[], measure: Measure<F>): number => {
   const parent = among.find((other) => other.formula.id === formula.derivedFrom)?.formula
-  if (parent === undefined) return 0
+  if (parent === undefined || among.some((other) => other.formula.derivedFrom === formula.id)) return 0
   const before = measure.details(parent)
   const filled = [...measure.details(formula)].filter((detail) => !before.has(detail)).length
   return FORK_BONUS + Math.min(filled * FILLED_DETAIL, MOST_FROM_FILLED)
