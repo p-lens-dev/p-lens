@@ -20,6 +20,73 @@
     <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>%DEPLOYMENT_PAGE_TITLE%</title>
+    <!--
+      When the stylesheet never arrived — an update caught halfway, or the
+      phone dropping part of what the service worker kept, so that the
+      address of an old stylesheet comes back as this page — the body keeps
+      the browser's own margin. Then the service worker and what it kept are
+      let go of, and the page is loaded again from the network, once a
+      minute at most. Books and settings are in IndexedDB and localStorage,
+      never in what is let go of. Offline, or where that did not help, a
+      notice styled in place says so and offers the same by a button. It is
+      all here, in plain script, as nothing the build makes can be counted on.
+    -->
+    <script>
+      ;(() => {
+        const TRIED = "p-lens.style-repair"
+        const styled = () => getComputedStyle(document.body).marginTop === "0px"
+        const triedLately = () => {
+          try {
+            return Date.now() - Number(sessionStorage.getItem(TRIED) ?? 0) < 60000
+          } catch {
+            return true
+          }
+        }
+        const repair = async () => {
+          try {
+            sessionStorage.setItem(TRIED, String(Date.now()))
+          } catch {}
+          try {
+            const registrations = (await navigator.serviceWorker?.getRegistrations()) ?? []
+            await Promise.all(registrations.map((registration) => registration.unregister()))
+          } catch {}
+          try {
+            await Promise.all((await caches.keys()).map((key) => caches.delete(key)))
+          } catch {}
+          location.reload()
+        }
+        const notice = () => {
+          const box = document.createElement("div")
+          box.setAttribute("role", "alert")
+          box.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px;background:#313338;color:#f2f3f5;font:16px/1.6 system-ui,sans-serif"
+          const title = document.createElement("p")
+          title.style.cssText = "margin:0;font-weight:bold;font-size:18px"
+          title.textContent = "表示が崩れています"
+          const body = document.createElement("p")
+          body.style.cssText = "margin:0"
+          body.textContent = "アプリの更新が途中で止まったようです。インターネットにつながった状態で「読み込み直す」を押してください。記録した帳簿や設定は消えません。"
+          const button = document.createElement("button")
+          button.type = "button"
+          button.textContent = "読み込み直す"
+          button.style.cssText = "align-self:flex-start;padding:8px 16px;border:0;border-radius:3px;background:#5865f2;color:#fff;font:inherit;font-weight:bold"
+          button.addEventListener("click", () => {
+            if (navigator.onLine) {
+              button.disabled = true
+              void repair()
+            } else body.textContent = "インターネットにつながっていません。つながってから、もう一度押してください。記録した帳簿や設定は消えません。"
+          })
+          box.append(title, body, button)
+          document.body.append(box)
+        }
+        addEventListener("load", () =>
+          setTimeout(() => {
+            if (styled()) return
+            if (navigator.onLine && !triedLately()) void repair()
+            else notice()
+          }, 1000),
+        )
+      })()
+    </script>
   </head>
   <body>
     <noscript>%DEPLOYMENT_NAME_IN_JAPANESE%を使うには JavaScript を有効にしてください。</noscript>
