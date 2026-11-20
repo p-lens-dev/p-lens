@@ -11,7 +11,7 @@ import { HintedIconButton } from "../../../primitives/popover"
 import { Select, type SelectOption } from "../../../primitives/select"
 import { toast } from "../../../primitives/toast"
 import { useMoves } from "../../../navigation/moves"
-import { EVEN_PRIOR_NAME, formulaHandle, formulaNameAmong, STOCK_SPREAD_NAMES } from "../../../wording/pachislot/formula"
+import { EVEN_PRIOR_NAME, formulaChoiceAmong, formulaHandle, STOCK_SPREAD_NAMES } from "../../../wording/pachislot/formula"
 import { KindMark } from "../formulas/KindMark"
 import { distributionMeasureOf } from "../../../../core/pachislot/measure"
 import { useApp } from "../../../context"
@@ -70,7 +70,7 @@ export function FormulaPicker(props: {
   }
   const waitingText = (): string => (props.machineChosen ? "算出条件を選ぶ" : "先に機種を選んでください")
   const nameOf = (chosen: Selection<Formula>): string =>
-    formulaNameAmong(
+    formulaChoiceAmong(
       chosen.listing.formula,
       (props.detail?.formulas ?? []).map((listing) => listing.formula),
     )

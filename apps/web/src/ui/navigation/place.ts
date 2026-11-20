@@ -86,6 +86,8 @@ const isFormulaTab = (segment: string): segment is FormulaTab => (FORMULA_TABS a
  * `pachinko-formula-hunt` is a formula brought to its 遊タイム狙い table,
  * and `pachinko-machine-hunt` the way in to that from outside, standing
  * for the best formula of those that have the table.
+ * `pachinko-machine-lineage` is the machine's 更新履歴: its formulas as the
+ * lineage of their forks.
  *
  * These are under `/pachinko`. Pachislot machines are under `/pachislot`, the
  * same depths in the same order — `pachislot-formula-basis` is a formula's 解析値 —
@@ -122,6 +124,7 @@ export type Place =
   | { readonly kind: "pachinko-machine-search" }
   | { readonly kind: "parlor-submitted" }
   | { readonly kind: "pachinko-machine"; readonly machineId: string }
+  | { readonly kind: "pachinko-machine-lineage"; readonly machineId: string }
   | { readonly kind: "pachinko-formula"; readonly machineId: string; readonly formulaId: string }
   | { readonly kind: "pachinko-formula-grounds"; readonly machineId: string; readonly formulaId: string }
   | { readonly kind: "pachinko-formula-basis"; readonly machineId: string; readonly formulaId: string }
@@ -132,6 +135,7 @@ export type Place =
   | { readonly kind: "pachinko-formula-new"; readonly tab: FormulaTab }
   | { readonly kind: "pachislot-machine-search" }
   | { readonly kind: "pachislot-machine"; readonly machineId: string }
+  | { readonly kind: "pachislot-machine-lineage"; readonly machineId: string }
   | { readonly kind: "pachislot-formula"; readonly machineId: string; readonly formulaId: string }
   | { readonly kind: "pachislot-formula-grounds"; readonly machineId: string; readonly formulaId: string }
   | { readonly kind: "pachislot-formula-basis"; readonly machineId: string; readonly formulaId: string }
@@ -209,6 +213,7 @@ const pachislotPlaceOf = (segments: readonly string[], path: string): Place => {
   if (first === "machines" && second !== undefined && third === undefined) return { kind: "pachislot-machine", machineId: second }
   if (first === "machines" && second !== undefined && third === "value" && fourth === undefined) return { kind: "pachislot-machine-value", machineId: second }
   if (first === "machines" && second !== undefined && third === "hunt" && fourth === undefined) return { kind: "pachislot-machine-hunt", machineId: second }
+  if (first === "machines" && second !== undefined && third === "lineage" && fourth === undefined) return { kind: "pachislot-machine-lineage", machineId: second }
   if (first === "machines" && second !== undefined && third === "distributions" && fourth === "new" && fifth === undefined)
     return { kind: "pachislot-distribution-new", machineId: second }
   if (first === "machines" && second !== undefined && third === "formulas" && fourth !== undefined) {
@@ -231,6 +236,7 @@ const pachinkoPlaceOf = (segments: readonly string[], path: string): Place => {
   if (first === "machines" && second !== undefined && third === undefined) return { kind: "pachinko-machine", machineId: second }
   if (first === "machines" && second !== undefined && third === "value" && fourth === undefined) return { kind: "pachinko-machine-value", machineId: second }
   if (first === "machines" && second !== undefined && third === "hunt" && fourth === undefined) return { kind: "pachinko-machine-hunt", machineId: second }
+  if (first === "machines" && second !== undefined && third === "lineage" && fourth === undefined) return { kind: "pachinko-machine-lineage", machineId: second }
   if (first === "machines" && second !== undefined && third === "formulas" && fourth !== undefined) {
     if (fifth === undefined) return { kind: "pachinko-formula", machineId: second, formulaId: fourth }
     if (fifth === "grounds") return { kind: "pachinko-formula-grounds", machineId: second, formulaId: fourth }
@@ -377,6 +383,8 @@ export const pathOf = (place: Place): string => {
       return `/pachinko/machines/${encode(place.machineId)}/formulas/${encode(place.formulaId)}/hunt`
     case "pachinko-machine-hunt":
       return `/pachinko/machines/${encode(place.machineId)}/hunt`
+    case "pachinko-machine-lineage":
+      return `/pachinko/machines/${encode(place.machineId)}/lineage`
     case "pachinko-formula-new":
       return `/pachinko/formulas/new/${place.tab}`
     case "pachislot-machine-search":
@@ -397,6 +405,8 @@ export const pathOf = (place: Place): string => {
       return `/pachislot/machines/${encode(place.machineId)}/formulas/${encode(place.formulaId)}/hunt`
     case "pachislot-machine-hunt":
       return `/pachislot/machines/${encode(place.machineId)}/hunt`
+    case "pachislot-machine-lineage":
+      return `/pachislot/machines/${encode(place.machineId)}/lineage`
     case "pachislot-formula-new":
       return `/pachislot/formulas/new/${place.tab}`
     case "pachislot-distribution-new":
@@ -456,6 +466,7 @@ export const focusOf = (place: Place): Focus => {
     case "pachinko-machine-value":
     case "pachinko-formula-hunt":
     case "pachinko-machine-hunt":
+    case "pachinko-machine-lineage":
     case "pachinko-formula-new":
     case "pachislot-machine-search":
     case "pachislot-machine":
@@ -466,6 +477,7 @@ export const focusOf = (place: Place): Focus => {
     case "pachislot-machine-value":
     case "pachislot-formula-hunt":
     case "pachislot-machine-hunt":
+    case "pachislot-machine-lineage":
     case "pachislot-formula-new":
     case "pachislot-distribution-new":
     case "book-view":
@@ -535,6 +547,7 @@ export const parentOf = (place: Place): Place | undefined => {
       return { kind: "pachinko-formula", machineId: place.machineId, formulaId: place.formulaId }
     case "pachinko-machine-value":
     case "pachinko-machine-hunt":
+    case "pachinko-machine-lineage":
       return { kind: "pachinko-machine", machineId: place.machineId }
     case "pachinko-formula-basis":
       return { kind: "pachinko-formula-grounds", machineId: place.machineId, formulaId: place.formulaId }
@@ -551,6 +564,7 @@ export const parentOf = (place: Place): Place | undefined => {
       return { kind: "pachislot-formula", machineId: place.machineId, formulaId: place.formulaId }
     case "pachislot-machine-value":
     case "pachislot-machine-hunt":
+    case "pachislot-machine-lineage":
       return { kind: "pachislot-machine", machineId: place.machineId }
     case "pachislot-formula-basis":
       return { kind: "pachislot-formula-grounds", machineId: place.machineId, formulaId: place.formulaId }
@@ -596,6 +610,7 @@ export const inLiveSpace = (place: Place): boolean =>
     "pachinko-machine-value",
     "pachinko-formula-hunt",
     "pachinko-machine-hunt",
+    "pachinko-machine-lineage",
     "pachinko-formula-new",
     "pachislot-machine-search",
     "pachislot-machine",
@@ -606,6 +621,7 @@ export const inLiveSpace = (place: Place): boolean =>
     "pachislot-machine-value",
     "pachislot-formula-hunt",
     "pachislot-machine-hunt",
+    "pachislot-machine-lineage",
     "pachislot-formula-new",
     "pachislot-distribution-new",
   ].includes(place.kind)

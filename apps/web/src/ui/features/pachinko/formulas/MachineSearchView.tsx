@@ -17,6 +17,7 @@ import { slashDay } from "../../../wording/dates"
 import { modelNameText, UNDELIVERED, UNDELIVERED_TITLE } from "../../../wording/catalog"
 import { hitChanceText } from "../../../wording/pachinko/machine"
 import { ViewHeader } from "../../shell/ViewHeader"
+import { registerNewMachine } from "./new-machine"
 import { probabilitiesText } from "./spec-text"
 
 function MachineList(props: { readonly machines: readonly MachineSummary[]; readonly onChoose: (machine: MachineSummary) => void }): JSX.Element {
@@ -75,10 +76,7 @@ export function MachineSearchView(props: { readonly place: Place; readonly query
     start.updatePachinko({ machine: { type: "catalog", machineId: machine.id, name: bookNameOf(machine) }, formulaId: undefined })
     moves.up(props.place)
   }
-  const create = (): void => {
-    start.updatePachinko({ machine: { type: "none" }, formulaId: undefined, remakeFrom: undefined, newMachineName: searched(), newMachineModelName: "", newMachineKeywords: "", newMachineReleasedOn: "" })
-    moves.go({ kind: "pachinko-formula-new", tab: "manual" })
-  }
+  const create = (): void => registerNewMachine(start, moves, searched())
   const createLabel = (): string => (searched() === "" ? "新しい機種の算出条件を作る" : `「${searched()}」の算出条件を作る`)
   const trail = () => [{ label: "パチンコ開始", onSelect: () => moves.up(props.place) }, { label: "機種選択" }]
   return (

@@ -1,5 +1,6 @@
 import type { SettingLevelFigures } from "../../../core/pachislot/figures"
-import type { FormulaKind, SettingLevelShare } from "../../../core/pachislot/formula"
+import type { Formula, FormulaKind, SettingLevelShare } from "../../../core/pachislot/formula"
+import { gradeOf } from "../../../core/pachislot/measure"
 import type { Prior, StockSpreadKey } from "../../../core/pachislot/prior"
 import type { TakeBackRefusal } from "../../../core/pachislot/path"
 import type { CounterRefusal } from "../../../core/pachislot/reading"
@@ -24,22 +25,28 @@ export const oddsText = (oneIn: number): string => (Number.isFinite(oneIn) ? `1/
  * What a pachislot formula is known by: its 機械割 from the lowest setting
  * level to the highest — `機械割 97.0%〜109.4%` — since nobody names one.
  */
-export const formulaText = (figures: readonly SettingLevelFigures[]): string => {
+export const formulaText = (figures: readonly SettingLevelFigures[]): string => `機械割 ${payoutRangeText(figures)}`
+
+/** 機械割 from the lowest setting level to the highest, `97.0%〜109.4%`, one figure where they are the same, dashes where there are none. */
+const payoutRangeText = (figures: readonly SettingLevelFigures[]): string => {
   const rates = figures.map((each) => each.payoutRate)
   const [lowest, highest] = [Math.min(...rates), Math.max(...rates)]
-  if (rates.length === 0) return "機械割 --"
-  return lowest === highest ? `機械割 ${payoutRateText(lowest)}` : `機械割 ${payoutRateText(lowest)}〜${payoutRateText(highest)}`
+  if (rates.length === 0) return "--"
+  return lowest === highest ? payoutRateText(lowest) : `${payoutRateText(lowest)}〜${payoutRateText(highest)}`
 }
 
 type Said = { readonly id: string; readonly figures: readonly SettingLevelFigures[] }
 
-/** A pachislot formula's name among its machine's, with its id where another says the same. */
-export const formulaNameAmong = (formula: Said, among: readonly Said[]): string => {
-  const said = formulaText(formula.figures)
-  return among.filter((other) => formulaText(other.figures) === said).length > 1 ? `${said}（${formulaIdLabel(formula.id)}）` : said
+/** A pachislot formula as a box to choose one shows it: what its counter tells first, then its 機械割 — `判別力S・機械割97.8%〜114.3%`. */
+export const formulaChoiceText = (formula: Formula): string => `判別力${gradeOf(formula)}・機械割${payoutRangeText(formula.figures)}`
+
+/** The same among its machine's, with its id where another says the same. */
+export const formulaChoiceAmong = (formula: Formula, among: readonly Formula[]): string => {
+  const shown = formulaChoiceText(formula)
+  return among.filter((other) => formulaChoiceText(other) === shown).length > 1 ? `${shown}（${formulaIdLabel(formula.id)}）` : shown
 }
 
-/** A pachislot formula as it is passed on — "use this one": its 機械割, which says what it is as a box to choose one shows it, then its id, which finds it. */
+/** A pachislot formula as it is passed on — "use this one": its 機械割, which says what it is, then its id, which finds it. */
 export const formulaHandle = (formula: Said): string => `${formulaText(formula.figures)}・${formulaIdLabel(formula.id)}`
 
 /** A 設定配分's shares, the levels it gives any: `設定1 60%・設定6 10%`. */

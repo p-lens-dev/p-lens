@@ -29,7 +29,7 @@ import { settleTyping } from "../../../primitives/text-field"
 import { toast } from "../../../primitives/toast"
 import { describeError } from "../../../wording/errors"
 import { UNWRITABLE_TEXT } from "../../../wording/fields"
-import { formulaHandle, formulaNameAmong } from "../../../wording/pachislot/formula"
+import { formulaChoiceAmong, formulaHandle } from "../../../wording/pachislot/formula"
 import { useBookFavorites } from "../../live/book-favorites"
 import { useStartForm, type CabinetChoice } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
@@ -190,7 +190,7 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachislo
                   <Select
                     label="算出条件"
                     placeholder={machineId() === undefined ? "先に機種を選んでください" : "算出条件を選ぶ"}
-                    options={formulas().map((formula) => ({ value: formula.id, label: formulaNameAmong(formula, formulas()) }))}
+                    options={formulas().map((formula) => ({ value: formula.id, label: formulaChoiceAmong(formula, formulas()) }))}
                     value={selection()?.listing.formula.id}
                     onChange={(id) => choose({ formulaId: id })}
                     invalid={nudge.red() && waitingOnFormula()}

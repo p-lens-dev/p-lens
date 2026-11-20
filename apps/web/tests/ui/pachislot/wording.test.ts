@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test"
 
-import type { SettingDistributionId } from "../../../src/core/pachislot/formula"
+import type { Formula, SettingDistributionId } from "../../../src/core/pachislot/formula"
 import {
   averageSettingLevelText,
   bonusTitle,
   EVEN_PRIOR_NAME,
+  formulaChoiceAmong,
   formulaHandle,
   medalsPerGameText,
   observedOneInText,
@@ -59,5 +60,26 @@ describe("a pachislot formula passed on", () => {
   test("is its 機械割, then its id, marked", () => {
     const figures = [1, 6].map((settingLevel) => ({ settingLevel, payoutRate: settingLevel === 1 ? 0.97 : 1.094, bonuses: [], combinedOneIn: 150 }))
     expect(formulaHandle({ id: "01a18b48-0000-7000-8000-000000000000", figures })).toBe("機械割 97.0%〜109.4%・ID:01a18b48")
+  })
+})
+
+describe("a pachislot formula in a box to choose one", () => {
+  const smallWin = (chance: number) => ({ events: [{ id: "bell", kind: { type: "role" as const }, chance }] })
+  const formula = (id: string, high: number, rates: readonly [number, number]): Formula =>
+    ({
+      id,
+      figures: [1, 6].map((settingLevel, index) => ({ settingLevel, payoutRate: rates[index] ?? 1, bonuses: [], combinedOneIn: 300 })),
+      basis: { normalized: { schemaVersion: 3, bet: 3, tables: [{ settingLevel: 1, ...smallWin(1 / 7) }, { settingLevel: 6, ...smallWin(high) }] } },
+    }) as unknown as Formula
+
+  test("says its 判別力 grade, then its 機械割", () => {
+    const told = formula("01a18b48-0000-7000-8000-000000000000", 1 / 6, [0.978, 1.143])
+    expect(formulaChoiceAmong(told, [told])).toBe("判別力S・機械割97.8%〜114.3%")
+  })
+
+  test("adds its id where another of the machine says the same", () => {
+    const one = formula("01a18b48-0000-7000-8000-000000000000", 1 / 7, [0.97, 1.094])
+    const two = formula("02b29c59-0000-7000-8000-000000000000", 1 / 7, [0.97, 1.094])
+    expect(formulaChoiceAmong(one, [one, two])).toBe("判別力E・機械割97.0%〜109.4%（ID:01a18b48）")
   })
 })

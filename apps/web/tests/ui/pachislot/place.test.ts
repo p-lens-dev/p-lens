@@ -12,6 +12,7 @@ const PLACES: readonly Place[] = [
   { kind: "pachislot-machine-value", machineId: "m 1" },
   { kind: "pachislot-formula-hunt", machineId: "m1", formulaId: "f/1" },
   { kind: "pachislot-machine-hunt", machineId: "m 1" },
+  { kind: "pachislot-machine-lineage", machineId: "m 1" },
   { kind: "pachislot-formula-new", tab: "basis" },
   { kind: "pachislot-distribution-new", machineId: "m1" },
 ]
@@ -70,5 +71,7 @@ describe("pachislot places", () => {
   test("the way in from outside to that table names the machine alone, at /hunt under it", () => {
     expect(placeOf("/pachislot/machines/m1/hunt")).toEqual({ kind: "pachislot-machine-hunt", machineId: "m1" })
     expect(parentOf({ kind: "pachislot-machine-hunt", machineId: "m1" })).toEqual({ kind: "pachislot-machine", machineId: "m1" })
+    expect(placeOf("/pachislot/machines/m1/lineage")).toEqual({ kind: "pachislot-machine-lineage", machineId: "m1" })
+    expect(parentOf({ kind: "pachislot-machine-lineage", machineId: "m1" })).toEqual({ kind: "pachislot-machine", machineId: "m1" })
   })
 })

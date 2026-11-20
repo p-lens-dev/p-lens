@@ -12,6 +12,7 @@ const PLACES: readonly Place[] = [
   { kind: "pachinko-machine-value", machineId: "m 1" },
   { kind: "pachinko-formula-hunt", machineId: "m1", formulaId: "f/1" },
   { kind: "pachinko-machine-hunt", machineId: "m 1" },
+  { kind: "pachinko-machine-lineage", machineId: "m 1" },
   { kind: "pachinko-formula-new", tab: "basis" },
 ]
 
@@ -63,6 +64,8 @@ describe("pachinko places", () => {
   test("the way in from outside to that table names the machine alone, at /hunt under it", () => {
     expect(placeOf("/pachinko/machines/m1/hunt")).toEqual({ kind: "pachinko-machine-hunt", machineId: "m1" })
     expect(parentOf({ kind: "pachinko-machine-hunt", machineId: "m1" })).toEqual({ kind: "pachinko-machine", machineId: "m1" })
+    expect(placeOf("/pachinko/machines/m1/lineage")).toEqual({ kind: "pachinko-machine-lineage", machineId: "m1" })
+    expect(parentOf({ kind: "pachinko-machine-lineage", machineId: "m1" })).toEqual({ kind: "pachinko-machine", machineId: "m1" })
   })
 
   test("an address under /pachinko the app has no screen for is not found", () => {

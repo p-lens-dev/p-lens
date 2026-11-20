@@ -6,18 +6,17 @@ import { loadMachine } from "../../../../application/pachinko/formulas"
 import { bookNameOf } from "../../../../core/catalog/catalog"
 import { ranked } from "../../../../core/formula/standing"
 import { SunkButton } from "../../../../sunk"
+import { Button } from "../../../primitives/button"
 import { useApp } from "../../../context"
-import { CirclePlusIcon } from "../../../primitives/icons"
 import { Loaded } from "../../../primitives/states"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { MARKS_UNSENT } from "../../../wording/catalog"
 import { describeError } from "../../../wording/errors"
 import { useBookFavorites } from "../../live/book-favorites"
-import { useStartBallValue, useStartForm } from "../../live/start-form"
+import { useStartBallValue } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
 import { FormulaCard } from "./FormulaCard"
-import { remadeIn, startedFrom } from "./remaking"
 import { trailTo } from "./trail"
 import { useActions } from "./use-actions"
 import { missingUndelivered } from "../../catalog/undelivered"
@@ -28,7 +27,6 @@ import { measure } from "../../../../core/pachinko/measure"
 export function MachineView(props: { readonly place: Place; readonly machineId: string }): JSX.Element {
   const app = useApp()
   const moves = useMoves()
-  const start = useStartForm()
   const actions = useActions()
   const unsent = useUnsentMarks()
   const favorites = useBookFavorites()
@@ -50,19 +48,9 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
             <div class="flex flex-col gap-3 p-4">
               <div class="flex items-center justify-between gap-3">
                 <h2 class="text-xs font-bold uppercase tracking-wide text-text-secondary">算出条件一覧</h2>
-                <button
-                  type="button"
-                  aria-label="算出条件を作る"
-                  title="算出条件を作る"
-                  class="flex size-8 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
-                  onClick={() => {
-                    const from = startedFrom(ranked(found.formulas, measure).map((listing) => listing.formula))
-                    start.updatePachinko({ machine: { type: "catalog", machineId: found.machine.id, name: bookNameOf(found.machine) }, remakeFrom: from?.id })
-                    moves.go({ kind: "pachinko-formula-new", tab: from === undefined ? "manual" : remadeIn(from) })
-                  }}
-                >
-                  <CirclePlusIcon />
-                </button>
+                <Button variant="outline" size="small" onClick={() => moves.go({ kind: "pachinko-machine-lineage", machineId: found.machine.id })}>
+                  更新履歴
+                </Button>
               </div>
               <Show when={failure()} keyed>
                 {(error) => <p role="alert" class="text-sm text-negative">{describeError(error)}</p>}

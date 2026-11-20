@@ -17,6 +17,7 @@ import { modelNameText, UNDELIVERED, UNDELIVERED_TITLE } from "../../../wording/
 import { machineDiscriminationText } from "../../../wording/pachislot/formula"
 import { useStartForm } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
+import { registerNewMachine } from "./new-machine"
 
 function MachineList(props: { readonly machines: readonly MachineSummary[]; readonly onChoose: (machine: MachineSummary) => void }): JSX.Element {
   const app = useApp()
@@ -76,10 +77,7 @@ export function MachineSearchView(props: { readonly place: Place; readonly query
     start.updatePachislot({ machine: { type: "catalog", machineId: machine.id, name: bookNameOf(machine) } })
     moves.up(props.place)
   }
-  const create = (): void => {
-    start.updatePachislot({ machine: { type: "none" }, formulaId: undefined, prior: undefined, remakeFrom: undefined, newMachineName: searched(), newMachineModelName: "", newMachineKeywords: "", newMachineReleasedOn: "" })
-    moves.go({ kind: "pachislot-formula-new", tab: "manual" })
-  }
+  const create = (): void => registerNewMachine(start, moves, searched())
   const createLabel = (): string => (searched() === "" ? "新しい機種の算出条件を作る" : `「${searched()}」の算出条件を作る`)
   const trail = () => [{ label: "スロット開始", onSelect: () => moves.up(props.place) }, { label: "機種選択" }]
   return (

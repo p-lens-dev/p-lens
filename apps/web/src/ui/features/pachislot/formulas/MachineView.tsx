@@ -7,17 +7,14 @@ import { bookNameOf } from "../../../../core/catalog/catalog"
 import { ranked } from "../../../../core/formula/standing"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
-import { CirclePlusIcon } from "../../../primitives/icons"
 import { EmptyState, Loaded } from "../../../primitives/states"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { MARKS_UNSENT } from "../../../wording/catalog"
 import { describeError } from "../../../wording/errors"
 import { useBookFavorites } from "../../live/book-favorites"
-import { useStartForm } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
 import { FormulaCard, SettingDistributionCard } from "./Cards"
-import { remadeIn, startedFrom } from "./remaking"
 import { trailTo } from "./trail"
 import { useActions } from "./use-actions"
 import { missingUndelivered } from "../../catalog/undelivered"
@@ -34,7 +31,6 @@ const SECTION_TITLE = "text-xs font-bold uppercase tracking-wide text-text-secon
 export function MachineView(props: { readonly place: Place; readonly machineId: string }): JSX.Element {
   const app = useApp()
   const moves = useMoves()
-  const start = useStartForm()
   const actions = useActions()
   const unsent = useUnsentMarks()
   const favorites = useBookFavorites()
@@ -62,19 +58,9 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
               <section class="flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                   <h2 class={SECTION_TITLE}>算出条件一覧</h2>
-                  <button
-                    type="button"
-                    aria-label="算出条件を作る"
-                    title="算出条件を作る"
-                    class="flex size-8 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
-                    onClick={() => {
-                      const from = startedFrom(ranked(found.formulas, measureOf(found.machine.releasedOn, app.services.now())).map((listing) => listing.formula))
-                      start.updatePachislot({ machine: { type: "catalog", machineId: found.machine.id, name: bookNameOf(found.machine) }, remakeFrom: from?.id })
-                      moves.go({ kind: "pachislot-formula-new", tab: from === undefined ? "manual" : remadeIn(from) })
-                    }}
-                  >
-                    <CirclePlusIcon />
-                  </button>
+                  <Button variant="outline" size="small" onClick={() => moves.go({ kind: "pachislot-machine-lineage", machineId: found.machine.id })}>
+                    更新履歴
+                  </Button>
                 </div>
                 <For each={ranked(found.formulas, measureOf(found.machine.releasedOn, app.services.now()))}>
                   {(listing) => (

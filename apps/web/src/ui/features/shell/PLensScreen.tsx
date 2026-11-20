@@ -170,6 +170,8 @@ const mainFor = (place: Place, query: () => string, live: () => Place): JSX.Elem
       return <PachinkoViews.MachineWayInView place={place} machineId={place.machineId} toward="value" />
     case "pachinko-machine-hunt":
       return <PachinkoViews.MachineWayInView place={place} machineId={place.machineId} toward="hunt" />
+    case "pachinko-machine-lineage":
+      return <PachinkoViews.LineageView place={place} machineId={place.machineId} />
     case "pachinko-formula-grounds":
       return <PachinkoViews.GroundsView place={place} machineId={place.machineId} formulaId={place.formulaId} />
     case "pachinko-formula-basis":
@@ -196,6 +198,8 @@ const mainFor = (place: Place, query: () => string, live: () => Place): JSX.Elem
       return <PachislotViews.MachineWayInView place={place} machineId={place.machineId} toward="value" />
     case "pachislot-machine-hunt":
       return <PachislotViews.MachineWayInView place={place} machineId={place.machineId} toward="hunt" />
+    case "pachislot-machine-lineage":
+      return <PachislotViews.LineageView place={place} machineId={place.machineId} />
     case "pachislot-formula-grounds":
       return <PachislotViews.GroundsView place={place} machineId={place.machineId} formulaId={place.formulaId} />
     case "pachislot-formula-basis":

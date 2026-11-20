@@ -37,6 +37,7 @@ import { amendAddress, locateAddress, submitAddress } from "../../live/submissio
 import { readTerms, type TermsField } from "../../live/start-terms"
 import { carriedInShown, readCarriedIn, tokensCarriedTo, tokensInHandUnreadable } from "../../live/tokens-in-hand"
 import { Terms } from "./Terms"
+import { registerNewMachine } from "../formulas/new-machine"
 import { seal } from "../../../../mummer"
 import { cabinetFieldMasked } from "../../../wording/cabinet"
 import { leaveFor, stayWhileOffline } from "../../../primitives/leaving"
@@ -45,38 +46,56 @@ import { locateFailedText, SURVEY_OFFLINE } from "../../../wording/parlor"
 /**
  * The machine, as a field that only opens the pachislot machine search: it
  * shows what was chosen there, and choosing again starts from it.
+ * A machine not listed is registered with the plus beside it, by making
+ * its first formula.
  */
 function MachineField(props: {
   readonly machine: PachislotMachineChoice
   readonly invalid: boolean
   readonly onOpen: () => void
   readonly onFocus: () => void
+  /** Off to register a machine the catalog does not have. */
+  readonly onRegister: () => void
 }): JSX.Element {
   const app = useApp()
   return (
-    <div class="flex min-w-0 flex-col gap-1.5">
-      <span class="text-xs font-bold uppercase tracking-wide text-text-secondary" id="pachislot-machine-field-label">
-        機種
-      </span>
+    <div class="flex min-w-0 items-end gap-2">
+      <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span class="text-xs font-bold uppercase tracking-wide text-text-secondary" id="pachislot-machine-field-label">
+          機種
+        </span>
+        <button
+          type="button"
+          aria-labelledby="pachislot-machine-field-label"
+          aria-invalid={props.invalid}
+          onClick={() => props.onOpen()}
+          onFocus={() => props.onFocus()}
+          classList={redRing(props.invalid)}
+          class="flex h-10 items-center justify-between gap-2 rounded-[3px] bg-surface-input px-3 text-left focus:outline-2 focus:outline-offset-0 focus:outline-focus-ring"
+        >
+          <Show when={props.machine.type === "catalog" ? props.machine.name : undefined} keyed fallback={<span class="text-text-muted">機種選択</span>}>
+            {(name) => <span class="truncate text-text-primary">{shownNameOf(app.machineNames(), name)}</span>}
+          </Show>
+          <span class="text-text-muted" aria-hidden="true">
+            ›
+          </span>
+        </button>
+      </div>
       <button
         type="button"
-        aria-labelledby="pachislot-machine-field-label"
-        aria-invalid={props.invalid}
-        onClick={() => props.onOpen()}
-        onFocus={() => props.onFocus()}
-        classList={redRing(props.invalid)}
-        class="flex h-10 items-center justify-between gap-2 rounded-[3px] bg-surface-input px-3 text-left focus:outline-2 focus:outline-offset-0 focus:outline-focus-ring"
+        aria-label={REGISTER_MACHINE}
+        title={REGISTER_MACHINE}
+        onClick={() => props.onRegister()}
+        class="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-nerdpro-ink text-nerdpro-ink hover:border-nerdpro-ink-hover hover:text-nerdpro-ink-hover [&_svg]:size-4"
       >
-        <Show when={props.machine.type === "catalog" ? props.machine.name : undefined} keyed fallback={<span class="text-text-muted">機種選択</span>}>
-          {(name) => <span class="truncate text-text-primary">{shownNameOf(app.machineNames(), name)}</span>}
-        </Show>
-        <span class="text-text-muted" aria-hidden="true">
-          ›
-        </span>
+        <PlusIcon />
       </button>
     </div>
   )
 }
+
+/** What the plus beside the machine says it does. */
+const REGISTER_MACHINE = "一覧にない機種を登録する"
 
 /** A parlor this device submitted, as the field offers it: waiting on the list, or turned down by it. */
 interface Waiting {
@@ -404,6 +423,7 @@ export function Start(props: {
             machine={start.form().pachislot.machine}
             invalid={machineNudge.red()}
             onOpen={() => moves.go({ kind: "pachislot-machine-search" })}
+            onRegister={() => registerNewMachine(start, moves, "")}
             onFocus={machineNudge.settle}
           />
           <FormulaPicker
