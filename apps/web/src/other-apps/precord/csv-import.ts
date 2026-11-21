@@ -1,5 +1,7 @@
+import { isZero, toPlainString } from "../../core/decimal/decimal"
+import type { PlayGameKind } from "../../core/play/play"
 import { Err, Ok, type Result } from "../../core/result/result"
-import { dayOf, hoursOf, unreadableOf, yenOf, type RowField, type RowsUnreadable } from "../core/cells"
+import { dayOf, gameKindOf, hoursOf, unreadableOf, yenOf, type RowField, type RowsUnreadable } from "../core/cells"
 import { rowsOfCsv, type CsvProblem } from "../core/csv-rows"
 import type { SourceTally } from "../core/source-tally"
 
@@ -8,9 +10,9 @@ export const PRECORD = "precord"
 
 /**
  * The columns pRecord's CSV names in its first row, as its own import
- * reads them. 収支, 時給 and 貯玉 are there too and are not read: the
- * first two follow from what is, and savings are no part of a tally kept
- * in yen.
+ * reads them. 収支 and 時給 are there too and are not read: they follow
+ * from what is. 種別 is written by pRecord's newer exports alone, and is
+ * mostly left empty. pRecord exports no savings.
  */
 const COLUMNS = {
   date: "日付",
@@ -19,11 +21,13 @@ const COLUMNS = {
   maker: "メーカー",
   machineCode: "機種コード",
   machine: "機種",
+  gameKind: "種別",
   cabinetNumber: "台番号",
   outlay: "投資額",
   takings: "回収額",
   memo: "メモ",
   hours: "稼働時間",
+  expense: "経費",
 } as const
 
 type Column = keyof typeof COLUMNS
@@ -43,6 +47,27 @@ export type PrecordProblem =
   | RowsUnreadable
   | CsvProblem
 
+/**
+ * A 経費 as a line of the memo: pRecord keeps it beside a tally and leaves
+ * it out of its own 収支, and this app has no account to put it in, so it
+ * is kept in words and never in the sides. None where it is empty or
+ * nought; a cell that does not read as yen is kept as it was written.
+ */
+const expenseLineOf = (text: string): string | undefined => {
+  const plain = text.trim()
+  if (plain === "") return undefined
+  const yen = yenOf(plain)
+  if (yen === undefined) return `経費 ${plain}`
+  return isZero(yen) ? undefined : `経費 ${toPlainString(yen)}円`
+}
+
+/** A memo with its 経費 written under it, where there is one. */
+const memoOf = (memo: string, expense: string): string =>
+  ((line) => (line === undefined ? memo : memo === "" ? line : `${memo}\n${line}`))(expenseLineOf(expense))
+
+/** The game a 種別 says; none where it is empty or says neither, so that a file pRecord's import takes is never refused for it. */
+const gameOf = (text: string): PlayGameKind | undefined => ((read) => (read.ok ? read.value : undefined))(gameKindOf(text))
+
 const tallyOf = (cell: (column: Column) => string): Result<SourceTally, readonly RowField[]> => {
   const [date, outlay, takings, hours] = [dayOf(cell("date")), yenOf(cell("outlay")), yenOf(cell("takings")), hoursOf(cell("hours"))]
   if (date === undefined || outlay === undefined || takings === undefined || !hours.ok)
@@ -59,11 +84,11 @@ const tallyOf = (cell: (column: Column) => string): Result<SourceTally, readonly
     cabinetNumber: cell("cabinetNumber").trim(),
     outlay,
     takings,
-    memo: cell("memo").trim(),
+    memo: memoOf(cell("memo").trim(), cell("expense")),
     hours: hours.value,
     clock: undefined,
     theoreticalValue: undefined,
-    gameKind: undefined,
+    gameKind: gameOf(cell("gameKind")),
     countedSpins: undefined,
     countedJackpots: undefined,
     sourceLabels: [],

@@ -6,8 +6,8 @@ import { wholeSidesOf } from "../core/whole-sides"
 
 /**
  * The columns pRecord's import guide lists, as its first row names them and
- * in its order: its own export, and the guide's sample, leave out 種別,
- * which its import takes in all the same.
+ * in its order, which is its newer exports' own: an older export leaves out
+ * 種別, which its import takes in all the same.
  */
 const COLUMNS = ["日付", "店舗コード", "店舗", "メーカー", "機種コード", "機種", "種別", "台番号", "投資額", "回収額", "収支", "メモ", "稼働時間", "時給", "経費"] as const
 

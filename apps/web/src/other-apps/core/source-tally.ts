@@ -161,7 +161,7 @@ const digest = (text: string): string =>
     .toString(16)
     .padStart(8, "0")
 
-/** What a source says beyond pRecord's columns, as one text; empty where it says none of it, as pRecord's tallies never do. */
+/** What a source says beyond pRecord's first columns, as one text; empty where it says none of it, as a pRecord tally with no 種別 does. */
 const beyondOf = (source: SourceTally): string =>
   source.gameKind === undefined && source.countedSpins === undefined && source.countedJackpots === undefined && source.sourceLabels.length === 0
     ? ""

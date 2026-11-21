@@ -6,9 +6,26 @@ import { importedIdsOf, importedTallyEntry } from "../../../src/other-apps/core/
 import { renderEntry } from "../../../src/core/journal/entry"
 import { dec } from "../../support/values"
 
-const HEADER = "日付,店舗コード,店舗,メーカー,機種コード,機種,台番号,投資額,回収額,収支,メモ,稼働時間,時給,貯玉"
+/** A row of cells as pRecord writes every one: each in quotes, a quote inside doubled. */
+const quotedRow = (cells: readonly string[]): string => cells.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(",")
 
-const FILE = `﻿${HEADER}\r\n2019/01/02,S123,マレハン東京皇国第8支店,ミナト,M9,流星の剣,123,12000,20000,8000,"朝イチ, 設定6: たぶん",5,1600,0\r\n2019/1/5,,名もなき店,,,,,5000,0,-5000,,,,\r\n`
+/** The columns a newer pRecord export writes, in its order. */
+const HEADER = ["日付", "店舗コード", "店舗", "メーカー", "機種コード", "機種", "種別", "台番号", "投資額", "回収額", "収支", "メモ", "稼働時間", "時給", "経費"]
+
+/** The columns an older pRecord export writes: no 種別. */
+const OLDER_HEADER = HEADER.filter((name) => name !== "種別")
+
+/** A pRecord export as it comes: no byte order mark, every cell quoted, each line ended in LF alone. */
+const exported = (header: readonly string[], rows: readonly (readonly string[])[]): string => [header, ...rows].map((row) => `${quotedRow(row)}\n`).join("")
+
+const FILE = exported(HEADER, [
+  ["2019/01/02", "S123", "マレハン東京皇国第8支店", "ミナト", "M9", "流星の剣", "", "123", "12000", "20000", "8000", "朝イチ, 設定6: たぶん", "5", "1600.0", "0"],
+  ["2019/1/5", "", "名もなき店", "", "", "", "", "", "5000", "0", "-5000", "", "0.0", "0.0", "0"],
+])
+
+/** One tally of a newer export, its other cells as pRecord writes them, `kind`, `memo` and `expense` as given. */
+const oneTally = (kind: string, memo: string, expense: string) =>
+  ((read) => (read.ok ? read.value[0] : undefined))(readPrecord(exported(HEADER, [["2026/10/11", "7", "ネルフ箱根本部店", "ミナト", "9", "流星の剣", kind, "99", "80000", "132000", "52000", memo, "0.0", "0.0", expense]])))
 
 describe("a CSV text as rows", () => {
   test("keeps commas, quotes and line breaks inside a quoted cell, and passes over the mark at its head and empty rows", () => {
@@ -40,6 +57,24 @@ describe("a pRecord CSV", () => {
     expect([hours("長い"), hours("時間"), hours("-1")]).toEqual(["unread", "unread", "unread"])
   })
 
+  test("reads an older export, which has no 種別, as it reads a newer one", () => {
+    const older = readPrecord(exported(OLDER_HEADER, [["2019/01/02", "S123", "マレハン東京皇国第8支店", "ミナト", "M9", "流星の剣", "123", "12000", "20000", "8000", "朝イチ, 設定6: たぶん", "5", "1600.0", "0"]]))
+    const newer = readPrecord(FILE)
+    expect(older.ok && older.value[0]).toEqual(newer.ok && newer.value[0])
+  })
+
+  test("reads its game from 種別, and takes a tally in with no game where 種別 is empty or says neither", () => {
+    expect([oneTally("パチンコ", "", "0")?.gameKind, oneTally("パチスロ", "", "0")?.gameKind]).toEqual(["pachinko", "pachislot"])
+    expect([oneTally("", "", "0")?.gameKind, oneTally("その他", "", "0")?.gameKind]).toEqual([undefined, undefined])
+  })
+
+  test("keeps a 経費 as a line under its memo, out of both sides, as pRecord's own 収支 leaves it out", () => {
+    const tally = oneTally("", "ハマった\nあと少し", "320")
+    expect([tally?.memo, tally?.outlay, tally?.takings]).toEqual(["ハマった\nあと少し\n経費 320円", dec("80000"), dec("132000")] as never)
+    expect([oneTally("", "", "320")?.memo, oneTally("", "", "1,200")?.memo, oneTally("", "", "電車代")?.memo]).toEqual(["経費 320円", "経費 1200円", "経費 電車代"])
+    expect([oneTally("", "めも", "0")?.memo, oneTally("", "めも", "")?.memo]).toEqual(["めも", "めも"])
+  })
+
   test("finds its columns by name, wherever they stand", () => {
     const read = readPrecord("回収額,日付,投資額\n300,2020/02/03,100\n")
     expect(read.ok && read.value.map((tally) => [tally.date, tally.outlay, tally.takings, tally.parlor.name])).toEqual([["2020-02-03", dec("100"), dec("300"), ""]] as never)
@@ -47,7 +82,7 @@ describe("a pRecord CSV", () => {
 
   test("is refused whole where it lacks a column a tally needs, holds nothing, or has a row that does not read", () => {
     expect(readPrecord("日付,店舗\n2019/01/02,店\n")).toEqual({ ok: false, error: { type: "not-precord", missing: ["投資額", "回収額"] } })
-    expect(readPrecord(`${HEADER}\r\n`)).toEqual({ ok: false, error: { type: "empty" } })
+    expect(readPrecord(exported(HEADER, []))).toEqual({ ok: false, error: { type: "empty" } })
     expect(readPrecord("")).toEqual({ ok: false, error: { type: "empty" } })
     expect(readPrecord("日付,投資額,回収額\n2019/01/02,100,200\n2019/13/40,x,-5\n01/02,1,1\n")).toEqual({
       ok: false,

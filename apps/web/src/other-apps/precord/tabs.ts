@@ -11,7 +11,7 @@ export const precordImport = (ports: ImportPorts): ImportSource<PrecordProblem> 
   from: PRECORD,
   name: PRECORD_NAME,
   about: "pRecord で書き出した CSV から、過去の収支を取り込みます。",
-  kept: "店舗名・機種名は pRecord のまま残します。同じファイルを2回選んでも、二重には入りません。貯玉は取り込みません。",
+  kept: "店舗名・機種名は pRecord のまま残します。経費は収支に入れず、メモに書き添えます。同じファイルを2回選んでも、二重には入りません。pRecord の CSV には貯玉が入っていないため、貯玉は取り込めません。",
   choose: IMPORT_CHOOSE,
   accept: ".csv,text/csv",
   asksUntagged: false,

@@ -3317,8 +3317,11 @@ beside what any app's taking in fails with (`TakingProblem`).
   the day, its parlor and machine by that app's names and codes, what went
   in and what came back in yen, a note. `other-apps/precord/csv-import` reads
   pRecord's CSV into these — its columns found by the names in the first
-  row, as pRecord's own import reads them — and nothing of a file is taken
-  in while any row of it does not read.
+  row, as pRecord's own import reads them, 種別 where a newer export has
+  it — and nothing of a file is taken in while any row of it does not read.
+  pRecord's 経費 is kept as a line of the note (`経費 320円`), never in the
+  sides: pRecord's own 収支 leaves it out, and the book has no account for
+  it. pRecord exports no savings.
 - **One entry in yen, both sides kept**: 投資額 as `費用:遊技`, 回収額 as
   `収益:遊技`, and what lies between as a play typed in by hand has it
   (`sidePostings`): a loss out of cash, a gain into `純資産:特殊景品`, never
