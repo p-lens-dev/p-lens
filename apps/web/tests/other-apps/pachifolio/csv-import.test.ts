@@ -13,9 +13,9 @@ describe("a パチフォリオ CSV", () => {
   test("is read a row a tally, with its game, its labels, and the spins and jackpots it counted", () => {
     const read = readPachifolio(FILE)
     expect(read.ok && read.value).toEqual([
-      { date: "2026-11-08", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8000"), takings: dec("7500"), memo: "メモが書けるよう！", hours: undefined, gameKind: "pachinko", countedSpins: { type: "regular-games", count: 163 }, countedJackpots: 2, sourceLabels: ["イベント"] },
-      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("30000"), takings: dec("30000"), memo: "", hours: undefined, gameKind: "pachinko", countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["イベント", "朝一"] },
-      { date: "2026-11-09", parlor: { name: "名もなき店", code: "" }, machine: { name: "星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("15000"), takings: dec("78000"), memo: "", hours: undefined, gameKind: "pachislot", countedSpins: { type: "regular-games", count: 1200 }, countedJackpots: 3, sourceLabels: [] },
+      { date: "2026-11-08", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8000"), takings: dec("7500"), memo: "メモが書けるよう！", hours: undefined, gameKind: "pachinko", countedSpins: undefined, countedRegularSpins: 163, countedJackpots: 2, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["イベント"] },
+      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("30000"), takings: dec("30000"), memo: "", hours: undefined, gameKind: "pachinko", countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["イベント", "朝一"] },
+      { date: "2026-11-09", parlor: { name: "名もなき店", code: "" }, machine: { name: "星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("15000"), takings: dec("78000"), memo: "", hours: undefined, gameKind: "pachislot", countedSpins: undefined, countedRegularSpins: 1200, countedJackpots: 3, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
     ] as never)
   })
 
@@ -33,7 +33,7 @@ describe("a tally taken in from パチフォリオ", () => {
   const [first, , third] = ((read) => (read.ok ? read.value : []))(readPachifolio(FILE))
 
   test("says its game, keeps each label in a tag of its own, and writes a pachinko play's spins and jackpots as its net regular spins and net jackpots, as this app writes its 回転数", () => {
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: first as never, machine: undefined, inferred: undefined }))).toBe(
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: first as never, machine: undefined, parlor: undefined, inferred: undefined }))).toBe(
       [
         "2026-11-08 マレハン東京皇国第8支店 | 流星の剣  ; play-id: x, game-kind: pachinko, imported-from: pachifolio, source-parlor: マレハン東京皇国第8支店, source-machine: 流星の剣, net-regular-spins: 163, net-jackpots: 2, source-label: イベント",
         "    費用:遊技                           8000 JPY",
@@ -46,8 +46,8 @@ describe("a tally taken in from パチフォリオ", () => {
   })
 
   test("writes a pachislot play's as its net games and net ATs, and none where neither game is known", () => {
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: third as never, machine: undefined, inferred: undefined }))).toContain("game-kind: pachislot, imported-from: pachifolio, source-parlor: 名もなき店, source-machine: 星の舞踏, net-games: 1200, net-ats: 3")
-    const unknown = renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: { ...(third as never as object), gameKind: undefined } as never, machine: undefined, inferred: undefined }))
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: third as never, machine: undefined, parlor: undefined, inferred: undefined }))).toContain("game-kind: pachislot, imported-from: pachifolio, source-parlor: 名もなき店, source-machine: 星の舞踏, net-games: 1200, net-ats: 3")
+    const unknown = renderEntry(importedTallyEntry({ id: "x" as never, from: "pachifolio", source: { ...(third as never as object), gameKind: undefined } as never, machine: undefined, parlor: undefined, inferred: undefined }))
     expect(unknown).not.toContain("net-")
     expect(unknown).not.toContain("game-kind")
   })

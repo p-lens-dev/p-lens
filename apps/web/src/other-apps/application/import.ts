@@ -10,7 +10,8 @@ import { renderEntry } from "../../core/journal/entry"
 import { withEntriesFiled, yearFileOf } from "../../core/journal/filing"
 import type { PlayGameKind, PlayId } from "../../core/play/play"
 import { Err, Ok, andThen, mapOk, type Result } from "../../core/result/result"
-import { tallyHeadsRequest } from "../../hledger/query/requests"
+import { accountsRequest, tallyHeadsRequest } from "../../hledger/query/requests"
+import { parlorsFromDeclarations, type Parlor } from "../../core/parlor/parlor"
 import type { EntryHead } from "../../hledger/protocol/wire"
 import { toPlainString } from "../../core/decimal/decimal"
 import * as Pachinko from "../../core/pachinko"
@@ -287,7 +288,8 @@ const heldOf = (heads: readonly EntryHead[]): ReadonlyMap<PlayId, boolean> =>
  * a person asked, weigh those that can be weighed, a batch a commit. A
  * tally whose machine's name is one the catalog's machine goes by, or one a
  * person said is a machine of the catalog, is tied to it; every other name
- * is kept as the source wrote it, in tags of its own. A file taken in
+ * is kept as the source wrote it, in tags of its own; a tally whose file
+ * names a listed parlor the book has, by its id, is tied to it. A file taken in
  * before whose weighing was stopped writes nothing new, and its weighing
  * goes on from the tallies still unweighed — not those weighed before and
  * not written with their worth, which would come to the same again.
@@ -295,20 +297,23 @@ const heldOf = (heads: readonly EntryHead[]): ReadonlyMap<PlayId, boolean> =>
 export const importTallies = async (ports: ImportPorts, bookId: BookId, from: string, preview: Preview, named: Named, weighing: Weighing | undefined): Promise<Result<Imported, ImportError<never>>> => {
   const machineOf = (source: SourceTally): MachineSummary | undefined => machineFor(preview.catalogue, named, source)
   const ids = importedIdsOf(from, preview.sources)
-  const tallies = preview.sources.map((source, index): ImportedTally => ({ id: ids[index] as PlayId, from, source, machine: ((machine) => (machine === undefined ? undefined : matchedOf(machine)))(machineOf(source)), inferred: undefined }))
-  const counted: { held: ReadonlyMap<PlayId, boolean> } = { held: new Map() }
-  const kept = await ports.session.write(bookId, async (journal, stored) =>
-    andThen(fromHledger(await journal.ask(tallyHeadsRequest(""))), (page): Outcome<ProposedChange> => {
+  const untied = preview.sources.map((source, index): ImportedTally => ({ id: ids[index] as PlayId, from, source, machine: ((machine) => (machine === undefined ? undefined : matchedOf(machine)))(machineOf(source)), parlor: undefined, inferred: undefined }))
+  const counted: { held: ReadonlyMap<PlayId, boolean>; tallies: readonly ImportedTally[] } = { held: new Map(), tallies: untied }
+  const kept = await ports.session.write(bookId, async (journal, stored) => {
+    const [accounts, heads] = await Promise.all([journal.ask(accountsRequest), journal.ask(tallyHeadsRequest(""))])
+    return andThen(andThen(fromHledger(accounts), (declared) => mapOk(fromHledger(heads), (page) => [parlorsFromDeclarations(declared), page] as const)), ([parlors, page]): Outcome<ProposedChange> => {
       counted.held = heldOf(page.items)
-      const fresh = oldestFirst(tallies.filter((tally) => !counted.held.has(tally.id)))
+      counted.tallies = untied.map((tally) => ({ ...tally, parlor: tiedParlorOf(parlors, tally.source) }))
+      const fresh = oldestFirst(counted.tallies.filter((tally) => !counted.held.has(tally.id)))
       return fresh.length === 0
         ? Err({ type: "nothing-written" })
         : Ok({
             files: ((entries) => withEntriesFiled(entries.reduce(withAccountsFor, stored.files), entries.map((entry) => ({ date: entry.date, text: renderEntry(entry) }))))(fresh.map(importedTallyEntry)),
             intent: { type: "plays-imported", from, count: fresh.length },
           })
-    }),
-  )
+    })
+  })
+  const tallies = counted.tallies
   const alreadyHere = tallies.filter((tally) => counted.held.has(tally.id)).length
   const weighedBefore = weighing?.weighedBefore.weighedUnwritten(bookId) ?? new Set<PlayId>()
   const unweighed = weighing === undefined ? [] : tallies.filter((tally) => counted.held.get(tally.id) !== true && !weighedBefore.has(tally.id)).flatMap((tally) => candidateOf(tally, machineOf(tally.source)?.id))
@@ -319,6 +324,10 @@ export const importTallies = async (ports: ImportPorts, bookId: BookId, from: st
   weighing.onReport({ type: "written", written, alreadyHere })
   return mapOk(await weighedAfter(ports, bookId, from, unweighed, weighing), (weighed) => ({ written, alreadyHere, ...weighed, otherThanPlay: preview.otherThanPlay }))
 }
+
+/** The book's parlor a source's tally was at, where its file names a listed parlor by its id and the book has that parlor: never another app's code for one. */
+const tiedParlorOf = (parlors: readonly Parlor[], source: SourceTally): Parlor | undefined =>
+  source.parlorId === undefined ? undefined : parlors.find((parlor) => parlor.identity.type === "listed" && parlor.identity.id === source.parlorId)
 
 /** A machine's name as a source wrote it that no machine of the catalog alone goes by, how many of the file's tallies are of it, and the game they all said it is, where they did. */
 export interface Unnamed {

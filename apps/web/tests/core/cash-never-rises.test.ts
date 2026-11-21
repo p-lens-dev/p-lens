@@ -33,7 +33,7 @@ const SIDES: readonly (readonly [string, string])[] = [
 
 const TALLIED: YenTally = { id: "tally" as PlayId, date: DAY, parlor: undefined, gameKind: "pachinko", machine: "e風の剣豪", cabinetNumber: undefined, outlay: dec("0"), takings: dec("0"), settlement: undefined, theoreticalValue: undefined, told: undefined }
 
-const SOURCE: SourceTally = { date: DAY, parlor: { name: "マレハン東京皇国第8支店", code: "S123" }, machine: { name: "流星の剣", code: "M9", maker: "ミナト" }, cabinetNumber: "123", outlay: dec("0"), takings: dec("0"), memo: "", hours: undefined, clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] }
+const SOURCE: SourceTally = { date: DAY, parlor: { name: "マレハン東京皇国第8支店", code: "S123" }, machine: { name: "流星の剣", code: "M9", maker: "ミナト" }, cabinetNumber: "123", outlay: dec("0"), takings: dec("0"), memo: "", hours: undefined, clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] }
 
 const made = (entry: { readonly ok: true; readonly value: Entry } | { readonly ok: false }): readonly Entry[] => (entry.ok ? [entry.value] : [])
 
@@ -47,7 +47,7 @@ const ENTRIES: readonly Entry[] = [
   ...SIDES.flatMap(([outlay, takings]) => made(composeYenTallyEntry({ ...TALLIED, outlay: dec(outlay), takings: dec(takings), settlement: { type: "off-book-savings", cash: dec("0") } }))),
   ...SIDES.flatMap(([outlay, takings]) => made(composeYenTallyEntry({ ...TALLIED, outlay: dec(outlay), takings: dec(takings), settlement: { type: "cash-and-prizes" } }))),
   ...SIDES.flatMap(([outlay, takings]) => made(composeYenTallyEntry({ ...TALLIED, outlay: dec(outlay), takings: dec(takings), settlement: { type: "off-book-exchanged", cash: dec("0"), specialPrizes: dec(takings).places > 0 ? dec("0") : dec(takings), oddPrizes: dec("0") } }))),
-  ...SIDES.map(([outlay, takings]) => importedTallyEntry({ id: "taken-in" as PlayId, from: "precord", source: { ...SOURCE, outlay: dec(outlay), takings: dec(takings) }, machine: undefined, inferred: undefined })),
+  ...SIDES.map(([outlay, takings]) => importedTallyEntry({ id: "taken-in" as PlayId, from: "precord", source: { ...SOURCE, outlay: dec(outlay), takings: dec(takings) }, machine: undefined, parlor: undefined, inferred: undefined })),
   ...["-12000", "8500", "0.5"].map((result) => dayResultEntry("typed-in" as PlayId, { date: DAY, result: dec(result) })),
   ...["16500", "16800", "17000", "0"].flatMap((specialPrizes) => made(prizeExchangeEntry({ parlor: MALEHAN, pool: POOL, date: DAY, tokens: dec("4800"), specialPrizes: dec(specialPrizes) }, PRICES))),
   openingBalanceEntry({ parlor: MALEHAN, pool: POOL, date: DAY }, dec("12000")),

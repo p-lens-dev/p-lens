@@ -59,7 +59,10 @@ export const taggedOf = (date: IsoDate, outlay: Decimal, takings: Decimal, tags:
     theoreticalValue: undefined,
     gameKind: gameOf(tags),
     countedSpins: undefined,
+    countedRegularSpins: undefined,
     countedJackpots: undefined,
+    countedBonuses: undefined,
+    parlorId: undefined,
     sourceLabels: tags.filter((tag) => GAME_TAGS[tag] === undefined),
   },
 })

@@ -1,6 +1,7 @@
 import type { IsoDate } from "../../core/calendar/calendar"
 import type { Decimal } from "../../core/decimal/decimal"
 import { describedBy, writableText, type Entry, type Posting } from "../../core/journal/entry"
+import { identityTags, type Parlor, type ParlorId } from "../../core/parlor/parlor"
 import { clockTags, clockText } from "../../core/tally/clock"
 import { toldTags } from "../../core/tally/compose"
 import { SOURCE_TAGS } from "../../core/tally/source-tags"
@@ -34,23 +35,18 @@ export interface SourceTally {
   readonly theoreticalValue: Decimal | undefined
   /** Which game it was, where that app said. */
   readonly gameKind: PlayGameKind | undefined
-  /** The spins that app counted the person playing, where it did, and which: a pachislot play's games, as that app counts them under the same name. */
-  readonly countedSpins: CountedSpins | undefined
+  /** Every spin that app counted the person playing from the seat, where it did: a pachislot play's games, as that app counts them under the same name. */
+  readonly countedSpins: number | undefined
+  /** A pachinko play's regular games alone that app counted — none of a 確変, 時短 or 残保留 — as パチフォリオ's 回転数 is taken to be, where it did: a pachislot play's games where it counted no spins beside them. */
+  readonly countedRegularSpins: number | undefined
   /** The jackpots that app counted the person winning, where it did: a pachislot play's ATs, as that app counts them under the same name. */
   readonly countedJackpots: number | undefined
+  /** The bonuses that app counted a pachislot play winning, where it did: a pachinko play's jackpots where it counted no jackpots beside them. */
+  readonly countedBonuses: number | undefined
+  /** The parlor of the parlor list it was at, where the file says, as this app's own 汎用形式 writes it: never another app's code for a parlor. */
+  readonly parlorId: ParlorId | undefined
   /** The words that app let a person label it with, as that app kept them, and none of this app's. */
   readonly sourceLabels: readonly string[]
-}
-
-/**
- * Spins another app counted, as that app counts them: every spin from the
- * seat, or a pachinko play's regular games alone — none of a 確変, 時短 or
- * 残保留 — as パチフォリオ's 回転数 is taken to be, this app writing its own
- * so. A pachislot play's games either way.
- */
-export interface CountedSpins {
-  readonly type: "every-spin" | "regular-games"
-  readonly count: number
 }
 
 /** A machine of the catalog that a source's machine is, where its name is one's and only one game's. */
@@ -59,13 +55,14 @@ export interface MatchedMachine {
   readonly gameKind: PlayGameKind
 }
 
-/** A tally taken in from another app, ready to be written: the tally as that app kept it, where it came from, the id it goes by here, and the catalog's machine where its name matched one. */
+/** A tally taken in from another app, ready to be written: the tally as that app kept it, where it came from, the id it goes by here, the catalog's machine where its name matched one, and the book's parlor where the file named one the book has. */
 export interface ImportedTally {
   readonly id: PlayId
   /** The app it came from, as a word of its own: `precord`. */
   readonly from: string
   readonly source: SourceTally
   readonly machine: MatchedMachine | undefined
+  readonly parlor: Parlor | undefined
   /** What it was taken to be worth from its hours and its two sides, where it was weighed. */
   readonly inferred: InferredWorth | undefined
 }
@@ -87,26 +84,27 @@ const gameKindOf = (tally: ImportedTally): PlayGameKind | undefined => tally.mac
 const counted = (name: string, count: number | undefined): readonly (readonly [string, string])[] => (count === undefined ? [] : [[name, String(count)]])
 
 /**
- * The spins and jackpots the other app counted of a tally's play, as this
- * app's own: a pachinko play's net spins, or its net regular spins where
- * that app counted regular games alone, and net jackpots, a pachislot
- * play's net games and net ATs; none where neither game is known, there
+ * The spins, jackpots and bonuses the other app counted of a tally's play,
+ * as this app's own: a pachinko play's net spins, net regular spins and net
+ * jackpots — its bonuses where that app counted no jackpots — and a
+ * pachislot play's net games — its regular games where that app counted no
+ * spins — net ATs and net bonuses; none where neither game is known, there
  * being no telling which they are.
  */
 const countedTags = (tally: ImportedTally): readonly (readonly [string, string])[] => {
-  const [spins, jackpots] = [tally.source.countedSpins, tally.source.countedJackpots]
+  const { countedSpins, countedRegularSpins, countedJackpots, countedBonuses } = tally.source
   switch (gameKindOf(tally)) {
     case "pachinko":
-      return [...counted(spins?.type === "regular-games" ? TALLY_TAGS.netRegularSpins : TALLY_TAGS.netSpins, spins?.count), ...counted(TALLY_TAGS.netJackpots, jackpots)]
+      return [...counted(TALLY_TAGS.netSpins, countedSpins), ...counted(TALLY_TAGS.netRegularSpins, countedRegularSpins), ...counted(TALLY_TAGS.netJackpots, countedJackpots ?? countedBonuses)]
     case "pachislot":
-      return [...counted(TALLY_TAGS.netGames, spins?.count), ...counted(TALLY_TAGS.netAts, jackpots)]
+      return [...counted(TALLY_TAGS.netGames, countedSpins ?? countedRegularSpins), ...counted(TALLY_TAGS.netAts, countedJackpots), ...counted(TALLY_TAGS.netBonuses, countedBonuses)]
     case undefined:
       return []
   }
 }
 
-/** An imported tally's description: the parlor as the other app named it for the payee, its machine and cabinet for the note. */
-const describe = (source: SourceTally): string => describedBy(writableText(source.parlor.name), cabinetOf(source))
+/** An imported tally's description: the book's parlor it is tied to, or else the parlor as the other app named it, for the payee, its machine and cabinet for the note. */
+const describe = (tally: ImportedTally): string => describedBy(tally.parlor?.name ?? writableText(tally.source.parlor.name), cabinetOf(tally.source))
 
 /** What an imported tally was worth: the theoretical value the other app gave, or else what it was taken to be worth where it was weighed. */
 const worthPostings = (tally: ImportedTally): readonly Posting[] => {
@@ -124,16 +122,17 @@ const worthPostings = (tally: ImportedTally): readonly Posting[] => {
  * has those too. Its
  * description is the tally as the other app named it; `machine` is
  * written only where the catalog has the machine, `game-kind` where it
- * has or the other app said which game it was, and no parlor is named
- * until one is tied to it.
+ * has or the other app said which game it was, and a parlor is named
+ * only where it is tied to one of the book's.
  */
 export const importedTallyEntry = (tally: ImportedTally): Entry => ({
   date: tally.source.date,
-  description: describe(tally.source),
+  description: describe(tally),
   tags: [
     [TALLY_TAGS.playId, tally.id],
     ...((gameKind) => (gameKind === undefined ? [] : [[TALLY_TAGS.gameKind, gameKind] as const]))(gameKindOf(tally)),
     ...(tally.machine === undefined ? [] : [[TALLY_TAGS.machine, tally.machine.name] as const]),
+    ...(tally.parlor === undefined ? [] : identityTags(tally.parlor.identity)),
     ...tagged(TALLY_TAGS.cabinetNumber, tally.source.cabinetNumber),
     [SOURCE_TAGS.from, tally.from],
     ...tagged(SOURCE_TAGS.parlor, tally.source.parlor.name),
@@ -163,9 +162,15 @@ const digest = (text: string): string =>
 
 /** What a source says beyond pRecord's first columns, as one text; empty where it says none of it, as a pRecord tally with no 種別 does. */
 const beyondOf = (source: SourceTally): string =>
-  source.gameKind === undefined && source.countedSpins === undefined && source.countedJackpots === undefined && source.sourceLabels.length === 0
+  source.gameKind === undefined && source.countedSpins === undefined && source.countedRegularSpins === undefined && source.countedJackpots === undefined && source.sourceLabels.length === 0
     ? ""
-    : [source.gameKind ?? "", source.countedSpins?.count ?? "", source.countedJackpots ?? "", ...source.sourceLabels].join("\u001e")
+    : [source.gameKind ?? "", source.countedSpins ?? source.countedRegularSpins ?? "", source.countedJackpots ?? "", ...source.sourceLabels].join("\u001e")
+
+/** What a source says beyond that again, as one text: regular spins counted beside every spin, bonuses and the listed parlor; empty where it says none of it, as no app's tallies did before 汎用形式 wrote them. */
+const furthestOf = (source: SourceTally): string =>
+  (source.countedSpins === undefined || source.countedRegularSpins === undefined) && source.countedBonuses === undefined && source.parlorId === undefined
+    ? ""
+    : [source.countedSpins === undefined ? "" : (source.countedRegularSpins ?? ""), source.countedBonuses ?? "", source.parlorId ?? ""].join("\u001e")
 
 const decimalText = (amount: Decimal): string => `${amount.mantissa}e-${amount.places}`
 
@@ -179,7 +184,7 @@ const saidOnly = (text: string): readonly string[] => (text === "" ? [] : [text]
 
 /** Everything a source's tally says, as one text: what pRecord's columns say, and what it says beyond them only where it does, so that a tally of an app that says less goes by the id it always has. */
 const sameAs = (source: SourceTally): string =>
-  [source.date, source.parlor.code, source.parlor.name, source.machine.code, source.machine.name, source.cabinetNumber, decimalText(source.outlay), decimalText(source.takings), source.memo, ...saidOnly(beyondOf(source)), ...saidOnly(furtherOf(source))].join("\u001f")
+  [source.date, source.parlor.code, source.parlor.name, source.machine.code, source.machine.name, source.cabinetNumber, decimalText(source.outlay), decimalText(source.takings), source.memo, ...saidOnly(beyondOf(source)), ...saidOnly(furtherOf(source)), ...saidOnly(furthestOf(source))].join("\u001f")
 
 /**
  * The ids a file's tallies go by here, in the file's order: where each came

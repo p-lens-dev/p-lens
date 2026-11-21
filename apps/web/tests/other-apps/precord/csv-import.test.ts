@@ -44,8 +44,8 @@ describe("a pRecord CSV", () => {
   test("is read a row a tally, its day whichever way it is written, its unread columns passed over", () => {
     const read = readPrecord(FILE)
     expect(read.ok && read.value).toEqual([
-      { date: "2019-01-02", parlor: { name: "マレハン東京皇国第8支店", code: "S123" }, machine: { name: "流星の剣", code: "M9", maker: "ミナト" }, cabinetNumber: "123", outlay: dec("12000"), takings: dec("20000"), memo: "朝イチ, 設定6: たぶん", hours: dec("5"), gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] },
-      { date: "2019-01-05", parlor: { name: "名もなき店", code: "" }, machine: { name: "", code: "", maker: "" }, cabinetNumber: "", outlay: dec("5000"), takings: dec("0"), memo: "", hours: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] },
+      { date: "2019-01-02", parlor: { name: "マレハン東京皇国第8支店", code: "S123" }, machine: { name: "流星の剣", code: "M9", maker: "ミナト" }, cabinetNumber: "123", outlay: dec("12000"), takings: dec("20000"), memo: "朝イチ, 設定6: たぶん", hours: dec("5"), gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
+      { date: "2019-01-05", parlor: { name: "名もなき店", code: "" }, machine: { name: "", code: "", maker: "" }, cabinetNumber: "", outlay: dec("5000"), takings: dec("0"), memo: "", hours: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
     ] as never)
   })
 
@@ -96,7 +96,7 @@ describe("an imported tally", () => {
 
   test("is one entry in yen with both its sides and its gain in the special prizes, never in cash, the source's names in tags of their own and its note under it", () => {
     const [id] = importedIdsOf("precord", [first as never])
-    expect(renderEntry(importedTallyEntry({ id: id as never, from: "precord", source: first as never, machine: undefined, inferred: undefined }))).toBe(
+    expect(renderEntry(importedTallyEntry({ id: id as never, from: "precord", source: first as never, machine: undefined, parlor: undefined, inferred: undefined }))).toBe(
       [
         `2019-01-02 マレハン東京皇国第8支店 | 流星の剣 123番台  ; play-id: ${id}, cabinet-number: 123, imported-from: precord, source-parlor: マレハン東京皇国第8支店, source-parlor-code: S123, source-machine: 流星の剣, source-machine-code: M9, source-maker: ミナト, hours: 5`,
         "    費用:遊技                           12000 JPY",
@@ -110,9 +110,9 @@ describe("an imported tally", () => {
   })
 
   test("names the catalog's machine and its game only where it was matched, and writes no posting that moves nothing", () => {
-    const text = renderEntry(importedTallyEntry({ id: "x" as never, from: "precord", source: second as never, machine: undefined, inferred: undefined }))
+    const text = renderEntry(importedTallyEntry({ id: "x" as never, from: "precord", source: second as never, machine: undefined, parlor: undefined, inferred: undefined }))
     expect(text).toBe("2019-01-05 名もなき店 |  ; play-id: x, imported-from: precord, source-parlor: 名もなき店\n    費用:遊技                           5000 JPY\n    資産:現金                           -5000 JPY\n")
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "precord", source: first as never, machine: { name: "流星の剣", gameKind: "pachislot" }, inferred: undefined }))).toContain("play-id: x, game-kind: pachislot, machine: 流星の剣, cabinet-number: 123, imported-from")
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "precord", source: first as never, machine: { name: "流星の剣", gameKind: "pachislot" }, parlor: undefined, inferred: undefined }))).toContain("play-id: x, game-kind: pachislot, machine: 流星の剣, cabinet-number: 123, imported-from")
   })
 
   test("goes by an id the same tally always gets, twins told apart by their order", () => {

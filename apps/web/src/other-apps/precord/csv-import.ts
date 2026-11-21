@@ -90,7 +90,10 @@ const tallyOf = (cell: (column: Column) => string): Result<SourceTally, readonly
     theoreticalValue: undefined,
     gameKind: gameOf(cell("gameKind")),
     countedSpins: undefined,
+    countedRegularSpins: undefined,
     countedJackpots: undefined,
+    countedBonuses: undefined,
+    parlorId: undefined,
     sourceLabels: [],
   })
 }

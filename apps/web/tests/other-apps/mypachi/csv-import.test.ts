@@ -21,9 +21,9 @@ describe("a Myパチ収支表 CSV", () => {
   test("is read from its Shift_JIS, a row a tally between its title and the row saying when it was made: its day without its weekday, its yen without their sign, its hours, its theoretical value, and its タグ broken at their spaces", () => {
     const read = readMypachi(shiftJisOf(TEXT))
     expect(read.ok && read.value).toEqual([
-      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "スマスロ星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("50000"), takings: dec("0"), memo: "", hours: dec("1.00"), clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] },
-      { date: "2026-11-06", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "e流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8929"), takings: dec("9821"), memo: "すぐやめ。", hours: dec("0.80"), clock: undefined, theoreticalValue: dec("1500"), gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["ハイエナ"] },
-      { date: "2026-10-28", parlor: { name: "名もなき店", code: "" }, machine: { name: "e流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("0"), takings: dec("5000"), memo: "", hours: dec("1.50"), clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["日本語なら", "そのままタグ化したい"] },
+      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "スマスロ星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("50000"), takings: dec("0"), memo: "", hours: dec("1.00"), clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
+      { date: "2026-11-06", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "e流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8929"), takings: dec("9821"), memo: "すぐやめ。", hours: dec("0.80"), clock: undefined, theoreticalValue: dec("1500"), gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["ハイエナ"] },
+      { date: "2026-10-28", parlor: { name: "名もなき店", code: "" }, machine: { name: "e流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("0"), takings: dec("5000"), memo: "", hours: dec("1.50"), clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["日本語なら", "そのままタグ化したい"] },
     ] as never)
   })
 
@@ -50,6 +50,6 @@ describe("a tally taken in from Myパチ収支表", () => {
   test("writes the theoretical value it gave", () => {
     const read = readMypachi(shiftJisOf(TEXT))
     const second = read.ok ? read.value[1] : undefined
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "mypachi", source: second as never, machine: undefined, inferred: undefined }))).toContain("(統計:期待値)                       1500 JPY")
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "mypachi", source: second as never, machine: undefined, parlor: undefined, inferred: undefined }))).toContain("(統計:期待値)                       1500 JPY")
   })
 })

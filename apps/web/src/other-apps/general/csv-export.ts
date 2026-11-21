@@ -4,7 +4,7 @@ import type { BookFiles } from "../../core/journal/layout"
 import { rentalPriceOf, rentalPriceOfTier, statedExchangeOf, statedExchangeOfRate, tierOf, type PlayTerms } from "../../core/parlor/terms"
 import { termsInHead } from "../../core/play-log/head"
 import { playLogPath } from "../../core/play-log/checkpoint"
-import type { PlayGameKind } from "../../core/play/play"
+import type { PlayGameKind, PlayId } from "../../core/play/play"
 import type { TallyLine } from "../../core/report/tally-line"
 import { clockText } from "../../core/tally/clock"
 import { rateOn, rateReachingBack, type PricePoint } from "../../core/valuation/valuation"
@@ -14,8 +14,9 @@ import { rateOn, rateReachingBack, type PricePoint } from "../../core/valuation/
  * format, as the account names are the journal's: whoever opens the file
  * reads these words, so a column keeps its name. They go in the order a
  * person reads a tally in — where and on what rate, what was played, what
- * it came to, how it went, then what was weighed and where it came from —
- * and 汎用形式's import offers its fields in the same order.
+ * it came to, how it went, then what was weighed, what the person said of
+ * it, and where it came from — and 汎用形式's import offers its fields in
+ * the same order.
  */
 const COLUMNS = [
   "営業日",
@@ -33,7 +34,12 @@ const COLUMNS = [
   "期待値",
   "実質ボーダー",
   "回転率",
+  "回転数",
+  "通常回転数",
+  "ゲーム数",
   "大当り回数",
+  "AT回数",
+  "ボーナス回数",
   "開始時刻",
   "終了時刻",
   "稼働時間",
@@ -44,6 +50,8 @@ const COLUMNS = [
   "推定の交換率",
   "推定の回転率",
   "摘要",
+  "タグ",
+  "メモ",
   "送り主",
   "送り主ID",
   "店舗ID",
@@ -60,6 +68,11 @@ const GAME_OF_TOKEN: Readonly<Record<TokenKind, PlayGameKind>> = { ball: "pachin
 const UNKNOWN = ""
 
 const amountText = (amount: Decimal | undefined): string => (amount === undefined ? UNKNOWN : toPlainString(amount))
+
+const countText = (count: number | undefined): string => (count === undefined ? UNKNOWN : String(count))
+
+/** A tally's labels in one cell, as 汎用形式's import reads them back: `イベント,朝一`. */
+const labelsText = (labels: readonly string[]): string => labels.join(",")
 
 /** Seconds as hours and minutes, `5:20`, to the nearest minute: what a spreadsheet takes as a time, and what this app takes in as 稼働時間. */
 const durationText = (seconds: Decimal | undefined): string => {
@@ -98,7 +111,7 @@ const rateCellsOf = (line: TallyLine, terms: PlayTerms | undefined, prices: read
   return [tier ?? UNKNOWN, amountText(rental), exchange]
 }
 
-const rowOf = (line: TallyLine, terms: PlayTerms | undefined, prices: readonly PricePoint[]): readonly string[] => [
+const rowOf = (line: TallyLine, terms: PlayTerms | undefined, prices: readonly PricePoint[], notes: ReadonlyMap<PlayId, string>): readonly string[] => [
   line.tally.date,
   line.parlorName ?? UNKNOWN,
   line.tally.gameKind === undefined ? UNKNOWN : GAME_KINDS[line.tally.gameKind],
@@ -112,7 +125,12 @@ const rowOf = (line: TallyLine, terms: PlayTerms | undefined, prices: readonly P
   amountText(line.tally.theoreticalValue),
   amountText(line.notes.aside.realBorder),
   amountText(line.notes.aside.spinPerformance),
-  line.notes.netJackpots === undefined ? UNKNOWN : String(line.notes.netJackpots),
+  countText(line.notes.netSpins),
+  countText(line.notes.netRegularSpins),
+  countText(line.notes.netGames),
+  countText(line.notes.netJackpots),
+  countText(line.notes.netAts),
+  countText(line.notes.netBonuses),
   line.notes.aside.clock?.started === undefined ? UNKNOWN : clockText(line.notes.aside.clock.started),
   line.notes.aside.clock?.finished === undefined ? UNKNOWN : clockText(line.notes.aside.clock.finished),
   durationText(line.notes.playSeconds),
@@ -123,6 +141,8 @@ const rowOf = (line: TallyLine, terms: PlayTerms | undefined, prices: readonly P
   amountText(line.notes.tokenExchange),
   amountText(line.notes.inferredSpinPerformance),
   line.tally.description,
+  labelsText(line.labels),
+  notes.get(line.tally.id) ?? UNKNOWN,
   line.notes.aside.sender?.name ?? UNKNOWN,
   line.notes.aside.sender?.id ?? UNKNOWN,
   line.tally.parlorId ?? UNKNOWN,
@@ -130,5 +150,8 @@ const rowOf = (line: TallyLine, terms: PlayTerms | undefined, prices: readonly P
   line.tally.importedFrom ?? UNKNOWN,
 ]
 
-/** Tallies as a table, a tally a row under the row of column names, in the order given, each with its rate from its play's log among the book's files and the book's rates. Amounts are plain numbers of yen, with no separators and no unit. */
-export const tallyTableOf = (lines: readonly TallyLine[], files: BookFiles, prices: readonly PricePoint[]): readonly (readonly string[])[] => [COLUMNS, ...lines.map((line) => rowOf(line, termsOf(files, line), prices))]
+/** Tallies as a table, a tally a row under the row of column names, in the order given, each with its rate from its play's log among the book's files and the book's rates, and its memo from what the person said of it, by its play's id (`notesOf`). Amounts are plain numbers of yen, with no separators and no unit. */
+export const tallyTableOf = (lines: readonly TallyLine[], files: BookFiles, prices: readonly PricePoint[], notes: ReadonlyMap<PlayId, string>): readonly (readonly string[])[] => [
+  COLUMNS,
+  ...lines.map((line) => rowOf(line, termsOf(files, line), prices, notes)),
+]

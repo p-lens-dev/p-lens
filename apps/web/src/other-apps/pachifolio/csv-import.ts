@@ -61,8 +61,11 @@ const tallyOf = (cell: (column: Column) => string): Result<SourceTally, readonly
     clock: undefined,
     theoreticalValue: undefined,
     gameKind: gameKind.value,
-    countedSpins: spins.value === undefined ? undefined : { type: "regular-games", count: spins.value },
+    countedSpins: undefined,
+    countedRegularSpins: spins.value,
     countedJackpots: jackpots.value,
+    countedBonuses: undefined,
+    parlorId: undefined,
     sourceLabels: labelsOf(cell("labels")),
   })
 }

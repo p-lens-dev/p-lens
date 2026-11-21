@@ -156,7 +156,10 @@ const tallyAt = (stored: StoredMap, date: IsoDate, index: number): SourceTally |
     theoreticalValue: undefined,
     gameKind: gameKindOf(machineCode),
     countedSpins: undefined,
+    countedRegularSpins: undefined,
     countedJackpots: undefined,
+    countedBonuses: undefined,
+    parlorId: undefined,
     sourceLabels: labelsOf(wholeAt(stored, at("tag")) ?? 0),
   }
 }

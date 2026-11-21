@@ -105,8 +105,13 @@ export const ofPricedTallies = async <File>(ports: ExportPorts, bookId: BookId, 
   })
 }
 
-/** The notes under each of a book's tallies, by its play's id: what a file for another app writes as a tally's memo. */
-export const notesOf = (stored: StoredBook): ReadonlyMap<PlayId, string> => tallyNotesIn(journalsOf(stored.files).map(([, text]) => text))
+/** What the person said of each of a book's tallies, by its play's id, from the book's files: the note they wrote of it, then the notes under its entry, such as the memo a tally taken in from another app brought — what a file for another app writes as a tally's memo. A tally with neither is not in it. */
+export const notesOf = (lines: readonly TallyLine[], files: BookFiles): ReadonlyMap<PlayId, string> => {
+  const comments = tallyNotesIn(journalsOf(files).map(([, text]) => text))
+  return new Map(
+    lines.flatMap((line) => ((text) => (text === "" ? [] : [[line.tally.id, text] as const]))([line.notes.userMemo, comments.get(line.tally.id)].filter((part): part is string => part !== undefined && part !== "").join(" "))),
+  )
+}
 
 /** Hand a file made to the person, to save wherever they choose. */
 export const handOver = async (ports: Pick<ExportPorts, "handover">, file: HandedFile): Promise<Outcome<void>> =>

@@ -17,6 +17,12 @@ const NO_NOTES: TallyNotes = {
   aside: { clock: undefined, spinPerformance: undefined, realBorder: undefined, sender: undefined, netCounts: undefined },
   playSeconds: undefined,
   netJackpots: undefined,
+  netSpins: undefined,
+  netRegularSpins: undefined,
+  netGames: undefined,
+  netAts: undefined,
+  netBonuses: undefined,
+  userMemo: undefined,
   carriedIn: undefined,
   inferredFormula: undefined,
   tokenRental: undefined,
@@ -186,7 +192,7 @@ describe("tallies as pRecord's CSV", () => {
     const source = read.ok ? read.value[0] : undefined
     if (source === undefined) throw new Error("the row is not read")
     const id = "imported" as PlayId
-    const entry = importedTallyEntry({ id, from: "precord", source, machine: { name: "e東京喰種", gameKind: "pachinko" }, inferred: undefined })
+    const entry = importedTallyEntry({ id, from: "precord", source, machine: { name: "e東京喰種", gameKind: "pachinko" }, parlor: undefined, inferred: undefined })
     const line = lineOf({ ...IN_YEN_SAID, description: entry.description, machineName: "e東京喰種" })
     const row = precordCsvOf([{ ...line, tally: { ...line.tally, id } }], tallyNotesIn([`; 稼働\n\n${renderEntry(entry)}`])).split("\r\n")[1]
     expect(row).toBe('"2026/10/02","","天王寺ホール本館","ビスティ","","e東京喰種","","99","5500","0","-5500","ちょっと回ってた","2時間25分","-2275.862","0"')

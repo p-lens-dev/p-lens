@@ -4,7 +4,7 @@ import { mapErr, mapOk, Ok, type Result } from "../../core/result/result"
 import type { Outcome } from "../../application/errors"
 import { bundleName, fileNameOf, fileStemsOf, singleJournalName } from "../core/file-name"
 import { csvOf } from "../core/csv"
-import { madeOf, ofPricedTallies, ownStem, type ExportPorts, type ExportWatch, type Made, type Stem, type Written } from "../application/export"
+import { madeOf, notesOf, ofPricedTallies, ownStem, type ExportPorts, type ExportWatch, type Made, type Stem, type Written } from "../application/export"
 import { importTallies, previewOf, type Imported, type ImportError, type ImportPorts, type Named, type Preview, type Weighing } from "../application/import"
 import { tallyTableOf } from "./csv-export"
 import { GENERAL, readGeneral, type GeneralProblem, type Mapping, type Sheet } from "./csv-import"
@@ -30,7 +30,7 @@ const quietly = (watch: ExportWatch): ExportWatch => ({ onReport: () => undefine
 
 /** Every tally of a book as a table, a tally a row, newest first: what a spreadsheet opens. */
 const tallyTable = (ports: ExportPorts, bookId: BookId, stem: Stem, watch: ExportWatch): Promise<Outcome<Written | undefined>> =>
-  ofPricedTallies(ports, bookId, watch, (lines, prices, stored) => ({ name: fileNameOf(stem(stored.files, bookId), "収支", ports.today(), "csv"), mediaType: "text/csv", text: csvOf(tallyTableOf(lines, stored.files, prices)) }))
+  ofPricedTallies(ports, bookId, watch, (lines, prices, stored) => ({ name: fileNameOf(stem(stored.files, bookId), "収支", ports.today(), "csv"), mediaType: "text/csv", text: csvOf(tallyTableOf(lines, stored.files, prices, notesOf(lines, stored.files))) }))
 
 /** A book's journals as one file hledger opens by itself. */
 export const makeSingleJournal = async (ports: ExportPorts, bookId: BookId, watch: ExportWatch): Promise<Outcome<Made>> => madeOf(await singleJournal(ports, bookId, ownStem, watch))

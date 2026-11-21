@@ -22,7 +22,7 @@ export const makeForPachiboCsv = async (ports: ExportPorts, bookId: BookId, watc
     await ofTallies(ports, bookId, watch, (lines, stored): WrittenBytes => ({
       name: fileNameOf(ownStem(stored.files, bookId), "ぱち簿", ports.today(), "csv"),
       mediaType: "text/csv",
-      bytes: shiftJisOf(pachiboCsvOf(lines, notesOf(stored))),
+      bytes: shiftJisOf(pachiboCsvOf(lines, notesOf(lines, stored.files))),
     })),
   )
 
@@ -32,6 +32,6 @@ export const makeForPachiboPcb = async (ports: ExportPorts, bookId: BookId, watc
     await ofTallies(ports, bookId, watch, (lines, stored): WrittenBytes => ({
       name: fileNameOf(ownStem(stored.files, bookId), "ぱち簿", ports.today(), "pcb"),
       mediaType: "application/octet-stream",
-      bytes: new Uint8Array(pachiboPcbOf(lines, notesOf(stored), ports.now(), utf8Of)),
+      bytes: new Uint8Array(pachiboPcbOf(lines, notesOf(lines, stored.files), ports.now(), utf8Of)),
     })),
   )

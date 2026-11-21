@@ -15,8 +15,8 @@ describe("a マネクルSP CSV", () => {
   test("is read in its sample file's form: the start an hour alone, the minutes as hours, a 期待値 apart from the result kept, the 投資種類 saying the game and kept before the タグ", () => {
     const read = readManekuru(SAMPLE)
     expect(read.ok && read.value).toEqual([
-      { date: "2022-05-20", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8000"), takings: dec("13800"), memo: "", hours: dec("1.50"), clock: { started: { hour: 18, minute: 0 }, finished: undefined }, theoreticalValue: dec("5000"), gameKind: "pachislot", countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["スロット", "天井狙い"] },
-      { date: "2022-05-21", parlor: { name: "", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("2000"), takings: dec("5000"), memo: "用事があったので途中で切り上げ", hours: undefined, clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["タグ1", "タグ2", "タグ3"] },
+      { date: "2022-05-20", parlor: { name: "マレハン東京皇国第8支店", code: "" }, machine: { name: "星の舞踏", code: "", maker: "" }, cabinetNumber: "", outlay: dec("8000"), takings: dec("13800"), memo: "", hours: dec("1.50"), clock: { started: { hour: 18, minute: 0 }, finished: undefined }, theoreticalValue: dec("5000"), gameKind: "pachislot", countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["スロット", "天井狙い"] },
+      { date: "2022-05-21", parlor: { name: "", code: "" }, machine: { name: "流星の剣", code: "", maker: "" }, cabinetNumber: "", outlay: dec("2000"), takings: dec("5000"), memo: "用事があったので途中で切り上げ", hours: undefined, clock: undefined, theoreticalValue: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["タグ1", "タグ2", "タグ3"] },
     ] as never)
   })
 
@@ -42,7 +42,7 @@ describe("a tally taken in from マネクルSP", () => {
   const [first] = ((read) => (read.ok ? read.value : []))(readManekuru(SAMPLE))
 
   test("writes the theoretical value it gave, and its start, where it said them, and is not given an inferred one beside it", () => {
-    const entry = renderEntry(importedTallyEntry({ id: "x" as never, from: "manekuru", source: first as never, machine: undefined, inferred: { value: dec("100"), formulaId: "f", tokenRental: dec("4"), tokenExchange: dec("28"), spinPerformance: undefined } }))
+    const entry = renderEntry(importedTallyEntry({ id: "x" as never, from: "manekuru", source: first as never, machine: undefined, parlor: undefined, inferred: { value: dec("100"), formulaId: "f", tokenRental: dec("4"), tokenExchange: dec("28"), spinPerformance: undefined } }))
     expect(entry).toContain("game-kind: pachislot, imported-from: manekuru, source-parlor: マレハン東京皇国第8支店, source-machine: 星の舞踏, source-label: スロット, source-label: 天井狙い, hours: 1.5, started: 18:00")
     expect(entry).toContain("(統計:期待値)")
     expect(entry).not.toContain("推定")
@@ -51,7 +51,7 @@ describe("a tally taken in from マネクルSP", () => {
 
   test("writes a tag longer than one may be typed cut to twelve characters, once where two come to the same, its id going by the tag as it was", () => {
     const long = { ...(first as never as object), sourceLabels: ["天井狙い", "とても長いタグの名前ですね一", "とても長いタグの名前ですね二"] } as never
-    const entry = renderEntry(importedTallyEntry({ id: "x" as never, from: "manekuru", source: long, machine: undefined, inferred: undefined }))
+    const entry = renderEntry(importedTallyEntry({ id: "x" as never, from: "manekuru", source: long, machine: undefined, parlor: undefined, inferred: undefined }))
     expect(entry).toContain("source-label: 天井狙い, source-label: とても長いタグの名前です,")
     expect(entry.match(/source-label/g)?.length).toBe(2)
     expect(importedIdsOf("manekuru", [long])).not.toEqual(importedIdsOf("manekuru", [{ ...(first as never as object), sourceLabels: ["天井狙い", "とても長いタグの名前です"] } as never]))

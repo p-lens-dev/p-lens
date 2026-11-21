@@ -21,6 +21,6 @@ export const makeForMypachi = async (ports: ExportPorts, bookId: BookId, watch: 
     await ofTallies(ports, bookId, watch, (lines, stored): WrittenBytes => ({
       name: fileNameOf(ownStem(stored.files, bookId), "Myパチ収支表", ports.today(), "csv"),
       mediaType: "text/csv",
-      bytes: shiftJisOf(mypachiCsvOf(lines, notesOf(stored), ports.now())),
+      bytes: shiftJisOf(mypachiCsvOf(lines, notesOf(lines, stored.files), ports.now())),
     })),
   )

@@ -23,4 +23,4 @@ export const importPrecord = (ports: ImportPorts, bookId: BookId, preview: Previ
  * and the table carries the same tallies and more.
  */
 export const makeForPrecord = async (ports: ExportPorts, bookId: BookId, watch: ExportWatch): Promise<Outcome<Made>> =>
-  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "pRecord", ports.today(), "csv"), mediaType: "text/csv", text: precordCsvOf(lines, notesOf(stored)) })))
+  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "pRecord", ports.today(), "csv"), mediaType: "text/csv", text: precordCsvOf(lines, notesOf(lines, stored.files)) })))

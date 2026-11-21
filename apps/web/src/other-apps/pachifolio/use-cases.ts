@@ -18,4 +18,4 @@ export const importPachifolio = (ports: ImportPorts, bookId: BookId, preview: Pr
 
 /** Every tally of a book as パチフォリオ's CSV, newest first, for パチフォリオ to take in: by itself and never in the zip, as pRecord's is. */
 export const makeForPachifolio = async (ports: ExportPorts, bookId: BookId, watch: ExportWatch): Promise<Outcome<Made>> =>
-  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "パチフォリオ", ports.today(), "csv"), mediaType: "text/csv", text: pachifolioCsvOf(lines, notesOf(stored)) })))
+  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "パチフォリオ", ports.today(), "csv"), mediaType: "text/csv", text: pachifolioCsvOf(lines, notesOf(lines, stored.files)) })))

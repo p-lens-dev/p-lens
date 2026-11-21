@@ -86,8 +86,8 @@ describe("a tally taken in from MAXBET", () => {
   test("is written in yen with its game where its tags said one, its other tags as labels and its memo as a note", () => {
     const read = readMaxbet(BACKUP)
     const [, second, third] = read.ok ? read.value.tallies : []
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "maxbet", source: second as never, machine: undefined, inferred: undefined }))).toContain("play-id: x, game-kind: pachislot, imported-from: maxbet, source-label: イベント")
-    const untagged = renderEntry(importedTallyEntry({ id: "y" as never, from: "maxbet", source: third as never, machine: undefined, inferred: undefined }))
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "maxbet", source: second as never, machine: undefined, parlor: undefined, inferred: undefined }))).toContain("play-id: x, game-kind: pachislot, imported-from: maxbet, source-label: イベント")
+    const untagged = renderEntry(importedTallyEntry({ id: "y" as never, from: "maxbet", source: third as never, machine: undefined, parlor: undefined, inferred: undefined }))
     expect(untagged).not.toContain("game-kind")
     expect(untagged).toContain("; メモあり")
   })

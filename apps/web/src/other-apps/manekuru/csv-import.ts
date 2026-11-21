@@ -151,7 +151,10 @@ const tallyOf = (cell: (column: Column) => string): Result<SourceTally, readonly
     theoreticalValue: worth.value,
     gameKind: gameKindOfStake(cell("stake")),
     countedSpins: undefined,
+    countedRegularSpins: undefined,
     countedJackpots: undefined,
+    countedBonuses: undefined,
+    parlorId: undefined,
     sourceLabels: labelsOf(cell("stake"), cell("labels")),
   })
 }

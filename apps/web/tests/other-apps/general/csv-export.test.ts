@@ -4,8 +4,10 @@ import type { IsoDate } from "../../../src/core/calendar/calendar"
 import { decimal } from "../../../src/core/decimal/decimal"
 import { csvOf } from "../../../src/other-apps/core/csv"
 import { tallyTableOf } from "../../../src/other-apps/general/csv-export"
+import { notesOf } from "../../../src/other-apps/application/export"
 import type { PlayId } from "../../../src/core/play/play"
 import type { TallyNotes } from "../../../src/core/report/tally-notes"
+import type { TallyLine } from "../../../src/core/report/tally-line"
 import type { BookFiles } from "../../../src/core/journal/layout"
 import { playLogPath } from "../../../src/core/play-log/checkpoint"
 import type { PricePoint } from "../../../src/core/valuation/valuation"
@@ -16,6 +18,12 @@ const NO_NOTES: TallyNotes = {
   aside: { clock: undefined, spinPerformance: undefined, realBorder: undefined, sender: undefined, netCounts: undefined },
   playSeconds: undefined,
   netJackpots: undefined,
+  netSpins: undefined,
+  netRegularSpins: undefined,
+  netGames: undefined,
+  netAts: undefined,
+  netBonuses: undefined,
+  userMemo: undefined,
   carriedIn: undefined,
   inferredFormula: undefined,
   tokenRental: undefined,
@@ -39,7 +47,12 @@ const COLUMNS = [
   "期待値",
   "実質ボーダー",
   "回転率",
+  "回転数",
+  "通常回転数",
+  "ゲーム数",
   "大当り回数",
+  "AT回数",
+  "ボーナス回数",
   "開始時刻",
   "終了時刻",
   "稼働時間",
@@ -50,6 +63,8 @@ const COLUMNS = [
   "推定の交換率",
   "推定の回転率",
   "摘要",
+  "タグ",
+  "メモ",
   "送り主",
   "送り主ID",
   "店舗ID",
@@ -67,6 +82,8 @@ const PRICES: readonly PricePoint[] = [
 const logStating = (terms: object): string => `${JSON.stringify({ header: true, terms })}\n`
 
 const NO_FILES: BookFiles = {}
+
+const NO_NOTES_BY_TALLY: ReadonlyMap<PlayId, string> = new Map()
 
 describe("tallies as a table", () => {
   test("a tally is a row under the column names, its amounts plain numbers, its rate as its tokens name it and the book values them on its day", () => {
@@ -87,8 +104,9 @@ describe("tallies as a table", () => {
         ],
         NO_FILES,
         PRICES,
+        NO_NOTES_BY_TALLY,
       ),
-    ).toEqual([COLUMNS, ["2026-09-08", "723豚の帽子亭店", "スロット", "20円", "20", "5.6", "ピエロット", "", "45", "10000", "12345.5", "2345.5", "-800", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "one", ""]])
+    ).toEqual([COLUMNS, ["2026-09-08", "723豚の帽子亭店", "スロット", "20円", "20", "5.6", "ピエロット", "", "45", "10000", "12345.5", "2345.5", "-800", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "one", ""]])
   })
 
   test("a tally's rental is as its play's log states it, and its exchange as the book values its tokens", () => {
@@ -106,6 +124,12 @@ describe("tallies as a table", () => {
               aside: { clock: { started: { hour: 22, minute: 30 }, finished: { hour: 1, minute: 5 } }, spinPerformance: decimal(185n, 1), realBorder: decimal(165n, 1), sender: { id: "s-1", name: "ハンマ" }, netCounts: undefined },
               playSeconds: yen(9300),
               netJackpots: 3,
+              netSpins: undefined,
+              netRegularSpins: undefined,
+              netGames: undefined,
+              netAts: undefined,
+              netBonuses: undefined,
+              userMemo: undefined,
               carriedIn: yen(250),
               inferredFormula: "f-1",
               tokenRental: yen(4),
@@ -118,8 +142,9 @@ describe("tallies as a table", () => {
         ],
         { [playLogPath("pachinko", "two" as PlayId)]: logStating({ rental: { yen: 1000, tokens: 260 }, exchange: { yen: 1000, tokens: 280 }, replay: { paidOut: 250, deducted: 250 } }) },
         PRICES,
+        NO_NOTES_BY_TALLY,
       )[1],
-    ).toEqual(["2026-10-09", "ジーステーション第3新東京市店", "パチンコ", "4円", "3.846154", "28", "流星", "made-up", "101", "5000", "8000", "3000", "", "16.5", "18.5", "3", "22:30", "01:05", "2:35", "250", "1200", "f-1", "4", "28", "17.2", "ジーステーション第3新東京市店 | 稼働", "ハンマ", "s-1", "p-1", "two", ""])
+    ).toEqual(["2026-10-09", "ジーステーション第3新東京市店", "パチンコ", "4円", "3.846154", "28", "流星", "made-up", "101", "5000", "8000", "3000", "", "16.5", "18.5", "", "", "", "3", "", "", "22:30", "01:05", "2:35", "250", "1200", "f-1", "4", "28", "17.2", "ジーステーション第3新東京市店 | 稼働", "", "", "ハンマ", "s-1", "p-1", "two", ""])
   })
 
   test("a tally in yen takes its rate from its play's log alone", () => {
@@ -140,8 +165,29 @@ describe("tallies as a table", () => {
         ],
         { [playLogPath("pachislot", "three" as PlayId)]: logStating({ rental: { yen: 1000, tokens: 50 }, exchange: { yen: 10000, tokens: 510 }, replay: { paidOut: 50, deducted: 50 } }) },
         PRICES,
+        NO_NOTES_BY_TALLY,
       )[1]?.slice(3, 6),
     ).toEqual(["20円", "20", "5.1"])
+  })
+
+  test("a tally's counts, labels and notes each have a cell: the note the person wrote, then the notes under its entry", () => {
+    const lines: readonly TallyLine[] = [
+      {
+        tally: { id: "four" as PlayId, date: "2026-10-11" as IsoDate, description: "ネルフ第3新東京市店 | 北斗", parlorId: undefined, gameKind: "pachislot", machine: undefined, cabinetNumber: undefined, importedFrom: "precord", theoreticalValue: undefined, inferredValue: undefined },
+        parlorName: "ネルフ第3新東京市店",
+        machineName: "北斗",
+        maker: undefined,
+        labels: ["イベント", "朝一"],
+        tokenCommodity: undefined,
+        notes: { ...NO_NOTES, netGames: 1200, netAts: 2, netBonuses: 1, userMemo: "据え置き" },
+        sides: { spent: yen(20000), won: yen(0) },
+        actual: yen(-20000),
+      },
+    ]
+    const files: BookFiles = { "2026.journal": "2026-10-11 ネルフ第3新東京市店 | 北斗  ; play-id:four, user-memo:据え置き\n    ; 角台\n    費用:遊技  20000 JPY\n    資産:現金\n" }
+    const row = tallyTableOf(lines, files, PRICES, notesOf(lines, files))[1]
+    expect(row?.slice(15, 21)).toEqual(["", "", "1200", "", "2", "1"])
+    expect(row?.slice(31, 33)).toEqual(["イベント,朝一", "据え置き 角台"])
   })
 
   test("what a tally does not say is an empty cell", () => {
@@ -162,8 +208,9 @@ describe("tallies as a table", () => {
         ],
         NO_FILES,
         PRICES,
+        NO_NOTES_BY_TALLY,
       )[1],
-    ).toEqual(["2026-10-08", "", "", "", "", "", "", "", "", "0", "3000", "3000", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "one", ""])
+    ).toEqual(["2026-10-08", "", "", "", "", "", "", "", "", "0", "3000", "3000", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "one", ""])
   })
 })
 

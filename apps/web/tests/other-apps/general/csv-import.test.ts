@@ -3,6 +3,14 @@ import { describe, expect, test } from "bun:test"
 import { guessedMapping, missingOf, readGeneral, sheetOf, withColumn, type Mapping, type Sheet } from "../../../src/other-apps/general/csv-import"
 import { signedWorthOf, signedYenOf } from "../../../src/other-apps/core/cells"
 import { dec } from "../../support/values"
+import { csvOf } from "../../../src/other-apps/core/csv"
+import { tallyTableOf } from "../../../src/other-apps/general/csv-export"
+import { importedTallyEntry } from "../../../src/other-apps/core/source-tally"
+import { renderEntry } from "../../../src/core/journal/entry"
+import type { IsoDate } from "../../../src/core/calendar/calendar"
+import type { PlayId } from "../../../src/core/play/play"
+import type { ParlorId } from "../../../src/core/parlor/parlor"
+import type { TallyNotes } from "../../../src/core/report/tally-notes"
 
 const sheet = (text: string): Sheet => ((read) => (read.ok ? read.value : { header: [], rows: [], width: 0 }))(sheetOf(text))
 
@@ -41,7 +49,7 @@ describe("a person's own CSV", () => {
       memo: "朝一",
       hours: dec("2.5"),
       gameKind: "pachinko",
-      countedSpins: { type: "every-spin", count: 163 },
+      countedSpins: 163,
       countedJackpots: 2,
       sourceLabels: ["イベント", "朝一"],
     } as never)
@@ -73,6 +81,79 @@ describe("a person's own CSV", () => {
       ok: false,
       error: { type: "rows-unreadable", rows: [{ line: 2, fields: ["date", "result", "gameKind", "hours"] }] },
     })
+  })
+})
+
+const NOTES: TallyNotes = {
+  aside: { clock: undefined, spinPerformance: undefined, realBorder: undefined, sender: undefined, netCounts: undefined },
+  playSeconds: undefined,
+  netJackpots: undefined,
+  netSpins: undefined,
+  netRegularSpins: undefined,
+  netGames: undefined,
+  netAts: undefined,
+  netBonuses: undefined,
+  userMemo: undefined,
+  carriedIn: undefined,
+  inferredFormula: undefined,
+  tokenRental: undefined,
+  tokenExchange: undefined,
+  inferredSpinPerformance: undefined,
+}
+
+describe("a CSV 汎用形式's export wrote", () => {
+  const exported = csvOf(
+    tallyTableOf(
+      [
+        {
+          tally: { id: "one" as PlayId, date: "2026-11-08" as IsoDate, description: "", parlorId: "p-1" as ParlorId, gameKind: "pachinko", machine: "流星の剣", cabinetNumber: "123", importedFrom: undefined, theoreticalValue: undefined, inferredValue: undefined },
+          parlorName: "マレハン東京皇国第8支店",
+          machineName: "流星の剣",
+          maker: undefined,
+          labels: ["イベント", "朝一"],
+          tokenCommodity: undefined,
+          notes: { ...NOTES, netSpins: 800, netRegularSpins: 650, netJackpots: 4 },
+          sides: { spent: dec("8000"), won: dec("7500") },
+          actual: dec("-500"),
+        },
+        {
+          tally: { id: "two" as PlayId, date: "2026-11-09" as IsoDate, description: "", parlorId: undefined, gameKind: "pachislot", machine: undefined, cabinetNumber: undefined, importedFrom: undefined, theoreticalValue: undefined, inferredValue: undefined },
+          parlorName: "名もなき店",
+          machineName: "星の舞踏",
+          maker: undefined,
+          labels: [],
+          tokenCommodity: undefined,
+          notes: { ...NOTES, netGames: 1200, netAts: 2, netBonuses: 1 },
+          sides: { spent: dec("20000"), won: dec("0") },
+          actual: dec("-20000"),
+        },
+      ],
+      {},
+      [],
+      new Map([["one" as PlayId, "据え置き"]]),
+    ),
+  )
+
+  test("is read back as it was written, each column taken in as the field it names", () => {
+    const read = readGeneral(sheet(exported), guessedMapping(sheet(exported)))
+    expect(
+      read.ok &&
+        read.value.map((tally) => [tally.parlor.name, tally.parlorId, tally.gameKind, tally.countedSpins, tally.countedRegularSpins, tally.countedJackpots, tally.countedBonuses, tally.sourceLabels, tally.memo]),
+    ).toEqual([
+      ["マレハン東京皇国第8支店", "p-1", "pachinko", 800, 650, 4, undefined, ["イベント", "朝一"], "据え置き"],
+      ["名もなき店", undefined, "pachislot", 1200, undefined, 2, 1, [], ""],
+    ] as never)
+  })
+
+  test("writes its counts as the tags they were read from, and its parlor's id only where the book has that parlor", () => {
+    const read = readGeneral(sheet(exported), guessedMapping(sheet(exported)))
+    const [first, second] = read.ok ? read.value : []
+    const parlor = { identity: { type: "listed", id: "p-1" as ParlorId }, name: "マレハン東京皇国第8支店", pools: [] } as const
+    const tied = renderEntry(importedTallyEntry({ id: "x" as PlayId, from: "csv", source: first as never, machine: undefined, parlor, inferred: undefined }))
+    expect(tied).toContain("parlor-id: p-1")
+    expect(tied).toContain("net-spins: 800, net-regular-spins: 650, net-jackpots: 4")
+    expect(renderEntry(importedTallyEntry({ id: "x" as PlayId, from: "csv", source: first as never, machine: undefined, parlor: undefined, inferred: undefined }))).not.toContain("parlor-id")
+    expect(renderEntry(importedTallyEntry({ id: "y" as PlayId, from: "csv", source: second as never, machine: undefined, parlor: undefined, inferred: undefined }))).toContain("net-games: 1200, net-ats: 2, net-bonuses: 1")
   })
 })
 

@@ -15,6 +15,12 @@ const NO_NOTES: TallyNotes = {
   aside: { clock: undefined, spinPerformance: undefined, realBorder: undefined, sender: undefined, netCounts: undefined },
   playSeconds: undefined,
   netJackpots: undefined,
+  netSpins: undefined,
+  netRegularSpins: undefined,
+  netGames: undefined,
+  netAts: undefined,
+  netBonuses: undefined,
+  userMemo: undefined,
   carriedIn: undefined,
   inferredFormula: undefined,
   tokenRental: undefined,
@@ -64,9 +70,9 @@ describe("tallies as パチフォリオ's CSV", () => {
 
   test("is read back as パチフォリオ's own file is", () => {
     const read = readPachifolio(text)
-    expect(read.ok && read.value.map((tally) => [tally.date, tally.parlor.name, tally.machine.name, tally.gameKind, tally.countedSpins, tally.countedJackpots, tally.memo])).toEqual([
-      ["2026-11-09", "マレハン東京皇国第8支店", "流星の剣", "pachinko", { type: "regular-games", count: 470 }, 3, "朝一\n据え置き"],
-      ["2026-11-08", "名もなき店", "星の舞踏, 改", "pachislot", { type: "regular-games", count: 1800 }, 2, ""],
+    expect(read.ok && read.value.map((tally) => [tally.date, tally.parlor.name, tally.machine.name, tally.gameKind, tally.countedRegularSpins, tally.countedJackpots, tally.memo])).toEqual([
+      ["2026-11-09", "マレハン東京皇国第8支店", "流星の剣", "pachinko", 470, 3, "朝一\n据え置き"],
+      ["2026-11-08", "名もなき店", "星の舞踏, 改", "pachislot", 1800, 2, ""],
       ["2026-11-07", "", "流星の剣", "pachinko", undefined, 4, ""],
       ["2026-11-06", "", "", undefined, undefined, undefined, ""],
     ] as never)

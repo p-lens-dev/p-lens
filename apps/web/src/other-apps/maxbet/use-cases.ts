@@ -24,4 +24,4 @@ export const importMaxbet = (ports: ImportPorts, bookId: BookId, preview: Previe
 
 /** Every tally of a book as MAXBET's backup (JSON), newest first, for MAXBET to take in: by itself and never in the zip, as pRecord's is. */
 export const makeForMaxbet = async (ports: ExportPorts, bookId: BookId, watch: ExportWatch): Promise<Outcome<Made>> =>
-  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "MAXBET", ports.today(), "json"), mediaType: "application/json", text: maxbetJsonOf(lines, notesOf(stored), ports.now()) })))
+  madeOf(await ofTallies(ports, bookId, watch, (lines, stored) => ({ name: fileNameOf(ownStem(stored.files, bookId), "MAXBET", ports.today(), "json"), mediaType: "application/json", text: maxbetJsonOf(lines, notesOf(lines, stored.files), ports.now()) })))

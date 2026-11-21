@@ -143,7 +143,7 @@ describe("a tally taken in from ぱち簿", () => {
   const [first, second] = ((read) => (read.ok ? read.value : []))(readPachibo(pcbOf(VALUES), utf8))
 
   test("is written in yen, its parlor and machine with their codes, its labels each a tag of its own, and its memo on one line", () => {
-    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachibo", source: first as never, machine: undefined, inferred: undefined }))).toBe(
+    expect(renderEntry(importedTallyEntry({ id: "x" as never, from: "pachibo", source: first as never, machine: undefined, parlor: undefined, inferred: undefined }))).toBe(
       [
         "2026-10-26 マレハン東京皇国第8支店 | 流星の剣 1223番台  ; play-id: x, game-kind: pachinko, cabinet-number: 1223, imported-from: pachibo, source-parlor: マレハン東京皇国第8支店, source-parlor-code: 270001, source-machine: 流星の剣, source-machine-code: 3001, source-maker: 星工房, source-label: 新台, source-label: イベント, hours: 9.67",
         "    費用:遊技                           37000 JPY",

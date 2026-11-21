@@ -15,11 +15,16 @@ export const FIELD_NAMES: Readonly<Record<Field, string>> = {
   takings: "回収",
   result: "収支",
   theoreticalValue: "期待値",
-  spins: "回転数・ゲーム数",
-  jackpots: "大当り・AT・ボーナス",
+  spins: "回転数",
+  regularSpins: "通常回転数",
+  games: "ゲーム数",
+  jackpots: "大当り回数",
+  ats: "AT回数",
+  bonuses: "ボーナス回数",
   hours: "稼働時間",
-  memo: "メモ",
   labels: "タグ",
+  memo: "メモ",
+  parlorId: "店舗ID",
 }
 
 /** The press that goes on from tying a file's columns to this app's fields. */

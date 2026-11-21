@@ -17,6 +17,12 @@ const NO_NOTES: TallyNotes = {
   aside: { clock: undefined, spinPerformance: undefined, realBorder: undefined, sender: undefined, netCounts: undefined },
   playSeconds: undefined,
   netJackpots: undefined,
+  netSpins: undefined,
+  netRegularSpins: undefined,
+  netGames: undefined,
+  netAts: undefined,
+  netBonuses: undefined,
+  userMemo: undefined,
   carriedIn: undefined,
   inferredFormula: undefined,
   tokenRental: undefined,
@@ -90,10 +96,10 @@ describe("tallies as ぱち簿's own file", () => {
   test("is read back by this app's taking in of ぱち簿's files as the same tallies, those of its labels ぱち簿 has words for kept", () => {
     const read = readPachibo(bytes, utf8Out)
     expect(read.ok && read.value).toEqual([
-      { date: "2026-10-01", parlor: { name: "", code: "" }, machine: { name: "", code: "", maker: "" }, cabinetNumber: "", outlay: dec("1000"), takings: dec("0"), memo: "", hours: undefined, gameKind: undefined, countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] },
-      { date: "2026-10-26", parlor: { name: "マレハン東京皇国第8支店", code: "990001" }, machine: { name: "流星の剣", code: "9001", maker: "星工房" }, cabinetNumber: "1223", outlay: dec("37000"), takings: dec("165000"), memo: "めもめま\n据え置き", hours: dec("9.67"), gameKind: "pachinko", countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["新台", "イベント"] },
-      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "990001" }, machine: { name: "流星の剣", code: "9001", maker: "星工房" }, cabinetNumber: "", outlay: dec("500"), takings: dec("0"), memo: "", hours: undefined, gameKind: "pachinko", countedSpins: undefined, countedJackpots: undefined, sourceLabels: [] },
-      { date: "2026-11-09", parlor: { name: "キコーネ浅草", code: "990002" }, machine: { name: "スマスロ 星の舞踏", code: "19001", maker: "月工房" }, cabinetNumber: "", outlay: dec("88000"), takings: dec("20000"), memo: "", hours: dec("9.08"), gameKind: "pachislot", countedSpins: undefined, countedJackpots: undefined, sourceLabels: ["20スロ", "ハイエナ"] },
+      { date: "2026-10-01", parlor: { name: "", code: "" }, machine: { name: "", code: "", maker: "" }, cabinetNumber: "", outlay: dec("1000"), takings: dec("0"), memo: "", hours: undefined, gameKind: undefined, countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
+      { date: "2026-10-26", parlor: { name: "マレハン東京皇国第8支店", code: "990001" }, machine: { name: "流星の剣", code: "9001", maker: "星工房" }, cabinetNumber: "1223", outlay: dec("37000"), takings: dec("165000"), memo: "めもめま\n据え置き", hours: dec("9.67"), gameKind: "pachinko", countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["新台", "イベント"] },
+      { date: "2026-11-09", parlor: { name: "マレハン東京皇国第8支店", code: "990001" }, machine: { name: "流星の剣", code: "9001", maker: "星工房" }, cabinetNumber: "", outlay: dec("500"), takings: dec("0"), memo: "", hours: undefined, gameKind: "pachinko", countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: [] },
+      { date: "2026-11-09", parlor: { name: "キコーネ浅草", code: "990002" }, machine: { name: "スマスロ 星の舞踏", code: "19001", maker: "月工房" }, cabinetNumber: "", outlay: dec("88000"), takings: dec("20000"), memo: "", hours: dec("9.08"), gameKind: "pachislot", countedSpins: undefined, countedRegularSpins: undefined, countedJackpots: undefined, countedBonuses: undefined, parlorId: undefined, sourceLabels: ["20スロ", "ハイエナ"] },
     ] as never)
   })
 
