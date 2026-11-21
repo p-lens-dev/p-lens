@@ -147,6 +147,7 @@ export const entryOf = (detail: MachineDetailDto): MachineEntry => {
       gameKind: "pachinko",
       machine,
       formulas: (detail.formulas as readonly PachinkoContract.FormulaDto[]).map((dto) => listingOf(pachinkoFormulaOf(dto), dto.standing)),
+      contributors: detail.contributors ?? [],
     }
   }
   const pachislot = detail as Extract<MachineDetailDto, { readonly distributions: readonly PachislotContract.SettingDistributionDto[] }>
@@ -155,6 +156,7 @@ export const entryOf = (detail: MachineDetailDto): MachineEntry => {
     machine,
     formulas: pachislot.formulas.map((dto) => listingOf(pachislotFormulaOf(dto), dto.standing)),
     distributions: pachislot.distributions.map((dto) => listingOf(distributionOf(dto), dto.standing)),
+    contributors: pachislot.contributors ?? [],
   }
 }
 
@@ -180,6 +182,7 @@ export const pachinkoFormulaDto = (formula: NewPachinkoFormula): PachinkoContrac
   ...(formula.kind === "manual" ? {} : { basis: { spec: formula.basis.spec, conditions: formula.basis.conditions } }),
   bonuses: formula.bonuses,
   ...(formula.derivedFrom === undefined ? {} : { derivedFrom: formula.derivedFrom }),
+  ...(formula.contributorName === undefined ? {} : { contributorName: formula.contributorName }),
 })
 
 /** A pachislot formula as it is sent: with the normalised spec this device made where the shared catalog found its 解析値 too heavy to solve. */
@@ -194,6 +197,7 @@ export const pachislotFormulaDto = (formula: NewPachislotFormula, onDevice: bool
   })),
   basis: { spec: formula.basis.spec, conditions: formula.basis.conditions, ...(onDevice ? { normalized: formula.basis.normalized } : {}) },
   ...(formula.derivedFrom === undefined ? {} : { derivedFrom: formula.derivedFrom }),
+  ...(formula.contributorName === undefined ? {} : { contributorName: formula.contributorName }),
 })
 
 export const distributionDto = (distribution: NewSettingDistribution): PachislotContract.NewSettingDistributionDto => ({

@@ -63,6 +63,8 @@ export type CatalogError =
    * heavy lets a formula in unchecked.
    */
   | { readonly type: "gave-up" }
+  /** The shared catalog would not take the handle a formula was signed with: too long, indecent, or a link. */
+  | { readonly type: "contributor-name-refused" }
   /** The shared catalog would not take it, as it said. */
   | { readonly type: "refused"; readonly reason: string }
 

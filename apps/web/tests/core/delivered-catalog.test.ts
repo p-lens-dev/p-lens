@@ -101,6 +101,11 @@ describe("the delivered catalog", () => {
     expect(entry.distributions[0]?.formula.shares).toEqual([{ settingLevel: 1, basisPoints: 10000 }])
   })
 
+  test("gives the handles a machine's formulas were signed with as the machine's, none where nobody signed", () => {
+    expect(entryOf({ ...UMI, contributors: ["流しの旅打ち", "あ"] }).contributors).toEqual(["流しの旅打ち", "あ"])
+    expect(entryOf(UMI).contributors).toEqual([])
+  })
+
   test("locates what a mark is on, and whether it has a basis to check", () => {
     expect(locate(DELIVERED, { type: "formula", id: "mori-typed" })).toEqual({ machineId: "mori" })
     expect(locate(DELIVERED, { type: "formula", id: "mori-basis" })).toEqual({ machineId: "mori" })

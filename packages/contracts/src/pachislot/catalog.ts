@@ -78,6 +78,8 @@ export interface NewFormulaDto {
   readonly figures: readonly FormulaSettingLevelFiguresDto[]
   readonly basis: SentBasisDto
   readonly derivedFrom?: string
+  /** The handle its sender signs it with, if any: kept apart from it, and shown only among its machine's `contributors`. */
+  readonly contributorName?: string
 }
 
 /** 設定配分: a pachislot machine's prior, in hundredths of a percent for each setting level it has, summing to `10000`. */

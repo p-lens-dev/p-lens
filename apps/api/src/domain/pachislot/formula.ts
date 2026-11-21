@@ -11,7 +11,7 @@ import type {
 } from "@p-lens/contracts/pachislot"
 import { isSettingLevel } from "@p-lens/contracts/pachislot"
 
-import { all, type Body, decentName, isBody, object, oneOf, optionalId } from "../body"
+import { all, type Body, decentName, isBody, object, oneOf, optionalContributorName, optionalId } from "../body"
 import type { ApiError } from "../errors"
 import { Err, Ok, type Result } from "../result"
 
@@ -22,6 +22,7 @@ export interface SentFormula {
   readonly spec: Body
   readonly conditions: ConditionsDto
   readonly derivedFrom: string | undefined
+  readonly contributorName: string | undefined
   /** The normalised spec the sender's device made, sent again after the API found the 解析値 too heavy to solve. */
   readonly solvedOnDevice: NormalizedSpecDto | undefined
 }
@@ -144,7 +145,12 @@ const statesRate = (spec: Body, conditions: ConditionsDto): boolean => {
  * stated, and the exact ones are made here from the same 解析値.
  */
 export const readFormula = (body: Body): Result<SentFormula, ApiError> => {
-  const head = all({ kind: oneOf(body, "kind", KINDS), basis: object(body, "basis"), derivedFrom: optionalId(body, "derivedFrom") })
+  const head = all({
+    kind: oneOf(body, "kind", KINDS),
+    basis: object(body, "basis"),
+    derivedFrom: optionalId(body, "derivedFrom"),
+    contributorName: optionalContributorName(body, "contributorName"),
+  })
   if (!head.ok) return head
   const figures = readFigures(body)
   if (!figures.ok) return figures
@@ -161,6 +167,7 @@ export const readFormula = (body: Body): Result<SentFormula, ApiError> => {
     spec: parts.value.spec,
     conditions: conditions.value,
     derivedFrom: head.value.derivedFrom,
+    contributorName: head.value.contributorName,
     solvedOnDevice: solvedOnDevice.value,
   })
 }

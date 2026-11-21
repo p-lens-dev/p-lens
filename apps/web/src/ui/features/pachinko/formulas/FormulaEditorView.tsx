@@ -9,6 +9,7 @@ import { bonusNamesOf, bonusShapes, namedBonuses } from "../../../../core/pachin
 import { basisOf, type Formula, type FormulaMaking } from "../../../../core/pachinko/formula"
 import { type Figures } from "../../../../core/pachinko/figures"
 import { type BonusRow, EMPTY_BONUS_ROW, readBonuses } from "../../../../core/catalog/bonuses"
+import { readContributorName } from "../../../../core/catalog/contributor"
 import type { DraftTarget, FormulaDraft } from "../../../../core/catalog/draft"
 import { type RegistrationKind, standingFor } from "../../../../core/catalog/quota"
 import { readKeywords, readModelName, readName } from "../../../../core/catalog/description"
@@ -25,7 +26,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../primitives/ta
 import { toast } from "../../../primitives/toast"
 import { useMoves } from "../../../navigation/moves"
 import type { FormulaTab, Place } from "../../../navigation/place"
-import { describeDescriptionProblem, describeReleaseDateError, quotaStandingText, REGISTER_OFFLINE, REGISTRATION_SENDING, SETTING_LEVEL_IN_NAME } from "../../../wording/catalog"
+import {
+  CONTRIBUTOR_NAME_NOTE,
+  describeContributorNameProblem,
+  describeDescriptionProblem,
+  describeReleaseDateError,
+  quotaStandingText,
+  REGISTER_OFFLINE,
+  REGISTRATION_SENDING,
+  SETTING_LEVEL_IN_NAME,
+} from "../../../wording/catalog"
 import { isUnreached } from "../../catalog/unreached"
 import { describeError } from "../../../wording/errors"
 import { oneInText, payoutText } from "../../../wording/pachinko/formula"
@@ -92,6 +102,8 @@ interface Start {
   readonly bonusRows: readonly BonusRow[]
   /** The names typed for a basis's bonuses, each under its rounds. */
   readonly bonusNames: Readonly<Record<string, string>>
+  /** The handle typed to sign it with: a formula remade is signed afresh, by whoever remakes it. */
+  readonly contributorName: string
 }
 
 /** A formula's bonuses as rows to type over, an empty one where it has none. */
@@ -114,6 +126,7 @@ const startFrom = (formula: Formula | undefined): Start => ({
   manual: formula === undefined ? EMPTY_MANUAL_FORM : manualFormOf(formula.figures),
   basis: startingBasis(formula),
   ...bonusesFrom(formula),
+  contributorName: "",
 })
 
 /** The pachinko formula a draft holds, or none where it is the other game's. */
@@ -124,6 +137,7 @@ const startFromDraft = (formula: NewPachinkoFormula): Start => ({
   manual: manualFormOf(formula.figures),
   basis: formula.kind === "manual" ? STARTING_BASIS : basisFormOf(formula.basis.spec, formula.basis.conditions, formula.figures.spinsPerHour),
   ...bonusesFrom(formula),
+  contributorName: formula.contributorName ?? "",
 })
 
 /** A formula as its tab makes it, before its bonuses are stated. */
@@ -175,6 +189,12 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
   const [basis, setBasis] = createSignal(props.start.basis)
   const [bonusRows, setBonusRows] = createSignal(props.start.bonusRows)
   const [bonusNames, setBonusNames] = createSignal(props.start.bonusNames)
+  const [contributorTyped, setContributorTyped] = createSignal(props.start.contributorName)
+  const contributorName = createMemo(() => readContributorName(contributorTyped()))
+  const contributorWording = (): string | undefined => {
+    const read = contributorName()
+    return read.ok ? undefined : describeContributorNameProblem(read.error)
+  }
   const [failure, setFailure] = createSignal<ApplicationError | undefined>(undefined)
   /** Whether the formula is on its way to the shared catalog: its button is still until the answer comes. */
   const [saving, setSaving] = createSignal<"editing" | "sending">("editing")
@@ -229,12 +249,14 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
 
   /** The formula the tab on screen would make before its bonuses are stated, or undefined while it cannot make one. */
   const unstated = (): Unstated<NewPachinkoFormula> | undefined => {
+    const signed = contributorName()
+    if (!signed.ok) return undefined
     if (props.place.tab === "manual") {
       const read = manualRead()
-      return read.ok ? { kind: "manual", figures: read.value, derivedFrom: props.from?.id } : undefined
+      return read.ok ? { kind: "manual", figures: read.value, derivedFrom: props.from?.id, contributorName: signed.value } : undefined
     }
     const made = simulated()
-    return made?.ok === true ? { kind: "simulated", figures: made.value.figures, basis: made.value.basis, derivedFrom: props.from?.id } : undefined
+    return made?.ok === true ? { kind: "simulated", figures: made.value.figures, basis: made.value.basis, derivedFrom: props.from?.id, contributorName: signed.value } : undefined
   }
 
   /** The formula the tab on screen would make, or undefined while it cannot make one. */
@@ -267,14 +289,15 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
     const dateMissing = registering && !releaseDate().ok
     const modelMissing = registering && readModelName(modelName()) === undefined
     const descriptionWrong = registering && !keywords().ok
-    const figuresMissing = unstated() === undefined
+    const signatureWrong = !contributorName().ok
+    const figuresMissing = !signatureWrong && unstated() === undefined
     const bonusesMissing = stated() === undefined
     if (nameMissing) nameNudge.nudge()
     if (dateMissing) dateNudge.nudge()
     if (modelMissing) modelNudge.nudge()
     if (figuresMissing) figuresNudge.nudge()
     if (bonusesMissing) bonusNudge.nudge()
-    return nameMissing || dateMissing || modelMissing || descriptionWrong || figuresMissing || bonusesMissing
+    return nameMissing || dateMissing || modelMissing || descriptionWrong || signatureWrong || figuresMissing || bonusesMissing
   }
 
   const save = async (): Promise<void> => {
@@ -390,6 +413,12 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachinko-form
               <BonusNames shapes={shapes()} names={bonusNames()} problems={((read) => (read.ok ? [] : read.error))(named())} onChange={setBonusNames} />
             </Show>
           </TabsContent>
+        </section>
+        <section aria-label="情報提供" class={PART}>
+          <div class="flex max-w-md flex-col gap-1">
+            <TextField label="ハンドルネーム（任意）" value={contributorTyped()} onChange={setContributorTyped} invalid={!contributorName().ok} error={contributorWording()} />
+            <p class="text-xs text-text-muted">{CONTRIBUTOR_NAME_NOTE}</p>
+          </div>
         </section>
         <Show when={failure()} keyed>
           {(error) => <p role="alert" class="text-sm text-negative">{describeError(error)}</p>}

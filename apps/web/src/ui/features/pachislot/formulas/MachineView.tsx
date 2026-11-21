@@ -10,7 +10,7 @@ import { Button } from "../../../primitives/button"
 import { EmptyState, Loaded } from "../../../primitives/states"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
-import { MARKS_UNSENT } from "../../../wording/catalog"
+import { contributorsText, MARKS_UNSENT } from "../../../wording/catalog"
 import { describeError } from "../../../wording/errors"
 import { useBookFavorites } from "../../live/book-favorites"
 import { ViewHeader } from "../../shell/ViewHeader"
@@ -74,6 +74,9 @@ export function MachineView(props: { readonly place: Place; readonly machineId: 
                     />
                   )}
                 </For>
+                <Show when={found.contributors.length > 0}>
+                  <p class="text-xs text-text-muted">{contributorsText(found.contributors)}</p>
+                </Show>
               </section>
               <section class="flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">

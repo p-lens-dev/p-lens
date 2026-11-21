@@ -1,7 +1,7 @@
 import type { MachineBonusDto } from "@p-lens/contracts"
 import { type AnalysisDto, bonusShapesOf, jackpotsOf, type ConditionsDto, type EngineErrorDto, type FiguresDto, type SpecDto, type NormalizedSpecDto } from "@p-lens/contracts/pachinko"
 
-import { all, type Body, bonuses, isBody, object, oneOf, optionalId, optionalPositive, positive } from "../body"
+import { all, type Body, bonuses, isBody, object, oneOf, optionalContributorName, optionalId, optionalPositive, positive } from "../body"
 import type { ApiError } from "../errors"
 import { Err, Ok, type Result } from "../result"
 
@@ -17,6 +17,7 @@ export type SentFormula = {
   readonly figures: FiguresDto
   readonly bonuses: readonly MachineBonusDto[]
   readonly derivedFrom: string | undefined
+  readonly contributorName: string | undefined
 } & ({ readonly kind: "manual" } | FromBasis)
 
 /** A formula ready to store: for one worked out from a basis, the normalised spec made here. */
@@ -79,11 +80,12 @@ export const readFormula = (body: Body): Result<SentFormula, ApiError> => {
     figures: object(body, "figures"),
     bonuses: bonuses(body, "bonuses"),
     derivedFrom: optionalId(body, "derivedFrom"),
+    contributorName: optionalContributorName(body, "contributorName"),
   })
   if (!head.ok) return head
   const figures = readFigures(head.value.figures)
   if (!figures.ok) return figures
-  const common = { figures: figures.value, bonuses: head.value.bonuses, derivedFrom: head.value.derivedFrom }
+  const common = { figures: figures.value, bonuses: head.value.bonuses, derivedFrom: head.value.derivedFrom, contributorName: head.value.contributorName }
   if (head.value.kind === "manual") return Ok({ ...common, kind: "manual" })
   const basis = object(body, "basis")
   if (!basis.ok) return basis

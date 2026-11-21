@@ -70,4 +70,6 @@ export interface NewFormulaDto {
   readonly basis?: { readonly spec: SpecDto; readonly conditions: ConditionsDto }
   readonly bonuses: readonly MachineBonusDto[]
   readonly derivedFrom?: string
+  /** The handle its sender signs it with, if any: kept apart from it, and shown only among its machine's `contributors`. */
+  readonly contributorName?: string
 }

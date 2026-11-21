@@ -54,13 +54,20 @@ export interface StandingDto {
   readonly uses: number
 }
 
-/** A machine with every formula of it in its game's shape, and a pachislot machine's 設定配分. */
+/**
+ * A machine with every formula of it in its game's shape, and a pachislot
+ * machine's 設定配分. `contributors` are the handles its shown formulas were
+ * signed with, each once, by who signed first; left out where none was.
+ * They belong to the machine, never to a formula: nobody can tell from them
+ * which formula whose is.
+ */
 export type MachineDetailDto =
-  | { readonly machine: MachineSummaryDto & { readonly gameKind: "pachinko" }; readonly formulas: readonly Pachinko.FormulaDto[] }
+  | { readonly machine: MachineSummaryDto & { readonly gameKind: "pachinko" }; readonly formulas: readonly Pachinko.FormulaDto[]; readonly contributors?: readonly string[] }
   | {
       readonly machine: MachineSummaryDto & { readonly gameKind: "pachislot" }
       readonly formulas: readonly Pachislot.FormulaDto[]
       readonly distributions: readonly Pachislot.SettingDistributionDto[]
+      readonly contributors?: readonly string[]
     }
 
 /**

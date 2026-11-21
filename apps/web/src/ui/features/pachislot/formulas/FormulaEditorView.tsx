@@ -7,6 +7,7 @@ import type { ApplicationError, Outcome } from "../../../../application/errors"
 import { addFormula, analyzeBasis, loadFormula, registerMachine } from "../../../../application/pachislot/formulas"
 import { bookNameOf, shownNameOf } from "../../../../core/catalog/catalog"
 import { readKeywords, readModelName, readName } from "../../../../core/catalog/description"
+import { readContributorName } from "../../../../core/catalog/contributor"
 import type { DraftTarget, FormulaDraft } from "../../../../core/catalog/draft"
 import { type RegistrationKind, standingFor } from "../../../../core/catalog/quota"
 import { readReleaseDate } from "../../../../core/catalog/release"
@@ -24,7 +25,16 @@ import { settleTyping, TextField } from "../../../primitives/text-field"
 import { toast } from "../../../primitives/toast"
 import { useMoves } from "../../../navigation/moves"
 import type { FormulaTab, Place } from "../../../navigation/place"
-import { describeDescriptionProblem, describeReleaseDateError, quotaStandingText, REGISTER_OFFLINE, REGISTRATION_SENDING, SETTING_LEVEL_IN_NAME } from "../../../wording/catalog"
+import {
+  CONTRIBUTOR_NAME_NOTE,
+  describeContributorNameProblem,
+  describeDescriptionProblem,
+  describeReleaseDateError,
+  quotaStandingText,
+  REGISTER_OFFLINE,
+  REGISTRATION_SENDING,
+  SETTING_LEVEL_IN_NAME,
+} from "../../../wording/catalog"
 import { isUnreached } from "../../catalog/unreached"
 import { describeError } from "../../../wording/errors"
 import { SHARED_UNCHECKED } from "../../../wording/pachislot/formula"
@@ -83,14 +93,16 @@ function Problems(props: { readonly problems: readonly FormProblem[]; readonly n
 interface Start {
   readonly manual: ManualForm
   readonly world: WorldForm
+  /** The handle typed to sign it with: a formula remade is signed afresh, by whoever remakes it. */
+  readonly contributorName: string
 }
 
 const startFrom = (formula: Formula | undefined): Start =>
   formula === undefined
-    ? { manual: STARTING_MANUAL, world: STARTING_WORLD }
+    ? { manual: STARTING_MANUAL, world: STARTING_WORLD, contributorName: "" }
     : formula.kind === "manual" || statesRate(formula.basis.spec, formula.basis.conditions)
-      ? { manual: manualFormOf(formula.basis.spec, formula.basis.conditions), world: STARTING_WORLD }
-      : { manual: STARTING_MANUAL, world: worldFormOf(formula.basis.spec) }
+      ? { manual: manualFormOf(formula.basis.spec, formula.basis.conditions), world: STARTING_WORLD, contributorName: "" }
+      : { manual: STARTING_MANUAL, world: worldFormOf(formula.basis.spec), contributorName: "" }
 
 /** The pachislot formula a draft holds, or none where it is the other game's. */
 const draftFormula = (draft: FormulaDraft): NewPachislotFormula | undefined => (draft.formula.gameKind === "pachislot" ? draft.formula.formula : undefined)
@@ -98,8 +110,8 @@ const draftFormula = (draft: FormulaDraft): NewPachislotFormula | undefined => (
 /** Where an editor starts from a formula that could not be sent: typed in by hand, or worked out from 解析値, as it was. */
 const startFromDraft = (formula: NewPachislotFormula): Start =>
   formula.kind === "manual" || statesRate(formula.basis.spec, formula.basis.conditions)
-    ? { manual: manualFormOf(formula.basis.spec, formula.basis.conditions), world: STARTING_WORLD }
-    : { manual: STARTING_MANUAL, world: worldFormOf(formula.basis.spec) }
+    ? { manual: manualFormOf(formula.basis.spec, formula.basis.conditions), world: STARTING_WORLD, contributorName: formula.contributorName ?? "" }
+    : { manual: STARTING_MANUAL, world: worldFormOf(formula.basis.spec), contributorName: formula.contributorName ?? "" }
 
 function Editor(props: { readonly place: Place & { readonly kind: "pachislot-formula-new" }; readonly start: Start; readonly from: Formula | undefined }): JSX.Element {
   const app = useApp()
@@ -128,6 +140,12 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
   }
   const [manual, setManual] = createSignal(props.start.manual)
   const [world, setWorld] = createSignal(props.start.world)
+  const [contributorTyped, setContributorTyped] = createSignal(props.start.contributorName)
+  const contributorName = createMemo(() => readContributorName(contributorTyped()))
+  const contributorWording = (): string | undefined => {
+    const read = contributorName()
+    return read.ok ? undefined : describeContributorNameProblem(read.error)
+  }
   const [failure, setFailure] = createSignal<ApplicationError | undefined>(undefined)
   /** Where sending the formula stands: not sent, being sent, or being sent again with what this device solved. */
   const [sending, setSending] = createSignal<"idle" | "sending" | "resending">("idle")
@@ -170,9 +188,10 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
   /** The formula the tab on screen would make, or undefined while it cannot make one. */
   const proposed = (): NewPachislotFormula | undefined => {
     const made = analyzed()
-    if (read().ok !== true || made?.ok !== true) return undefined
+    const signed = contributorName()
+    if (read().ok !== true || made?.ok !== true || !signed.ok) return undefined
     const derivedFrom = props.from?.id
-    return { kind: props.place.tab === "manual" ? "manual" : "simulated", figures: made.value.figures, basis: made.value.basis, derivedFrom }
+    return { kind: props.place.tab === "manual" ? "manual" : "simulated", figures: made.value.figures, basis: made.value.basis, derivedFrom, contributorName: signed.value }
   }
 
   /** Where a formula is shared: added to the machine chosen, or registered with a new one — or nowhere yet, if the new one is not filled in. */
@@ -196,12 +215,13 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
     const dateMissing = registering && !releaseDate().ok
     const modelMissing = registering && readModelName(pachislot().newMachineModelName) === undefined
     const descriptionWrong = registering && !keywords().ok
-    const figuresMissing = proposed() === undefined
+    const signatureWrong = !contributorName().ok
+    const figuresMissing = !signatureWrong && proposed() === undefined
     if (nameMissing) nameNudge.nudge()
     if (dateMissing) dateNudge.nudge()
     if (modelMissing) modelNudge.nudge()
     if (figuresMissing) figuresNudge.nudge()
-    return nameMissing || dateMissing || modelMissing || descriptionWrong || figuresMissing
+    return nameMissing || dateMissing || modelMissing || descriptionWrong || signatureWrong || figuresMissing
   }
 
   const save = async (): Promise<void> => {
@@ -342,6 +362,12 @@ function Editor(props: { readonly place: Place & { readonly kind: "pachislot-for
             <WorldEditor form={world()} onChange={setWorld} />
             <Preview />
           </TabsContent>
+        </section>
+        <section aria-label="情報提供" class={PART}>
+          <div class="flex max-w-md flex-col gap-1">
+            <TextField label="ハンドルネーム（任意）" value={contributorTyped()} onChange={setContributorTyped} invalid={!contributorName().ok} error={contributorWording()} />
+            <p class="text-xs text-text-muted">{CONTRIBUTOR_NAME_NOTE}</p>
+          </div>
         </section>
         <Show when={sending() === "resending"}>
           <Resending />

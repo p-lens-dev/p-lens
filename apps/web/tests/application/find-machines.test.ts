@@ -19,7 +19,7 @@ const catalogOf = (machines: readonly MachineSummary[]): Catalog => ({
   read: async (id) => {
     const found = machines.find((machine) => machine.id === id)
     if (found === undefined) return Err({ type: "machine-missing", id })
-    const entry: MachineEntry = { gameKind: "pachinko", machine: found, formulas: [] }
+    const entry: MachineEntry = { gameKind: "pachinko", machine: found, formulas: [], contributors: [] }
     return Ok(entry)
   },
   register: unused,

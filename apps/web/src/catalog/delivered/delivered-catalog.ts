@@ -105,6 +105,7 @@ const fromApi = (failure: ApiFailure, sending: Sending): CatalogError => {
       if (sending.type !== "other" && tooHeavy(failure)) return { type: "too-heavy" }
       if (sending.type !== "other" && failure.status === 503 && failure.error.type === "unexpected") return { type: "gave-up" }
       if (error.type === "check-stands") return { type: "check-stands" }
+      if (error.type === "invalid-body" && error["field"] === "contributorName") return { type: "contributor-name-refused" }
       if (error.type === "quota-reached" && typeof error["nextAt"] === "string" && (error["kind"] === "machine" || error["kind"] === "addition"))
         return { type: "quota-reached", kind: error["kind"], nextAt: error["nextAt"] }
       return { type: "refused", reason: error.type }

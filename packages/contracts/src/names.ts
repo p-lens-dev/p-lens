@@ -41,6 +41,17 @@ export const isHitChanceText = (text: string): boolean => {
 /** The most words a machine is searched by beside its name, and the longest one may be. */
 export const MACHINE_KEYWORDS = { count: 10, length: 30 } as const
 
+/**
+ * The longest handle a person may sign a formula with. A handle is shown
+ * only at the foot of its machine's formulas, among everyone's, never beside
+ * the formula it came with: a formula is judged by its figures, not by who
+ * sent it.
+ */
+export const CONTRIBUTOR_NAME = { length: 12 } as const
+
+/** Whether a handle can be read out at all: it holds a letter or a digit, not punctuation and symbols alone (`、。`, `・・・`). */
+export const readableContributorName = (name: string): boolean => /[\p{L}\p{N}]/u.test(name)
+
 /** The most bonuses a machine lists, the longest a bonus's name may be, the most balls one may pay out, and the most jackpots one may be won over. */
 export const MACHINE_BONUSES = { count: 20, nameLength: 20, payout: 100_000, jackpots: 50 } as const
 

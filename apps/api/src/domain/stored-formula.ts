@@ -24,6 +24,8 @@ export interface StoredFormula {
   /** A pachinko formula's bonuses; none for a pachislot one, whose bonuses are its world's. */
   readonly bonuses: unknown
   readonly derivedFrom: string | undefined
+  /** The handle its sender signed it with: no part of the formula, shown only among its machine's contributors. */
+  readonly contributorName: string | undefined
   /** Whether the API checked it: false only for a pachislot formula too heavy to solve here, stored as its sender's device solved it. */
   readonly checked: boolean
 }
@@ -35,7 +37,7 @@ export type PreparedOfGame =
 
 const storedPachinko = (formula: Pachinko.PreparedFormula): StoredFormula =>
   formula.kind === "manual"
-    ? { kind: "manual", figures: formula.figures, basis: undefined, normalized: undefined, engineSchemaVersion: undefined, engineVersion: undefined, bonuses: formula.bonuses, derivedFrom: formula.derivedFrom, checked: true }
+    ? { kind: "manual", figures: formula.figures, basis: undefined, normalized: undefined, engineSchemaVersion: undefined, engineVersion: undefined, bonuses: formula.bonuses, derivedFrom: formula.derivedFrom, contributorName: formula.contributorName, checked: true }
     : {
         kind: formula.kind,
         figures: formula.figures,
@@ -45,6 +47,7 @@ const storedPachinko = (formula: Pachinko.PreparedFormula): StoredFormula =>
         engineVersion: formula.engineVersion,
         bonuses: formula.bonuses,
         derivedFrom: formula.derivedFrom,
+        contributorName: formula.contributorName,
         checked: true,
       }
 
@@ -57,6 +60,7 @@ const storedPachislot = (formula: Pachislot.PreparedFormula): StoredFormula => (
   engineVersion: formula.engineVersion,
   bonuses: undefined,
   derivedFrom: formula.derivedFrom,
+  contributorName: formula.contributorName,
   checked: formula.checked,
 })
 

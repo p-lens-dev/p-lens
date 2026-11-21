@@ -165,14 +165,25 @@ export const describeMachine = async (database: Database, effects: Effects, id: 
   return Err(done.error.type === "unique" ? { type: "conflict", what: nameClashed(done.error.detail) } : unexpected(done.error))
 }
 
+/**
+ * The handles a machine's formulas were signed with, each once, in the order
+ * they were first signed; left out where none was. The rows come oldest
+ * first, and are only of formulas shown.
+ */
+const contributorsOf = (formulas: readonly FormulaRow[]): { readonly contributors?: readonly string[] } => {
+  const names = [...new Set(formulas.flatMap((row) => (row.contributor_name === null ? [] : [row.contributor_name])))]
+  return names.length === 0 ? {} : { contributors: names }
+}
+
 /** A machine with its formulas, and a pachislot machine with its 設定配分: the game is the machine's, and decides the shape. */
 const detailOf = (machine: MachineRow, formulas: readonly FormulaRow[], distributions: readonly DistributionRow[]): MachineDetailDto =>
   machine.game_kind === "pachinko"
-    ? { machine: { ...summaryOf(machine), gameKind: "pachinko" }, formulas: formulas.map(pachinkoFormulaOf) }
+    ? { machine: { ...summaryOf(machine), gameKind: "pachinko" }, formulas: formulas.map(pachinkoFormulaOf), ...contributorsOf(formulas) }
     : {
         machine: { ...summaryOf(machine), gameKind: "pachislot" },
         formulas: formulas.map((row) => formulaOf<PachislotContract.FormulaDto>(row)),
         distributions: distributions.map(distributionOf),
+        ...contributorsOf(formulas),
       }
 
 /** A machine, every formula of it and every 設定配分, each with what people have done with it. Ranking is the reader's. */

@@ -72,17 +72,19 @@ export const shownNameOf = (names: MachineNames, bookName: string): string => na
 /** The model name of a machine a book names, where the catalog knows the machine and its model name. */
 export const modelNameOf = (names: MachineNames, bookName: string): string | undefined => names.get(bookName)?.modelName
 
-/** A pachinko machine and every formula of it, each with what people have done with it. */
+/** A pachinko machine and every formula of it, each with what people have done with it, and the handles they were signed with. */
 export interface PachinkoMachineDetail {
   readonly machine: MachineSummary
   readonly formulas: readonly FormulaListing<Pachinko.Formula>[]
+  readonly contributors: readonly string[]
 }
 
-/** A pachislot machine with every formula and every 設定配分 of it, each with what people have done with it. */
+/** A pachislot machine with every formula and every 設定配分 of it, each with what people have done with it, and the handles its formulas were signed with. */
 export interface PachislotMachineDetail {
   readonly machine: MachineSummary
   readonly formulas: readonly FormulaListing<Pachislot.Formula>[]
   readonly distributions: readonly FormulaListing<Pachislot.SettingDistribution>[]
+  readonly contributors: readonly string[]
 }
 
 /** A machine as the catalog holds it, in its game's shape. */
@@ -113,12 +115,16 @@ export type NewPachinkoFormula = {
   readonly figures: Pachinko.Figures
   readonly bonuses: readonly MachineBonus[]
   readonly derivedFrom: Pachinko.FormulaId | undefined
+  /** The handle its sender signs it with, none where they leave it empty: shown among its machine's contributors, never beside it. */
+  readonly contributorName: string | undefined
 } & Pachinko.NewFormulaMaking
 
 /** A pachislot formula about to be made. */
 export type NewPachislotFormula = {
   readonly figures: readonly Pachislot.SettingLevelFigures[]
   readonly derivedFrom: Pachislot.FormulaId | undefined
+  /** The handle its sender signs it with, none where they leave it empty: shown among its machine's contributors, never beside it. */
+  readonly contributorName: string | undefined
 } & Pachislot.NewFormulaMaking
 
 /** A 設定配分 about to be registered. */

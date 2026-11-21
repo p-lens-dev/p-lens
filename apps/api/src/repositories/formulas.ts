@@ -26,8 +26,8 @@ export const insertFormula = async (database: Database, effects: Effects, user: 
   database
     .prepare(
       `INSERT INTO formulas (id, machine_id, kind, figures_json, basis_json, normalized_spec_json, engine_schema_version,
-         sampling_json, derived_from, content_hash, created_by, created_at, bonuses_json, checked, engine_version)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)`,
+         sampling_json, derived_from, content_hash, created_by, created_at, bonuses_json, checked, engine_version, contributor_name)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)`,
     )
     .bind(
       id,
@@ -45,6 +45,7 @@ export const insertFormula = async (database: Database, effects: Effects, user: 
       json(formula.bonuses),
       formula.checked ? 1 : 0,
       formula.engineVersion ?? null,
+      formula.contributorName ?? null,
     )
 
 export const addFormula = async (database: Database, effects: Effects, user: UserId, machineId: string, formula: StoredFormula): Promise<Result<CreatedDto, ApiError>> => {
@@ -85,6 +86,7 @@ export interface FormulaRow extends StandingRow {
   readonly content_hash: string
   readonly created_at: string
   readonly checked: number
+  readonly contributor_name: string | null
 }
 
 /** A stored formula as served, in its machine's game's shape; SQL's nulls stop here, and absent fields are left out. */

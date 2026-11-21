@@ -1,4 +1,4 @@
-import { comparableName, isHitChanceText, keptName, MACHINE_BONUSES, MACHINE_KEYWORDS, type MachineBonusDto, namesSettingLevel, releaseDateProblem } from "@p-lens/contracts"
+import { comparableName, CONTRIBUTOR_NAME, isHitChanceText, readableContributorName, keptName, MACHINE_BONUSES, MACHINE_KEYWORDS, type MachineBonusDto, namesSettingLevel, releaseDateProblem } from "@p-lens/contracts"
 import { isUuidV7, type UuidV7 } from "@p-lens/uuidv7"
 
 import type { ApiError } from "./errors"
@@ -42,6 +42,18 @@ export const machineName = (body: Body, field: string): Result<string, ApiError>
 export const optionalDecentName = (body: Body, field: string): Result<string | undefined, ApiError> => {
   const value = body[field]
   return value === undefined || value === null || (typeof value === "string" && value.trim() === "") ? Ok(undefined) : decentName(body, field)
+}
+
+/**
+ * The handle a formula is signed with, or none where it is left out or left
+ * empty: decent, short, on one line, readable, and holding no link — a
+ * thanks, never an advertisement.
+ */
+export const optionalContributorName = (body: Body, field: string): Result<string | undefined, ApiError> => {
+  const read = optionalDecentName(body, field)
+  if (!read.ok || read.value === undefined) return read
+  if ([...read.value].length > CONTRIBUTOR_NAME.length) return invalid(field, "too-long")
+  return /\p{Cc}|https?:|www\./iu.test(read.value) || !readableContributorName(read.value) ? invalid(field, "unknown-value") : read
 }
 
 /**

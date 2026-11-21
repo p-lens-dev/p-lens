@@ -1,6 +1,7 @@
 import { EARLIEST_RELEASE } from "@p-lens/contracts"
 
 import type { CatalogError } from "../../catalog/port/catalog"
+import type { ContributorNameProblem } from "../../core/catalog/contributor"
 import type { DescriptionProblem } from "../../core/catalog/description"
 import type { QuotaStanding, RegistrationKind } from "../../core/catalog/quota"
 import type { ReleaseDateError } from "../../core/catalog/release"
@@ -98,6 +99,8 @@ export const describeCatalogError = (error: CatalogError): string => {
       return `設定配分には「${MARK_NAMES[error.mark]}」を付けられません。`
     case "quota-reached":
       return `${REGISTRATION_NAMES[error.kind]}は、${formatMoment(error.nextAt)} から送れます。入力した内容はこの端末に残してあるので、その時刻になったらもう一度登録を押してください。`
+    case "contributor-name-refused":
+      return "このハンドルネームは共有カタログが受け付けませんでした。別の名前にするか、空欄のまま登録してください。"
     case "refused":
       return refusal(error.reason)
   }
@@ -132,6 +135,24 @@ export const describeDescriptionProblem = (problem: DescriptionProblem): string 
       return `1語は${problem.longest}文字までです。`
   }
 }
+
+/** What a handle typed to sign a formula with is wrong with, beside its field. */
+export const describeContributorNameProblem = (problem: ContributorNameProblem): string => {
+  switch (problem.type) {
+    case "too-long":
+      return `${problem.longest}文字までです。`
+    case "unreadable":
+      return "記号だけの名前は入れられません。"
+    case "link":
+      return "URLは入れられません。"
+  }
+}
+
+/** Said under the handle field: where a handle is shown, and that it is never shown beside the formula it came with. */
+export const CONTRIBUTOR_NAME_NOTE = "機種ページの算出条件一覧の末尾に「情報提供: ◯◯様」とまとめて載ります。どの算出条件を送った人かは表示されません。"
+
+/** The line at the foot of a machine's formulas, thanking everyone who signed one, each once. */
+export const contributorsText = (names: readonly string[]): string => `情報提供: ${names.map((name) => `${name}様`).join(", ")}`
 
 /** What a release date typed is wrong with, beside its field; nothing while none is typed. */
 export const describeReleaseDateError = (error: ReleaseDateError): string | undefined => {
