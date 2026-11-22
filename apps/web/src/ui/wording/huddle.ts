@@ -10,7 +10,7 @@ export const HUDDLE_HEADING = "ノリ打ち"
 /** What a jackpot is said as, by the game: on a pachislot machine the jackpot a play stands in is an AT. */
 const IN_JACKPOT: Readonly<Record<PlayGameKind, string>> = { pachinko: "大当り中", pachislot: "AT中" }
 
-/** What a mark beside one of the others' plays in the day's list says of where it stands, where it says anything: a bonus just won by its label, as a jackpot's line says AT当選. */
+/** What a mark beside one of the others' plays in the day's list says of where it stands, where it says anything: a 遊タイム reached by its name, a bonus just won by its label, as a jackpot's line says AT当選. */
 export const huddleStandingText = (standing: Exclude<HuddleStanding, { readonly type: "playing" }>, gameKind: PlayGameKind): string => {
   switch (standing.type) {
     case "finished":
@@ -19,6 +19,8 @@ export const huddleStandingText = (standing: Exclude<HuddleStanding, { readonly 
       return IN_JACKPOT[gameKind]
     case "rapid":
       return "時短中"
+    case "relief":
+      return "遊タイム"
     case "bonus":
       return `${standing.bonus}当選`
   }

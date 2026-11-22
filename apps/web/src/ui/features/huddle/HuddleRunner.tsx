@@ -42,8 +42,8 @@ const changedSince = (drafts: readonly PlayDraft[], shown: ReadonlyMap<string, s
  * huddle, and nothing is drawn.
  *
  * It also says when the way back to the day's list is urged: as who of the
- * others has won changes — one wins a jackpot or a bonus, one's jackpot
- * ends — and not while one goes on, until the list is looked at, which is anywhere but one's
+ * others has won changes — one wins a jackpot or a bonus or reaches a
+ * 遊タイム, one's jackpot or 遊タイム ends — and not while one goes on, until the list is looked at, which is anywhere but one's
  * own play.
  */
 export function HuddleRunner(props: { readonly place: Place; readonly crossing: CrossingServices }): JSX.Element {

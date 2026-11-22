@@ -4,13 +4,16 @@ import type { HuddleEntry, HuddlePlay } from "./post"
 import { parsePlayLog, type Checkpoint } from "../play-log/checkpoint"
 import { EVERY_JACKPOT, liveSummary } from "../play-log/live"
 import { inPlayOrder } from "../play-log/performance"
+import * as Pachinko from "../pachinko"
 import * as Pachislot from "../pachislot"
 import type { PlayGameKind } from "../play/play"
 
 /**
  * Where one of the others' plays stands, as its log last says: over, in a
  * jackpot — an AT won, on a pachislot AT machine, or a pachinko run still
- * in 確変 — in 時短, as its bar was switched to it, a bonus just won on a
+ * in 確変 — in 時短, as its bar was switched to it, in a pachinko
+ * cabinet's 遊タイム, as its bar was switched to it from regular games,
+ * a bonus just won on a
  * pachislot bonus machine — by its label, on the line of the log it was
  * read on, counting from the first, so that one won on the next line is
  * another — or being played.
@@ -19,6 +22,7 @@ export type HuddleStanding =
   | { readonly type: "finished" }
   | { readonly type: "jackpot" }
   | { readonly type: "rapid" }
+  | { readonly type: "relief" }
   | { readonly type: "bonus"; readonly bonus: string; readonly line: number }
   | { readonly type: "playing" }
 
@@ -34,7 +38,8 @@ export const huddleStandingOf = (play: Play): HuddleStanding => {
   const ordered = inPlayOrder(read.value)
   const last = ordered.at(-1)
   if (last?.event?.kind === "jackpot") return { type: "jackpot" }
-  return last?.event?.kind === "rapid-began" ? { type: "rapid" } : bonusWonOf(play, ordered)
+  if (last?.event?.kind === "rapid-began") return play.gameKind === "pachinko" && Pachinko.inReliefDrive(ordered) ? { type: "relief" } : { type: "rapid" }
+  return bonusWonOf(play, ordered)
 }
 
 /** Whether a reading was of regular games: no jackpot or other event on it, and, on a pachinko play, not in 時短 or 確変. */
@@ -77,25 +82,26 @@ export const idleMembers = (entries: readonly HuddleEntry[], now: number): Reado
   return new Set([...lastSaid].filter(([, said]) => now - Date.parse(said) >= IDLE_AFTER).map(([member]) => member))
 }
 
-/** Who of the others still in the huddle has won on the play they are on, each by their member and play, and a bonus by the line it was won on too: a jackpot as long as it goes on, a bonus only on the line that read it. */
+/** Who of the others still in the huddle has won on the play they are on, or reached its 遊タイム, each by their member and play, and a bonus by the line it was won on too: a jackpot or a 遊タイム as long as it goes on, a bonus only on the line that read it. */
 const winnersOf = (plays: readonly HuddlePlay[]): readonly string[] =>
   plays
     .filter((shown) => shown.latest && !shown.departed)
-    .flatMap((shown) => ((standing) => (standing.type === "jackpot" ? [`${shown.post.member} ${shown.post.play.id}`] : standing.type === "bonus" ? [`${shown.post.member} ${shown.post.play.id} ${standing.line}`] : []))(huddleStandingOf(shown.post.play)))
+    .flatMap((shown) => ((standing) => (standing.type === "jackpot" || standing.type === "relief" ? [`${shown.post.member} ${shown.post.play.id}`] : standing.type === "bonus" ? [`${shown.post.member} ${shown.post.play.id} ${standing.line}`] : []))(huddleStandingOf(shown.post.play)))
 
 /**
  * Who of the others still in the huddle has won on the play they are on,
- * as one word — each one's member and play, in order — the same for the
- * same people in the same wins: it changes as one of them wins a jackpot
- * or a bonus, or one's ends, and not while a jackpot goes on.
+ * or reached its 遊タイム, as one word — each one's member and play, in
+ * order — the same for the same people in the same wins: it changes as
+ * one of them wins a jackpot or a bonus or reaches a 遊タイム, or one's
+ * ends, and not while a jackpot or a 遊タイム goes on.
  */
 export const wonNow = (plays: readonly HuddlePlay[]): string => winnersOf(plays).toSorted().join("\n")
 
 /**
  * How the huddle's game turned between who had won and who has now: one
- * won a jackpot or a bonus — from regular games, or one more beside
- * another's — or only wins that went on ended; nothing where it did not
- * turn.
+ * won a jackpot or a bonus or reached a 遊タイム — from regular games, or
+ * one more beside another's — or only wins that went on ended; nothing
+ * where it did not turn.
  */
 export type HuddleTurn = "won" | "ended"
 

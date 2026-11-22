@@ -12,15 +12,16 @@ import { captionOf } from "../live/play-caption"
 /**
  * The mark one of the others' plays wears: in a jackpot or 時短, the words
  * and the jackpots won in a row as a round chip — red, a jackpot being hot,
- * grey in 時短 — and none in 時短 that no jackpot led to; a bonus just won,
- * its words on red, hot as a jackpot, with no count beside it; over, left
+ * grey in 時短 — and none in 時短 that no jackpot led to; a 遊タイム
+ * reached or a bonus just won, its words on red, hot as a jackpot, with
+ * no count beside it; over, left
  * for another machine, or the one its player was on as they left the
  * huddle — whatever it was doing then, which is no longer so — a quiet
  * framed chip; nothing while it is simply played.
  */
 type Mark =
   | { readonly type: "streak"; readonly words: string; readonly count: number; readonly look: string }
-  | { readonly type: "won"; readonly words: string }
+  | { readonly type: "hot"; readonly words: string }
   | { readonly type: "chip"; readonly words: string }
 
 const STREAK_LOOKS = { jackpot: "bg-negative text-accent-contrast", rapid: "bg-surface-0 text-text-secondary" } as const
@@ -37,8 +38,9 @@ const markOf = (shown: RoomPlay, presence: Presence): Mark | undefined => {
     case "jackpot":
     case "rapid":
       return { type: "streak", words: huddleStandingText(standing, shown.play.gameKind), count: jackpotStreakOf(shown.play), look: STREAK_LOOKS[standing.type] }
+    case "relief":
     case "bonus":
-      return { type: "won", words: huddleStandingText(standing, shown.play.gameKind) }
+      return { type: "hot", words: huddleStandingText(standing, shown.play.gameKind) }
     case "finished":
       return { type: "chip", words: huddleStandingText(standing, shown.play.gameKind) }
     case "playing":
@@ -52,7 +54,7 @@ function MarkShown(props: { readonly mark: Mark }): JSX.Element {
       <Match when={props.mark.type === "chip" && props.mark}>
         {(mark) => <span class="ml-auto shrink-0 rounded-full border border-border px-1.5 text-[11px] font-semibold leading-5 text-text-muted">{mark().words}</span>}
       </Match>
-      <Match when={props.mark.type === "won" && props.mark}>
+      <Match when={props.mark.type === "hot" && props.mark}>
         {(mark) => <span class={`ml-auto shrink-0 rounded-full px-1.5 text-[11px] font-semibold leading-5 ${STREAK_LOOKS.jackpot}`}>{mark().words}</span>}
       </Match>
       <Match when={props.mark.type === "streak" && props.mark}>
@@ -71,7 +73,7 @@ function MarkShown(props: { readonly mark: Mark }): JSX.Element {
 
 /**
  * One play in a huddle's room: on what, with a mark for a jackpot or 時短
- * and the jackpots won in a row, a bonus just won, a play over, one left for another
+ * and the jackpots won in a row, a 遊タイム reached, a bonus just won, a play over, one left for another
  * machine, by one who left the huddle, or by one who has said nothing for
  * long (動きなし) — what the play said last being likely over by then;
  * where and since when; and on the

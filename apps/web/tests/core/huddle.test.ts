@@ -47,6 +47,8 @@ const AT_MACHINE = { figures: [{ settingLevel: 1, payoutRate: 0.98, bonuses: [],
 
 const onMachine = (log: string, formula: FormulaSnapshot): HuddlePost["play"] => ({ ...withLog(log, "pachislot"), pachislot: { formula, prior: { type: "uniform" } } }) as unknown as HuddlePost["play"]
 
+const RELIEF = '{"spins":0,"outlay":0}\n{"spins":500,"outlay":10000,"event":{"kind":"rapid-began"}}\n'
+
 const SEAT = '{"spins":0,"outlay":0,"counter":{"spins":0,"total":800,"bonuses":{"big":2,"reg":1}}}\n'
 const BIG_WON = `${SEAT}{"spins":150,"outlay":3000,"counter":{"total":950,"bonuses":{"big":3,"reg":1}}}\n`
 const REG_WON = `${SEAT}{"spins":150,"outlay":3000,"counter":{"total":950,"bonuses":{"big":2,"reg":2}}}\n`
@@ -247,6 +249,11 @@ describe("where one of the others' plays stands", () => {
     expect(huddleStandingOf(onMachine(BIG_WON, AT_MACHINE))).toEqual({ type: "playing" })
   })
 
+  test("is a 遊タイム where a pachinko cabinet turned to 時短 straight from regular games, and played once a reading in it follows", () => {
+    expect(huddleStandingOf(withLog(RELIEF))).toEqual({ type: "relief" })
+    expect(huddleStandingOf(withLog(`${RELIEF}{"spins":540,"outlay":10000,"phase":"rapid"}\n`))).toEqual({ type: "playing" })
+  })
+
   test("is over once its log says so, whatever came before", () => {
     expect(huddleStandingOf(withLog('{"spins":0,"outlay":0}\n{"spins":120,"outlay":3000,"event":{"kind":"jackpot"}}\n{"spins":120,"outlay":3000,"event":{"kind":"finished"}}\n'))).toEqual({ type: "finished" })
   })
@@ -268,6 +275,11 @@ describe("who of the others has won", () => {
     expect(wonNow([shown("b", AGAIN)])).toBe(first)
     expect(wonNow([shown("b", OVER)])).not.toBe(first)
     expect(wonNow([shown("b", AGAIN), shown("c", JACKPOT)])).not.toBe(first)
+  })
+
+  test("counts one who reached a 遊タイム, and stays the same while it goes on", () => {
+    expect(wonNow([shown("b", RELIEF)])).toBe("b p-1")
+    expect(wonNow([shown("b", RELIEF), shown("c", JACKPOT)])).toBe("b p-1\nc p-1")
   })
 
   test("changes with each bonus won, though one followed another, and as the line after it reads none", () => {
