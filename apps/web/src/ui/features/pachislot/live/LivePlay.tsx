@@ -536,7 +536,7 @@ export function LivePlay(props: {
                   </Show>
                 </div>
                 <div class="sticky bottom-0">
-                  <FoldingSheet label={COMPOSER_FOLD}>
+                  <FoldingSheet label={COMPOSER_FOLD} openedBy={revising()}>
                     <div class="grid border-t border-border bg-surface-2">
                       <div class="col-start-1 row-start-1 flex flex-col gap-3 p-4" classList={{ invisible: elsewhere() !== undefined }} inert={elsewhere() !== undefined}>
                         <NoticeStack notices={board.notices()} />

@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, onMount, type JSX } from "solid-js"
 
 import { GripIcon } from "./icons"
 
@@ -65,8 +65,13 @@ const lessMotion = (): boolean => window.matchMedia("(prefers-reduced-motion: re
  * focus. A keyboard opens and folds it from the tab as a button. The tab
  * is at the left, under the thumb of the hand that holds the phone while
  * the other is on a pachinko machine's handle.
+ *
+ * Given `openedBy`, the sheet opens, folded, whenever that comes to be
+ * something new: what a press elsewhere took up to be worked on in it, so
+ * that it is not taken up out of sight. It only opens, and takes no focus,
+ * so no keyboard rises unasked; it is never folded by it.
  */
-export function FoldingSheet(props: { readonly label: string; readonly children: JSX.Element }): JSX.Element {
+export function FoldingSheet(props: { readonly label: string; readonly openedBy?: unknown; readonly children: JSX.Element }): JSX.Element {
   const [standing, setStanding] = createSignal<Standing>({ type: "open" })
   const [full, setFull] = createSignal(0)
   const held: { inner: HTMLDivElement | undefined } = { inner: undefined }
@@ -78,6 +83,15 @@ export function FoldingSheet(props: { readonly label: string; readonly children:
     const still = full() === 0 || heightOf(standing(), full()) === heightOf({ type: "running", to }, full()) || lessMotion()
     setStanding(still ? { type: to } : { type: "running", to })
   }
+  createEffect(
+    on(
+      () => props.openedBy,
+      (opener) => {
+        if (opener !== undefined && !open()) runTo("open")
+      },
+      { defer: true },
+    ),
+  )
   const pressed = (event: PointerEvent & { readonly currentTarget: HTMLButtonElement }): void => {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)

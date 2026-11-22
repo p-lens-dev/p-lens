@@ -33,7 +33,7 @@ import { Withheld } from "../mummer/Withheld"
 
 const SUBMIT_PARLOR = "一覧にない店舗を申請する"
 
-const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
 
 /** Where a form's saving is: being typed, being written, or failed. */
 type Saving = { readonly type: "typing" } | { readonly type: "saving" } | { readonly type: "failed"; readonly error: ApplicationError }

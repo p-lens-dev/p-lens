@@ -29,6 +29,7 @@ import { HintedIconButton } from "../../../primitives/popover"
 import { Select } from "../../../primitives/select"
 import { settleTyping, TextField } from "../../../primitives/text-field"
 import { toast } from "../../../primitives/toast"
+import { InlineNumberInput } from "../../../primitives/inline-number-input"
 import { describeError } from "../../../wording/errors"
 import { UNWRITABLE_TEXT } from "../../../wording/fields"
 import { formulaBorderText, formulaHandle, formulaNameAmong } from "../../../wording/pachinko/formula"
@@ -175,18 +176,7 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachinko
               機種設定
             </h2>
             <div class="flex h-6 shrink-0 items-center gap-1 text-xs font-bold" classList={{ "text-text-primary": !unwritable(), "text-negative": unwritable() }}>
-              <input
-                aria-label="台番号"
-                aria-invalid={unwritable()}
-                title={unwritable() ? UNWRITABLE_TEXT : undefined}
-                value={cabinetNumber()}
-                onInput={(event) => choose({ cabinetNumber: event.currentTarget.value })}
-                onFocus={nudge.settle}
-                inputMode="numeric"
-                placeholder="----"
-                class="h-6 w-14 rounded-[3px] bg-surface-input px-1.5 text-right text-base tabular-nums outline-none placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-focus-ring"
-                classList={{ "ring-1 ring-negative": unwritable(), "[-webkit-text-security:disc]": cabinetFieldMasked(seal.cabinet(cabinetNumber())) }}
-              />
+              <InlineNumberInput label="台番号" value={cabinetNumber()} onInput={(cabinetNumber) => choose({ cabinetNumber })} onFocus={nudge.settle} invalid={unwritable()} title={unwritable() ? UNWRITABLE_TEXT : undefined} masked={cabinetFieldMasked(seal.cabinet(cabinetNumber()))} />
               番台
             </div>
           </div>

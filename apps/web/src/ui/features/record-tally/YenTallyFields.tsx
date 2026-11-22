@@ -16,6 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from "../../primitives/toggle-group"
 import { describeError } from "../../wording/errors"
 import * as PachinkoWording from "../../wording/pachinko/inference"
 import { stayWhileOffline } from "../../primitives/leaving"
+import { InlineNumberInput } from "../../primitives/inline-number-input"
 import { LOCATE_REQUEST, locateFailedText, parlorChoiceText, SURVEY_OFFLINE, typedMachineRefused, typedParlorRefused } from "../../wording/parlor"
 import * as PachinkoViews from "../pachinko"
 import * as PachislotViews from "../pachislot"
@@ -31,7 +32,7 @@ import { JournalText } from "../mummer/JournalText"
 
 const SUBMIT_PARLOR = "一覧にない店舗を申請する"
 
-const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
 
 /** What a form's rows are kept to on a screen with room: half the form's width, as a play started live gives its parlor — a name, or a pair of sums with what they come to under them, being read better short of a whole row. */
 const HALF_ON_A_WIDE_SCREEN = "@roomy:w-[calc(50%-0.25rem)]"
@@ -152,15 +153,7 @@ function CabinetNumberInput(props: { readonly editing: YenTallyEditing }): JSX.E
   const editing = props.editing
   return (
     <div class="flex h-6 shrink-0 items-center gap-1 text-xs font-bold text-text-primary">
-      <input
-        aria-label="台番号"
-        value={editing.form().cabinetNumber}
-        onInput={(event) => editing.set("cabinetNumber")(event.currentTarget.value)}
-        inputMode="numeric"
-        placeholder="----"
-        class="h-6 w-14 rounded-[3px] bg-surface-input px-1.5 text-right text-base tabular-nums outline-none placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-focus-ring"
-        classList={{ "[-webkit-text-security:disc]": cabinetFieldMasked(seal.cabinet(editing.form().cabinetNumber)) }}
-      />
+      <InlineNumberInput label="台番号" value={editing.form().cabinetNumber} onInput={editing.set("cabinetNumber")} masked={cabinetFieldMasked(seal.cabinet(editing.form().cabinetNumber))} />
       番台
     </div>
   )

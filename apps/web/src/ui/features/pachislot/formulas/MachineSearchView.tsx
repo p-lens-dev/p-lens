@@ -94,7 +94,7 @@ export function MachineSearchView(props: { readonly place: Place; readonly query
                 type="button"
                 aria-label={createLabel()}
                 onClick={create}
-                class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-semipro-ink text-semipro-ink hover:border-semipro-ink-hover hover:text-semipro-ink-hover [&_svg]:size-5"
+                class="flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-semipro-ink text-semipro-ink hover:border-semipro-ink-hover hover:text-semipro-ink-hover [&_svg]:size-5"
               >
                 <PlusIcon />
               </TooltipTrigger>

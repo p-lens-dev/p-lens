@@ -240,7 +240,7 @@ export function LivePlay(props: {
                     </Show>
                   </div>
                   <div class="sticky bottom-0">
-                    <FoldingSheet label={COMPOSER_FOLD}>
+                    <FoldingSheet label={COMPOSER_FOLD} openedBy={work()}>
                       <div class="grid">
                         <div class="col-start-1 row-start-1" classList={{ invisible: elsewhere() !== undefined }} inert={elsewhere() !== undefined}>
                           <Show
