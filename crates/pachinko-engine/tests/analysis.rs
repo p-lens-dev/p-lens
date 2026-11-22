@@ -2,8 +2,8 @@
 
 mod support;
 
-use pachinko_domain::conditions::{CalculationConditions, RoundPayout, SupportGain};
-use pachinko_domain::quantity::{Balls, RoundCount};
+use pachinko_domain::conditions::{CalculationConditions, RoundPayout, SupportDrift};
+use pachinko_domain::quantity::{Balls, RoundCount, SpinCount};
 use pachinko_domain::spec::{Allotment, Next, OtherRounds};
 use pachinko_engine::analysis::{Analysis, analyze};
 use pachinko_engine::normalize::normalize;
@@ -12,7 +12,7 @@ use support::*;
 
 const FROM_SPEC: CalculationConditions = CalculationConditions {
     round_payout: RoundPayout::FromSpec,
-    support_gain: SupportGain::NONE,
+    support_drift: SupportDrift::NONE,
 };
 
 fn solved(spec: &pachinko_domain::spec::Spec) -> Analysis {
@@ -49,7 +49,7 @@ fn the_made_up_machine_comes_to_what_it_does_by_hand() {
 fn a_measured_round_payout_replaces_the_sheet() {
     let conditions = CalculationConditions {
         round_payout: RoundPayout::Measured(Balls::new(130.0).expect("finite")),
-        support_gain: SupportGain::NONE,
+        support_drift: SupportDrift::NONE,
     };
     let normalized = normalize(&made_up()).expect("normalises");
     let analysis = analyze(&normalized, &conditions).expect("solves");
@@ -164,7 +164,7 @@ fn a_share_won_over_several_jackpots_counts_each_and_pays_no_more_for_it() {
 fn a_measured_round_scales_every_share_alike() {
     let conditions = CalculationConditions {
         round_payout: RoundPayout::Measured(Balls::new(126.0).expect("finite")),
-        support_gain: SupportGain::NONE,
+        support_drift: SupportDrift::NONE,
     };
     let normalized = normalize(&two_attackers()).expect("normalises");
     let analysis = analyze(&normalized, &conditions).expect("solves");
@@ -305,11 +305,11 @@ proptest! {
     }
 }
 
-const LESS_A_TENTH: CalculationConditions = CalculationConditions {
+const LESS_A_THIRD: CalculationConditions = CalculationConditions {
     round_payout: RoundPayout::FromSpec,
-    support_gain: match SupportGain::new(-1000) {
-        Some(gain) => gain,
-        None => SupportGain::NONE,
+    support_drift: match SupportDrift::new(-30) {
+        Some(drift) => drift,
+        None => SupportDrift::NONE,
     },
 };
 
@@ -318,18 +318,93 @@ fn under(spec: &pachinko_domain::spec::Spec, conditions: &CalculationConditions)
     analyze(&normalized, conditions).expect("a normalised spec solves")
 }
 
+/// The made-up machine with its RUSH lasting a hundred spins: the 80% won
+/// within them at one chance a spin, so many spins played there on average.
+fn rush_of_a_hundred_spins() -> (pachinko_domain::spec::Spec, f64) {
+    let mut spec = made_up();
+    if let Some(rushing) = spec.components.rushing.get_mut(&id("RUSH")) {
+        rushing.spins = Some(SpinCount::new(nonzero(100)));
+    }
+    let chance = 1.0 - 0.2_f64.powf(1.0 / 100.0);
+    (spec, 0.8 / chance)
+}
+
 #[test]
-fn a_support_gain_changes_only_the_jackpots_won_on_the_support() {
-    let analysis = under(&made_up(), &LESS_A_TENTH);
-    assert!(close(
-        analysis.average_payout.value(),
-        1400.0 + 2800.0 * 0.9
-    ));
+fn a_support_drift_changes_the_balls_by_each_spin_on_the_support() {
+    let (spec, per_visit) = rush_of_a_hundred_spins();
+    let analysis = under(&spec, &LESS_A_THIRD);
+    let spins = 0.5 / (1.0 - 0.8) * per_visit;
+    assert!(close(analysis.average_payout.value(), 4200.0 - 0.3 * spins));
     assert!(close(analysis.average_rounds, 30.0));
     assert!(close(analysis.average_combo, 3.0));
     assert!(close(
         analysis.balls_per_round.value(),
-        (1400.0 + 2800.0 * 0.9) / 30.0
+        (4200.0 - 0.3 * spins) / 30.0
+    ));
+}
+
+#[test]
+fn an_st_plays_until_a_jackpot_or_its_last_spin() {
+    let spec = machine(
+        one_in(100),
+        vec![share(10_000, 10, to("ST"))],
+        vec![mode(
+            "ST",
+            special_time(100, one_in(50)),
+            vec![share(10_000, 10, to("ST"))],
+            Next::Regular,
+        )],
+    );
+    let missed = 0.98_f64.powi(100);
+    let visits = 1.0 / missed;
+    let spins = visits * (1.0 - missed) * 50.0;
+    assert!(close(
+        under(&spec, &LESS_A_THIRD).average_payout.value(),
+        1400.0 * visits - 0.3 * spins
+    ));
+}
+
+#[test]
+fn a_loop_plays_until_a_jackpot_at_the_chance_it_says() {
+    let mut spec = machine(
+        one_in(100),
+        vec![share(10_000, 10, to("loop"))],
+        vec![mode(
+            "loop",
+            Kind::UntilHit,
+            vec![share(5000, 10, to("loop")), share(5000, 10, Next::Regular)],
+            Next::Regular,
+        )],
+    );
+    spec.components
+        .until_hit_chance
+        .insert(id("loop"), one_in(10));
+    assert!(close(
+        under(&spec, &LESS_A_THIRD).average_payout.value(),
+        1400.0 * 3.0 - 0.3 * 20.0
+    ));
+}
+
+#[test]
+fn a_drift_is_refused_where_a_state_on_the_support_tells_no_spins() {
+    let normalized = normalize(&made_up()).expect("normalises");
+    assert_eq!(
+        analyze(&normalized, &LESS_A_THIRD),
+        Err(pachinko_engine::error::SolveError::UnknownSupportSpins)
+    );
+    assert!(analyze(&normalized, &FROM_SPEC).is_ok());
+}
+
+#[test]
+fn a_measured_round_leaves_the_drift_as_it_was_said() {
+    let (spec, per_visit) = rush_of_a_hundred_spins();
+    let conditions = CalculationConditions {
+        round_payout: RoundPayout::Measured(Balls::new(130.0).expect("finite")),
+        ..LESS_A_THIRD
+    };
+    assert!(close(
+        under(&spec, &conditions).average_payout.value(),
+        30.0 * 130.0 - 0.3 * 2.5 * per_visit
     ));
 }
 
@@ -338,7 +413,7 @@ fn a_mode_played_without_the_support_is_not_changed_by_it() {
     let mut spec = made_up();
     spec.components.without_support.insert(id("RUSH"));
     assert!(close(
-        under(&spec, &LESS_A_TENTH).average_payout.value(),
+        under(&spec, &LESS_A_THIRD).average_payout.value(),
         4200.0
     ));
 }
@@ -356,7 +431,7 @@ fn a_leftover_queue_is_played_without_the_support() {
         )],
     );
     assert!(close(
-        under(&queued, &LESS_A_TENTH).average_payout.value(),
+        under(&queued, &LESS_A_THIRD).average_payout.value(),
         under(&queued, &FROM_SPEC).average_payout.value()
     ));
 }
@@ -375,12 +450,28 @@ fn the_regular_game_is_never_played_without_the_support() {
 }
 
 #[test]
-fn a_support_gain_is_above_minus_all_and_at_most_doubled() {
-    assert_eq!(SupportGain::new(-10_000), None);
-    assert_eq!(SupportGain::new(10_001), None);
+fn a_loop_chance_belongs_to_a_loop_alone() {
+    let mut spec = made_up();
+    spec.components
+        .until_hit_chance
+        .insert(id("RUSH"), one_in(10));
+    assert_eq!(
+        normalize(&spec),
+        Err(pachinko_engine::error::SpecError::StrayComponent {
+            entity: id("RUSH"),
+            component: pachinko_domain::spec::Component::UntilHitChance,
+        })
+    );
+}
+
+#[test]
+fn a_support_drift_is_at_most_ten_balls_a_spin_either_way() {
+    assert_eq!(SupportDrift::new(-1001), None);
+    assert_eq!(SupportDrift::new(1001), None);
+    assert!(SupportDrift::new(1000).is_some());
     assert!(close(
-        SupportGain::new(-500).map_or(0.0, SupportGain::factor),
-        0.95
+        SupportDrift::new(-30).map_or(0.0, SupportDrift::balls_per_spin),
+        -0.3
     ));
 }
 

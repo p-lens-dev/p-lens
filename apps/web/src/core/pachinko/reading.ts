@@ -28,7 +28,7 @@ export interface Reading {
   readonly gauge?: number
   /** Whether the reading says the cabinet turned to 時短 there: from 確変, a line with nothing else on it, or from regular games, the 遊タイム reached; never a jackpot's. */
   readonly rapidBegan?: true
-  /** Whether the person counted the 電サポ's drift at this reading, though it may have come to none: then the line says it, and the play is measured by what was counted rather than by the formula's 電サポ中の出玉増減. */
+  /** Whether the person counted the 電サポ's drift at this reading, though it may have come to none: then the line says it, and the play is measured by what was counted rather than by the formula's 電サポ中の増減. */
   readonly driftCounted?: true
 }
 

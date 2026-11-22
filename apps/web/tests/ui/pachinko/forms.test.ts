@@ -67,7 +67,7 @@ describe("the basis form", () => {
   test("reads percentages and denominators exactly, never through a float", () => {
     const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: "319.68", modes: [{ ...STARTING_BASIS.modes[0]!, continuationRate: "81.5" }] })
     expect(read.ok && regularOf(read.value.spec)?.chance).toEqual({ type: "ratio", numerator: 1, denominatorHundredths: 31_968 })
-    expect(read.ok && modesOf(read.value.spec)[0]?.kind).toEqual({ type: "rushing", continuationRate: { type: "percent", basisPoints: 8150 } })
+    expect(read.ok && modesOf(read.value.spec)[0]?.kind).toEqual({ type: "rushing", continuationRate: { type: "percent", basisPoints: 8150 }, spins: undefined })
   })
 
   test("a measured payout replaces the sheet's in the conditions", () => {
@@ -75,12 +75,25 @@ describe("the basis form", () => {
     expect(read.ok && read.value.conditions).toEqual({ roundPayout: { type: "measured", balls: 132.5 } })
   })
 
-  test("a support gain goes into the conditions in basis points, signed as typed, and none where it is left empty or nought", () => {
-    const read = readBasisForm({ ...STARTING_BASIS, supportGain: "−7.5" })
-    expect(read.ok && read.value.conditions).toEqual({ roundPayout: { type: "from-spec" }, supportGain: { basisPoints: -750 } })
-    expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).supportGain).toBe("-7.5")
-    expect(((each) => each.ok && each.value.conditions)(readBasisForm({ ...STARTING_BASIS, supportGain: "0" }))).toEqual({ roundPayout: { type: "from-spec" } })
-    expect(((each) => (each.ok ? [] : each.error))(readBasisForm({ ...STARTING_BASIS, supportGain: "-100" }))).toEqual([{ field: "電サポ中の出玉増減", reason: "out-of-range" }])
+  test("a support drift goes into the conditions in hundredths of a ball a spin, signed as typed, and none where it is left empty or nought", () => {
+    const read = readBasisForm({ ...STARTING_BASIS, supportDrift: "−0.05" })
+    expect(read.ok && read.value.conditions).toEqual({ roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: -5 } })
+    expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).supportDrift).toBe("-0.05")
+    expect(((each) => each.ok && each.value.conditions)(readBasisForm({ ...STARTING_BASIS, supportDrift: "0" }))).toEqual({ roundPayout: { type: "from-spec" } })
+    expect(((each) => (each.ok ? [] : each.error))(readBasisForm({ ...STARTING_BASIS, supportDrift: "-10.01" }))).toEqual([{ field: "電サポ中の増減", reason: "out-of-range" }])
+  })
+
+  test("a RUSH's 電サポ回数 and a loop's chance are kept where typed, read back so, and left out where empty", () => {
+    const loop = { ...STARTING_BASIS.modes[0]!, key: "m2", label: "確変", kind: "until-hit" as const, chance: "99.9" }
+    const read = readBasisForm({ ...STARTING_BASIS, modes: [{ ...STARTING_BASIS.modes[0]!, spins: "130" }, loop] })
+    expect(read.ok && read.value.spec.components.rushing).toEqual({ m1: { continuationRate: { type: "percent", basisPoints: 8000 }, spins: 130 } })
+    expect(read.ok && read.value.spec.components.untilHitChance).toEqual({ m2: { type: "ratio", numerator: 1, denominatorHundredths: 9990 } })
+    expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).modes.map((mode) => [mode.spins, mode.chance])).toEqual([
+      ["130", ""],
+      ["", "99.9"],
+    ])
+    const plain = readBasisForm(STARTING_BASIS)
+    expect(plain.ok && plain.value.spec.components.rushing).toEqual({ m1: { continuationRate: { type: "percent", basisPoints: 8000 } } })
   })
 
   test("a mode said to be played without the 電サポ is kept so, and read back so", () => {

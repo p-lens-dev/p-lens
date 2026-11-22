@@ -51,21 +51,21 @@ const readRoundPayout = (body: Body): Result<ConditionsDto["roundPayout"], ApiEr
   return payout["type"] === "measured" && typeof balls === "number" && Number.isFinite(balls) && balls > 0 ? Ok({ type: "measured", balls }) : invalid("basis.conditions.roundPayout")
 }
 
-/** A support gain in whole basis points above -100% and at most +100%; none where it is left out or nought, so the same conditions are always written alike. */
-const readSupportGain = (body: Body): Result<ConditionsDto["supportGain"], ApiError> => {
-  const gain = body["supportGain"]
-  if (gain === undefined) return Ok(undefined)
-  const points = isBody(gain) ? gain["basisPoints"] : undefined
-  if (typeof points !== "number" || !Number.isInteger(points) || points <= -10_000 || points > 10_000) return invalid("basis.conditions.supportGain")
-  return Ok(points === 0 ? undefined : { basisPoints: points })
+/** A support drift in whole hundredths of a ball a spin, at most ten balls either way; none where it is left out or nought, so the same conditions are always written alike. */
+const readSupportDrift = (body: Body): Result<ConditionsDto["supportDrift"], ApiError> => {
+  const drift = body["supportDrift"]
+  if (drift === undefined) return Ok(undefined)
+  const hundredths = isBody(drift) ? drift["hundredthsPerSpin"] : undefined
+  if (typeof hundredths !== "number" || !Number.isInteger(hundredths) || hundredths < -1000 || hundredths > 1000) return invalid("basis.conditions.supportDrift")
+  return Ok(hundredths === 0 ? undefined : { hundredthsPerSpin: hundredths })
 }
 
 const readConditions = (body: Body): Result<ConditionsDto, ApiError> => {
   const roundPayout = readRoundPayout(body)
   if (!roundPayout.ok) return roundPayout
-  const supportGain = readSupportGain(body)
-  if (!supportGain.ok) return supportGain
-  return Ok({ roundPayout: roundPayout.value, ...(supportGain.value === undefined ? {} : { supportGain: supportGain.value }) })
+  const supportDrift = readSupportDrift(body)
+  if (!supportDrift.ok) return supportDrift
+  return Ok({ roundPayout: roundPayout.value, ...(supportDrift.value === undefined ? {} : { supportDrift: supportDrift.value }) })
 }
 
 /**

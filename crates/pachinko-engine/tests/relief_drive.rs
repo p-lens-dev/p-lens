@@ -5,7 +5,7 @@
 mod support;
 
 use pachinko_domain::conditions::{
-    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportGain,
+    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportDrift,
 };
 use pachinko_domain::quantity::SpinCount;
 use pachinko_domain::spec::{Next, ReliefDrive, Spec};
@@ -39,7 +39,7 @@ fn with_relief_drive(to_mode: &str) -> Spec {
 
 const FROM_SPEC: CalculationConditions = CalculationConditions {
     round_payout: RoundPayout::FromSpec,
-    support_gain: SupportGain::NONE,
+    support_drift: SupportDrift::NONE,
 };
 
 fn play() -> PlayConditions {

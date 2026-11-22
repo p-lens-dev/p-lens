@@ -1,43 +1,43 @@
 use crate::quantity::Balls;
 
 /// The conditions a formula adopts on top of a spec: what a round really
-/// yields, and what the balls won on the 電サポ gain or lose besides. Two
+/// yields, and what the spins played on the 電サポ gain or lose besides. Two
 /// formulas of the same machine can differ here as well as in the spec they
 /// were built from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CalculationConditions {
     pub round_payout: RoundPayout,
-    pub support_gain: SupportGain,
+    pub support_drift: SupportDrift,
 }
 
-/// 電サポ中の出玉増減: what the balls a jackpot gains are changed by when it
-/// is won on the 電サポ, after the first jackpot — balls shot to the right
-/// running out of the 電チュー, or caught besides — in basis points of
-/// them: `-1000` is -10%. A first jackpot, and one won in a mode played
-/// without the 電サポ, are never touched. A spec sheet's figures are the
-/// machine's alone; this is the play's, as a parlor's cabinet gives it.
+/// 電サポ中の増減: what each spin played on the 電サポ gains or loses, shot
+/// to the right between jackpots — balls running past the 電チュー, or
+/// caught besides — in hundredths of a ball: `-30` is 0.3 of a ball lost a
+/// spin. The rounds of a jackpot are never touched, nor a spin of a mode
+/// played without the 電サポ. A spec sheet's figures are the machine's
+/// alone; this is the play's, as a parlor's cabinet gives it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SupportGain(i32);
+pub struct SupportDrift(i32);
 
-impl SupportGain {
+impl SupportDrift {
     pub const NONE: Self = Self(0);
 
-    /// A gain above -100% and at most +100%.
-    pub const fn new(basis_points: i32) -> Option<Self> {
-        if -10_000 < basis_points && basis_points <= 10_000 {
-            Some(Self(basis_points))
+    /// A drift of at most ten balls a spin either way.
+    pub const fn new(hundredths: i32) -> Option<Self> {
+        if -1_000 <= hundredths && hundredths <= 1_000 {
+            Some(Self(hundredths))
         } else {
             None
         }
     }
 
-    pub fn basis_points(self) -> i32 {
+    pub fn hundredths(self) -> i32 {
         self.0
     }
 
-    /// What a ball won on the 電サポ comes to: `0.9` at -10%.
-    pub fn factor(self) -> f64 {
-        1.0 + f64::from(self.0) / 10_000.0
+    /// Balls a spin on the 電サポ gains: `-0.3` at `-30`.
+    pub fn balls_per_spin(self) -> f64 {
+        f64::from(self.0) / 100.0
     }
 }
 

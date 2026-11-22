@@ -642,9 +642,10 @@ then deletes the draft; a record the book refuses keeps it.
   drift was not counted (`measurableAcross`, `unsaidSupportOf`), and the
   measuring starts again at the first hand known after one — the count
   as it ended, or balls bought as the hand ran out. The formula's
-  電サポ中の出玉増減 (`supportGain`) is what the 電サポ is looked for to
+  電サポ中の増減 (`supportDrift`) is what the 電サポ is looked for to
   do, never what it did: it is never taken into the measuring, only into
-  the border and against a counted drift (`supportRatioOf`). Spins a
+  the border and against a counted drift (`supportRatioOf`), as so many
+  balls on each spin of a 電サポ counted. Spins a
   combo is taken to play at the heso (`paidSpins`, a CZ or 潜確 played
   without the 電サポ) are paid for in the theoretical value (`hesoSpins`)
   after each jackpot whose 電サポ was not counted, and never measured.
@@ -1068,16 +1069,26 @@ walking down the trail and back keeps the work in hand.
   combo, ends the mode it was won in and empties the relief gauge — so it
   names no prize, count or other rounds. A
   measured round scales every share alike.
-- **電サポ中の出玉増減 is a condition, never the sheet's.** A formula's
-  conditions may say what the balls a jackpot gains are changed by when it
-  is won on the 電サポ (`supportGain`, basis points: `-1000` is -10%) — balls
-  shot to the right running out, as DMMぱちタウン states it machine by
-  machine. It touches every jackpot after the first won in a state played
-  on the 電サポ, and never a first jackpot, a leftover queue's or a mode's
-  that says `withoutSupport`: a normalised state says so of itself
-  (`withoutSupport`, left out where it is played on it, so a chain stored
-  before reads as played on it throughout, which no condition it was
-  stored with changes). A mode said `withoutSupport` whose spins run out —
+- **電サポ中の増減 is a condition, never the sheet's.** A formula's
+  conditions may say what each spin played on the 電サポ gains or loses
+  (`supportDrift`, hundredths of a ball: `-30` is 0.3 of a ball lost a
+  spin) — balls shot to the right running past the 電チュー, less the small
+  prizes caught — between jackpots, never on the rounds of a jackpot. The
+  spins are the engine's: a state on the 電サポ plays an ST's or a 時短's
+  until a jackpot or its last (a c時短's until either), a RUSH's within its
+  電サポ回数 (`rushing.spins`) at the one chance a spin that wins its rate
+  within them, a 確変 loop's until a jackpot at the chance it says
+  (`untilHitChance`); its normalised state carries them (`supportSpins`,
+  schema 5). A RUSH saying no 電サポ回数, or a loop no chance, tells none,
+  and a drift on such a spec is refused (`unknown-support-spins`) rather
+  than counted as none. A leftover queue, and a mode that says
+  `withoutSupport`, play no spins on the 電サポ: a normalised state says so
+  of itself (`withoutSupport`, left out where it is played on it). The
+  drift is said in balls of the cabinet and is not scaled by a measured
+  round. It replaced a factor on the jackpots won on the 電サポ
+  (`supportGain`, engine 5–7), read from a site's border condition that
+  meant the balls of the spins, not of the jackpots; formulas stored with
+  one keep their figures, and the engine reads them without it. A mode said `withoutSupport` whose spins run out —
   a CZ, a 潜確 counted out — is shot at the heso: its spins cost balls as
   the regular game's do. Its normalised state carries them (`paidSpins`:
   so many at most, at its chance; a leftover queue's are held already and
@@ -1085,11 +1096,12 @@ walking down the trail and back keeps the work in hand.
   spins the 1R トータル確率 and トータル確率 are over, the simulators draw
   how many were played and pay for them, and the grounds put them into
   each state's equation (`heso`) and check the state against the sheet.
-  The engine solves each state's balls with the
-  factor in its own equation; the simulators keep the balls won on the
-  電サポ apart (`PayoutYield`), and the grounds put the factor into the
-  same equation, take the 1R 平均出玉 as every round's gain over every
-  round, and check each state's mark against the sheet. The JSON is the
+  The engine solves each state's balls with its
+  spins' drift in its own equation; the simulators draw the spins played
+  on the 電サポ and drift by each (`PayoutYield`), and the grounds put the
+  drift into the same equation, take the 1R 平均出玉 as every round's gain
+  over every round, and check each state's mark and its spins on the 電サポ
+  against the sheet. The JSON is the
   same shape (`packages/contracts`), and a feature is a component, not a new
   shape. `pachinko_engine::query` is the system that reads it: it assembles
   the regular game and each mode from their components and refuses an entity
@@ -1125,8 +1137,8 @@ walking down the trail and back keeps the work in hand.
   gauge, no jackpot yet); how often each way comes over the long run is the
   stationary distribution of the small chain they form, and 1R トータル確率
   is the weighted cycles' rounds over their regular-game spins. A mode's
-  spins on the 電サポ cost nothing: what the 電サポ gains or loses is in
-  its jackpots' balls (`supportGain`), and a mode `withoutSupport` pays for
+  spins on the 電サポ cost no regular spin: what the 電サポ gains or loses is
+  balls on each of them (`supportDrift`), and a mode `withoutSupport` pays for
   its spins at the heso (`paidSpins`). The simulator carries the gauge and
   the spent 遊タイム from cycle to cycle the same way, and is tested against
   the exact figure on a
@@ -3565,7 +3577,8 @@ is not written out here a second time.
 | LT（ラッキートリガー） | lucky trigger (`luckyTrigger`, `atCombo`) |
 | 連チャン / N連目 | combo / combo N (`combo`, `averageCombo`); never "chain" |
 | 回転が尽きて終わる | runout (`ModeKind::Runout`) |
-| 電サポ / 電サポ増減率（電サポ中の出玉増減） | tulip support (`withoutSupport` where a mode is played without it) / its ball gain (`supportGain`, basis points) |
+| 電サポ / 電サポ中の増減 | tulip support (`withoutSupport` where a mode is played without it) / its drift a spin (`supportDrift`, hundredths of a ball) |
+| 電サポ回数 | a RUSH's spins (`rushing.spins`), which tell the spins it plays on the 電サポ |
 | 電サポ増減 | the 電サポ's drift as the person counted it (`checkpoint.support`) |
 | 遊タイム狙い（ハイエナ） | hyena hunt (`hyenaHunt`, `hyena_hunt`) |
 | 着席時データカウンター | initial spins (`initialSpins`): spins played by whoever sat there before |

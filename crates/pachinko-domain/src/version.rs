@@ -22,11 +22,13 @@ impl SpecVersion {
 ///    reading 2 would pass over.
 /// 4: the regular game may have a c時短, leading off it with no jackpot, which
 ///    an engine reading 3 would pass over.
+/// 5: a state on the 電サポ may say the spins it plays there, which an engine
+///    reading 4 would pass over.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SchemaVersion(u32);
 
 impl SchemaVersion {
-    pub const CURRENT: Self = Self(4);
+    pub const CURRENT: Self = Self(5);
 
     pub fn new(version: u32) -> Self {
         Self(version)

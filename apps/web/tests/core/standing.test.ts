@@ -103,7 +103,7 @@ describe("ranking formulas", () => {
     expect(ids(ranked([used, copy], sameWorth))).toEqual(["used", "copy"])
     expect(ids(ranked([used, orphan], sameWorth))).toEqual(["orphan", "used"])
     expect(ids(ranked([parent, fork], sameWorth))).toEqual(["parent", "fork"])
-    const details: Readonly<Record<string, ReadonlySet<string>>> = { parent: new Set(["regularGame"]), fork: new Set(["regularGame", "allotment", "supportGain"]) }
+    const details: Readonly<Record<string, ReadonlySet<string>>> = { parent: new Set(["regularGame"]), fork: new Set(["regularGame", "allotment", "supportDrift"]) }
     expect(ids(ranked([parent, fork], { ...sameWorth, details: (each) => details[each.id] ?? new Set() }))).toEqual(["fork", "parent"])
     const filledMany = { ...listing("many", {}, "2026-09-10T00:00:00.000Z"), formula: { id: "many", createdAt: "2026-09-10T00:00:00.000Z", derivedFrom: "parent" } }
     const plenty = new Set(["a", "b", "c", "d", "e", "f", "g", "h"])

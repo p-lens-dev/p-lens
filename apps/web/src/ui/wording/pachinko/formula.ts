@@ -23,19 +23,20 @@ export const markedFormulaText = (figures: Said["figures"]): string => `1RT ${on
 /** What a formula's figures were read at, on a machine with setting levels its world does not otherwise tell apart. */
 export const assumedSettingLevelText = (settingLevel: number): string => `設定${settingLevel}で計算`
 
-/** A formula's 電サポ中の出玉増減, from basis points, said even where it is none: `電サポ増減率-5%`, `電サポ増減率0%`. */
-export const supportGainRateText = (basisPoints: number): string => `電サポ増減率${basisPoints > 0 ? "+" : ""}${String(basisPoints / 100)}%`
+/** A formula's 電サポ中の増減, from hundredths of a ball a spin, said even where it is none: `電サポ増減-0.05玉/回転`, `電サポ増減0玉/回転`. */
+export const supportDriftText = (hundredthsPerSpin: number): string =>
+  `電サポ増減${hundredthsPerSpin > 0 ? "+" : ""}${(hundredthsPerSpin / 100).toFixed(2).replace(/\.?0+$/, "")}玉/回転`
 
-/** A formula's border, its 電サポ中の出玉増減, and the setting level it was read at where it says one, each a line of its own as a formula's card shows them. */
-export const formulaBorderLines = (spinPerformance: number, supportGain: number, settingLevel: number | undefined): readonly string[] => [
+/** A formula's border, its 電サポ中の増減, and the setting level it was read at where it says one, each a line of its own as a formula's card shows them. */
+export const formulaBorderLines = (spinPerformance: number, supportDrift: number, settingLevel: number | undefined): readonly string[] => [
   borderText(spinPerformance),
-  supportGainRateText(supportGain),
+  supportDriftText(supportDrift),
   ...(settingLevel === undefined ? [] : [assumedSettingLevelText(settingLevel)]),
 ]
 
-/** The same on one line: `20.7回転/千円・電サポ増減率-5%・設定1で計算`. */
-export const formulaBorderText = (spinPerformance: number, supportGain: number, settingLevel: number | undefined): string =>
-  formulaBorderLines(spinPerformance, supportGain, settingLevel).join("・")
+/** The same on one line: `20.7回転/千円・電サポ増減-0.05玉/回転・設定1で計算`. */
+export const formulaBorderText = (spinPerformance: number, supportDrift: number, settingLevel: number | undefined): string =>
+  formulaBorderLines(spinPerformance, supportDrift, settingLevel).join("・")
 
 /**
  * A formula's name among its machine's, as a box to choose one shows it:

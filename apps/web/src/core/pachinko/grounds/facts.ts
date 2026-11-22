@@ -31,8 +31,10 @@ const outcomeFacts = (from: string, outcomes: readonly OutcomeDto[], normalized:
  * the first jackpot's outcomes and each state's — its share, rounds, balls,
  * where it leads and the jackpots it is, none for a miss — the spins of a
  * state that fill the relief gauge when they run out, the states played
- * without the 電サポ, the spins a state plays at the heso and pays for — so
- * many at most, at its chance — and the 遊タイム.
+ * without the 電サポ, the spins a state plays on the 電サポ — so many at
+ * most, or `none` for a loop, until it stops at its chance — the spins it
+ * plays at the heso and pays for — so many at most, at its chance — and the
+ * 遊タイム.
  */
 const chainFacts = (normalized: NormalizedSpecDto): readonly string[] => [
   given(`regular_one_in(${prologNumber(1 / normalized.hitChance)})`),
@@ -41,6 +43,7 @@ const chainFacts = (normalized: NormalizedSpecDto): readonly string[] => [
     given(`state(${index})`),
     given(`fills(${index}, ${state.fillsGauge ?? 0})`),
     ...(state.withoutSupport === true ? [given(`without_support(${index})`)] : []),
+    ...(state.supportSpins === undefined ? [] : [given(`support_spins(${index}, ${state.supportSpins.spins ?? "none"}, ${prologNumber(state.supportSpins.chance)})`)]),
     ...(state.paidSpins === undefined ? [] : [given(`heso(${index}, ${state.paidSpins.spins}, ${prologNumber(state.paidSpins.chance)})`)]),
     ...outcomeFacts(String(index), state.outcomes, normalized, state.fillsGauge ?? 0),
   ]),
@@ -85,8 +88,23 @@ const kindFact = (kind: ModeKind): string => {
   }
 }
 
+/** What a mode says of the spins it plays on the 電サポ beside its kind: a RUSH its 電サポ回数, a 確変 loop its chance. */
+const supportSpinsFacts = (kind: ModeKind, place: number): readonly string[] => {
+  switch (kind.type) {
+    case "rushing":
+      return kind.spins === undefined ? [] : [given(`spec_rushing_spins(${place}, ${kind.spins})`)]
+    case "until-hit":
+      return kind.chance === undefined ? [] : [given(`spec_until_hit_chance(${place}, ${prologNumber(chanceOf(kind.chance))})`)]
+    case "special-time":
+    case "rapid":
+    case "leftover-queue":
+      return []
+  }
+}
+
 const modeFacts = (mode: ModeView, place: number, spec: SpecDto, places: Places): readonly string[] => [
   given(`spec_mode(${place}, ${kindFact(mode.kind)})`),
+  ...supportSpinsFacts(mode.kind, place),
   ...shareFacts(`mode(${place})`, mode.allotment, spec, places),
   given(`spec_on_miss(${place}, ${next(mode.onMiss, places)})`),
   ...(mode.luckyTrigger === undefined ? [] : [given(`spec_lucky_trigger(${place}, ${mode.luckyTrigger.atCombo}, ${places.get(mode.luckyTrigger.to) ?? -1})`)]),
@@ -174,9 +192,8 @@ const storedFacts = (figures: Figures, sampled: SampledFigure | undefined): read
  * What the reasoner is told of a formula, as Prolog facts: the spec as its
  * sheet was written, the chain the engine made of it and solved, how a
  * round pays — the machine's payout rule, a round as measured where it
- * was, and what the balls won on the 電サポ come to as a factor where a
- * support gain changes them — what the engine solved, and the figures the
- * formula stores. Only
+ * was, and what a spin on the 電サポ gains in balls where a support drift
+ * says — what the engine solved, and the figures the formula stores. Only
  * numbers are written: nothing a person typed reaches the reasoner as text.
  */
 export const groundsFacts = (basis: Basis, analysis: AnalysisDto, figures: Figures, sampled: SampledFigure | undefined): string =>
@@ -185,7 +202,7 @@ export const groundsFacts = (basis: Basis, analysis: AnalysisDto, figures: Figur
     ...chainFacts(basis.normalized),
     given(`payout(${basis.spec.resources.payout.prizeBalls}, ${basis.spec.resources.payout.count})`),
     ...(basis.conditions.roundPayout.type === "measured" ? [given(`measured(${prologNumber(basis.conditions.roundPayout.balls)})`)] : []),
-    ...((points) => (points === undefined || points === 0 ? [] : [given(`support_gain(${prologNumber(1 + points / 10_000)})`)]))(basis.conditions.supportGain?.basisPoints),
+    ...((hundredths) => (hundredths === undefined || hundredths === 0 ? [] : [given(`support_drift(${prologNumber(hundredths / 100)})`)]))(basis.conditions.supportDrift?.hundredthsPerSpin),
     ...solvedFacts(analysis),
     ...storedFacts(figures, sampled),
   ].join("\n")

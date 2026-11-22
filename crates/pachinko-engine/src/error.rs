@@ -99,4 +99,7 @@ pub enum SolveError {
     Singular,
     /// An outcome leads to a state the spec does not have.
     DanglingTarget,
+    /// A support drift on a spec with a state on the 電サポ that does not
+    /// tell its spins there: a RUSH saying no 電サポ回数, a 確変 loop no chance.
+    UnknownSupportSpins,
 }

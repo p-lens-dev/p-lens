@@ -74,13 +74,17 @@ pub struct Components {
     pub rushing: BTreeMap<ModeId, Rushing>,
     /// Until the next jackpot, which is certain: a 確変 loop.
     pub until_hit: BTreeSet<ModeId>,
+    /// The chance a 確変 loop hits at on each spin, where it is said: what
+    /// tells the spins it plays on the 電サポ. Only an `until_hit` entity
+    /// has it.
+    pub until_hit_chance: BTreeMap<ModeId, ProbabilitySource>,
     /// Where play goes when a mode ends without a jackpot.
     pub on_miss: BTreeMap<ModeId, Next>,
     pub lucky_trigger: BTreeMap<ModeId, LuckyTrigger>,
     /// The regular game's 遊タイム.
     pub relief_drive: BTreeMap<ModeId, ReliefDrive>,
-    /// Modes played without the 電サポ — a 潜確 at the heso — whose jackpots
-    /// the support gain does not touch. A leftover queue is played without
+    /// Modes played without the 電サポ — a 潜確 at the heso — whose spins
+    /// the support drift does not touch. A leftover queue is played without
     /// it whether it says so or not.
     pub without_support: BTreeSet<ModeId>,
     /// A 時短 that each spin may end early without a jackpot — a c時短 — and
@@ -137,9 +141,13 @@ pub struct LeftoverQueue {
     pub draws: SpinCount,
 }
 
+/// A RUSH by its continuation rate, and its 電サポ回数 where said: the spins
+/// it lasts, which tell the spins it plays on the 電サポ, the rate being won
+/// within them at one chance a spin.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rushing {
     pub continuation_rate: ProbabilitySource,
+    pub spins: Option<SpinCount>,
 }
 
 /// The names of the components, for saying which one is missing or in conflict.
@@ -153,6 +161,7 @@ pub enum Component {
     LeftoverQueue,
     Rushing,
     UntilHit,
+    UntilHitChance,
     OnMiss,
     LuckyTrigger,
     ReliefDrive,
@@ -264,7 +273,7 @@ pub struct Mode {
     pub on_miss: Next,
     pub lucky_trigger: Option<LuckyTrigger>,
     /// Whether the mode is played on the 電サポ, shot to the right, so that
-    /// what its jackpots pay out is touched by the support gain.
+    /// its spins are touched by the support drift.
     pub supported: bool,
     /// Whether the mode is shot at the heso, as the regular game is, its
     /// spins costing balls: a mode said to be played without the 電サポ. A
@@ -286,11 +295,15 @@ pub enum ModeKind {
         chance: ProbabilitySource,
         fills_gauge: bool,
     },
-    /// At the next jackpot, which is certain: a 確変 loop.
-    UntilHit,
+    /// At the next jackpot, which is certain: a 確変 loop, at `chance` a
+    /// spin where it is said.
+    UntilHit { chance: Option<ProbabilitySource> },
     /// At each jackpot, by a continuation rate: a RUSH as its spec sheet
-    /// summarises it.
-    Continuation { rate: ProbabilitySource },
+    /// summarises it, lasting `spins` where they are said.
+    Continuation {
+        rate: ProbabilitySource,
+        spins: Option<SpinCount>,
+    },
 }
 
 /// ラッキートリガー: the jackpot that makes combo `at_combo` in this mode,

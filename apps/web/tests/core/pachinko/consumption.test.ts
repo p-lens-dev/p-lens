@@ -145,7 +145,7 @@ describe("what a play's regular games cost", () => {
       reading({ counterSpins: 150, phase: "special", held: 11 * 1400 }),
       reading({ counterSpins: 400, held: 11 * 1400 - 3125 }),
     ])
-    const found = consumptionOf(log, TERMS, { supportGain: -500 })
+    const found = consumptionOf(log, TERMS, { supportDrift: -5 })
     expect(found.measured).toEqual({ spins: 530, balls: 6625, rentedBalls: 3500, replayedBalls: 0 })
     expect(found.measured && spinPerformanceOf(found.measured, TERMS)).toBe(20)
   })
@@ -157,7 +157,7 @@ describe("what a play's regular games cost", () => {
       reading({ counterSpins: 0, phase: "special", held: 1400 }),
       reading({ counterSpins: 200, rented: 4400 }),
     ])
-    const found = consumptionOf(log, TERMS, { supportGain: -500 })
+    const found = consumptionOf(log, TERMS, { supportDrift: -5 })
     expect(found.measured).toEqual({ spins: 500, balls: 6250, rentedBalls: 4850, replayedBalls: 0 })
     expect(found.measured && spinPerformanceOf(found.measured, TERMS)).toBe(20)
   })
@@ -356,7 +356,7 @@ describe("each line's own stretch of a pachinko play", () => {
 })
 
 describe("a 電サポ whose drift was not counted", () => {
-  const measuredOf = (log: readonly Checkpoint[]) => consumptionOf(log, TERMS, { supportGain: -500 }).measured
+  const measuredOf = (log: readonly Checkpoint[]) => consumptionOf(log, TERMS, { supportDrift: -5 }).measured
   const shown = (log: readonly Checkpoint[]): readonly (number | { readonly through: number } | "--" | undefined)[] =>
     stretchPerformancesOf(log, TERMS).map((rate) => (rate === undefined ? undefined : rate.type === "measured" ? rate.rate : rate.type === "through" ? { through: rate.rate } : "--"))
 

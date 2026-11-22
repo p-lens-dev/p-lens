@@ -181,9 +181,17 @@ function ModeEditor(props: {
         </For>
       </ToggleGroup>
       <Show when={props.mode.kind === "rushing"}>
-        <div class="w-40">
+        <div class="grid max-w-md grid-cols-2 gap-3">
           <TextField label="継続率" value={props.mode.continuationRate} onChange={set("continuationRate")} inputMode="decimal" suffix="%" />
+          <TextField label="電サポ回数" value={props.mode.spins} onChange={set("spins")} inputMode="numeric" suffix="回転" />
         </div>
+        <p class="text-xs text-text-muted">電サポ回数は、電サポ中の増減を入れるときに使います。継続率はこの回転数の中で取れる割合として、平均の電サポ回転数を出します。</p>
+      </Show>
+      <Show when={props.mode.kind === "until-hit"}>
+        <div class="w-40">
+          <TextField label="大当り確率 1/" value={props.mode.chance} onChange={set("chance")} inputMode="decimal" />
+        </div>
+        <p class="text-xs text-text-muted">大当り確率は、電サポ中の増減を入れるときに使います。次の大当りまでの平均の電サポ回転数を出します。</p>
       </Show>
       <Show when={props.mode.kind === "special-time"}>
         <div class="grid max-w-md grid-cols-2 gap-3">
@@ -352,10 +360,10 @@ export function BasisEditor(props: { readonly form: BasisForm; readonly onChange
         <TextField label="賞球（機種）" value={props.form.prizeBalls} onChange={set("prizeBalls")} inputMode="numeric" suffix="個" />
         <TextField label="カウント" value={props.form.count} onChange={set("count")} inputMode="numeric" />
         <TextField label="実測の1R出玉" value={props.form.measuredPayout} onChange={set("measuredPayout")} inputMode="decimal" suffix="玉" placeholder="スペック通り" />
-        <TextField label="電サポ中の出玉増減" value={props.form.supportGain} onChange={set("supportGain")} inputMode="text" suffix="%" placeholder="0" />
+        <TextField label="電サポ中の増減" value={props.form.supportDrift} onChange={set("supportDrift")} inputMode="text" suffix="玉/回転" placeholder="0" />
         <TextField label="1時間の回転数" value={props.form.spinsPerHour} onChange={set("spinsPerHour")} inputMode="numeric" />
       </div>
-      <p class="text-xs text-text-muted">電サポ中の出玉増減は、初当り以外で電サポ中に取った大当りの出玉を、右打ち中のこぼれなどの分だけ増減させます（-10%なら-10）。初当りと、電サポなしのモード（残保留・潜確など）の大当りは変わりません。</p>
+      <p class="text-xs text-text-muted">電サポ中の増減は、右打ちで電サポを1回転回すごとに増えたり減ったりする玉の数です（120回転で6玉減るなら-0.05）。大当りの出玉と、電サポなしのモード（残保留・潜確など）の回転は変わりません。継続率のモードには電サポ回数、次回までのモードには大当り確率が要ります。</p>
     </div>
   )
 }

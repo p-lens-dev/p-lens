@@ -1,4 +1,4 @@
-import { supportGainOf, type Formula, type FormulaId, type FormulaKind } from "./formula"
+import { supportDriftOf, type Formula, type FormulaId, type FormulaKind } from "./formula"
 import type { Figures } from "./figures"
 import type { MachineId } from "../machine/machine"
 
@@ -13,12 +13,11 @@ export interface FormulaSnapshot {
   readonly kind: FormulaKind
   readonly figures: Figures
   /**
-   * 電サポ中の出玉増減 as its basis says, in basis points — `-500` is -5% —
-   * left out where it says none or has no basis: what a play's measuring
-   * takes off the jackpots won on the 電サポ where the person did not count
-   * the drift themselves.
+   * 電サポ中の増減 as its basis says, in hundredths of a ball a spin — `-30`
+   * is 0.3 of a ball lost — left out where it says none or has no basis:
+   * what a play's measuring sets the drift a person counted against.
    */
-  readonly supportGain?: number
+  readonly supportDrift?: number
   /**
    * The spins a first jackpot's combo plays at the heso on average — a CZ
    * after a bonus, say — as the engine solved them, left out where it plays
@@ -33,5 +32,5 @@ export const snapshotOf = (formula: Formula): FormulaSnapshot => ({
   machineId: formula.machineId,
   kind: formula.kind,
   figures: formula.figures,
-  ...((points) => (points === 0 ? {} : { supportGain: points }))(supportGainOf(formula)),
+  ...((hundredths) => (hundredths === 0 ? {} : { supportDrift: hundredths }))(supportDriftOf(formula)),
 })

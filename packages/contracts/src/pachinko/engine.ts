@@ -94,16 +94,18 @@ export interface ComponentsDto {
   readonly rapid?: Readonly<Record<string, { readonly spins: number; readonly chance?: ProbabilityDto }>>
   /** 残保留: the draws still queued when a mode's spins run out, at the regular game's chance. */
   readonly leftoverQueue?: Readonly<Record<string, { readonly draws: number }>>
-  /** A RUSH as many spec sheets summarise it: a continuation rate given directly. */
-  readonly rushing?: Readonly<Record<string, { readonly continuationRate: ProbabilityDto }>>
+  /** A RUSH as many spec sheets summarise it: a continuation rate given directly, and its 電サポ回数 where the sheet says it — the spins it lasts, which tell the spins it plays on the 電サポ. */
+  readonly rushing?: Readonly<Record<string, { readonly continuationRate: ProbabilityDto; readonly spins?: number }>>
   /** Until the next jackpot, which is certain: a 確変 loop. */
   readonly untilHit?: readonly string[]
+  /** The chance a 確変 loop hits at on each spin, where it is said: what tells the spins it plays on the 電サポ. Only an `untilHit` entity has it. */
+  readonly untilHitChance?: Readonly<Record<string, ProbabilityDto>>
   /** Where play goes when a mode ends without a jackpot. */
   readonly onMiss?: Readonly<Record<string, NextDto>>
   readonly luckyTrigger?: Readonly<Record<string, LuckyTriggerDto>>
   /** The regular game's 遊タイム. */
   readonly reliefDrive?: Readonly<Record<string, ReliefDriveDto>>
-  /** Modes played without the 電サポ — a 潜確 at the heso — whose jackpots the support gain does not touch; a leftover queue is so whether it is named here or not. */
+  /** Modes played without the 電サポ — a 潜確 at the heso — whose spins the support drift does not touch; a leftover queue is so whether it is named here or not. */
   readonly withoutSupport?: readonly string[]
   /** A 時短 that each spin may end early without a jackpot — a c時短 — and where play goes then. On the regular game, the same: a spin of it that is no jackpot may lead off to a 時短, the relief gauge counting on through it. */
   readonly earlyEnd?: Readonly<Record<string, EarlyEndDto>>
@@ -168,14 +170,17 @@ export interface NormalizedSpecDto {
   readonly entry: readonly OutcomeDto[]
   /**
    * Each state, `withoutSupport` where it is played without the 電サポ — a
-   * spec normalised before the support gain says it of none — and
-   * `paidSpins` where it plays spins at the heso, paid for as regular spins:
-   * so many until a jackpot, at this chance.
+   * spec normalised before modes could be played off it says it of none —
+   * `supportSpins` where its mode tells the spins it plays on the 電サポ:
+   * until it stops at this chance a spin, or so many of them run out, a
+   * 確変 loop saying no spins — and `paidSpins` where it plays spins at the
+   * heso, paid for as regular spins: so many until a jackpot, at this chance.
    */
   readonly states: readonly {
     readonly outcomes: readonly OutcomeDto[]
     readonly fillsGauge?: number
     readonly withoutSupport?: true
+    readonly supportSpins?: { readonly spins?: number; readonly chance: number }
     readonly paidSpins?: { readonly spins: number; readonly chance: number }
   }[]
   /** The combo each state stands at in its mode, counting the jackpot that entered it. */
@@ -193,12 +198,13 @@ export type SourceDto =
 export interface ConditionsDto {
   readonly roundPayout: { readonly type: "from-spec" } | { readonly type: "measured"; readonly balls: number }
   /**
-   * 電サポ中の出玉増減: what the balls a jackpot won on the 電サポ gains are
-   * changed by, in basis points of them — `-1000` is -10% — after the first
-   * jackpot, and never in a mode played without the 電サポ. Left out where
-   * there is none.
+   * 電サポ中の増減: what each spin played on the 電サポ gains or loses, in
+   * hundredths of a ball — `-30` is 0.3 of a ball lost a spin — between
+   * jackpots, never on a spin of a mode played without the 電サポ. Every
+   * state on the 電サポ must tell its spins, or the formula is refused
+   * (`unknown-support-spins`). Left out where there is none.
    */
-  readonly supportGain?: { readonly basisPoints: number }
+  readonly supportDrift?: { readonly hundredthsPerSpin: number }
 }
 
 export interface PlayDto {
@@ -469,7 +475,7 @@ export type EngineErrorDto =
       readonly type: "unsupported-spec"
       readonly reason: { readonly type: "too-many-states"; readonly states: number; readonly limit: number } | { readonly type: "lucky-trigger-to-itself" } | { readonly type: "lucky-trigger-on-entry" }
     }
-  | { readonly type: "solve-failed"; readonly reason: "singular" | "dangling-target" }
+  | { readonly type: "solve-failed"; readonly reason: "singular" | "dangling-target" | "unknown-support-spins" }
 
 /** The envelope every engine answer travels in. */
 export type Envelope<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: EngineErrorDto }

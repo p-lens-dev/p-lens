@@ -78,6 +78,29 @@ impl PaidSpins {
     }
 }
 
+/// Spins a state plays on the 電サポ, shot to the right, until it stops —
+/// at `chance` a spin, a jackpot or a 時短 ended early — or `spins` of them
+/// run out; a 確変 loop, which says no spins, until it stops.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SupportSpins {
+    pub spins: Option<u32>,
+    pub chance: Probability,
+}
+
+impl SupportSpins {
+    /// The spins played on average: `(1 - (1 - p)^n) / p`, or `1 / p`
+    /// where no spins are said. A chance of nothing is refused where the
+    /// spec is normalised, so this divides by none.
+    pub fn expected(self) -> f64 {
+        let p = self.chance.value();
+        match self.spins {
+            Some(spins) if p <= 0.0 => f64::from(spins),
+            Some(spins) => (1.0 - self.chance.complement().value().powf(f64::from(spins))) / p,
+            None => 1.0 / p,
+        }
+    }
+}
+
 /// A state of the combo that follows a first jackpot. It knows only its
 /// outcomes; what the machine calls it is in `origins`.
 #[derive(Clone, Debug, PartialEq)]
@@ -87,9 +110,13 @@ pub struct State {
     /// runs out without a jackpot: a 時短's or a leftover queue's, played at
     /// the regular game's chance. An ST or a loop fills none.
     pub fills_gauge: u32,
-    /// Whether the state is played on the 電サポ, so that the balls its
-    /// jackpots gain are touched by a formula's support gain.
+    /// Whether the state is played on the 電サポ, so that its spins are
+    /// touched by a formula's support drift.
     pub supported: bool,
+    /// The spins it plays on the 電サポ, where its mode tells them: none for
+    /// a state off the 電サポ, nor for a RUSH that says no 電サポ回数 or a
+    /// 確変 loop no chance.
+    pub support_spins: Option<SupportSpins>,
     /// The spins it plays at the heso, costing balls as the regular game's
     /// do: a mode played off the 電サポ whose spins run out. None for every
     /// other state, whose spins cost nothing.

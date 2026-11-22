@@ -9,7 +9,7 @@ import { bookNameOf } from "../../../../core/catalog/catalog"
 import { usesWeighTheirMost, type Mark } from "../../../../core/formula/standing"
 import { bonusShapes } from "../../../../core/pachinko/bonuses"
 import { borderOf } from "../../../../core/pachinko/theoretical-value"
-import { assumedSettingLevelOf, basisOf, supportGainOf, type Formula, type Sampling } from "../../../../core/pachinko/formula"
+import { assumedSettingLevelOf, basisOf, supportDriftOf, type Formula, type Sampling } from "../../../../core/pachinko/formula"
 import { useApp } from "../../../context"
 import { Button, NerdproLink } from "../../../primitives/button"
 import { BoltIcon, HandIcon, HandOffIcon, HeartIcon, ShieldIcon, ShieldOffIcon } from "../../../primitives/icons"
@@ -100,7 +100,7 @@ export function FormulaView(props: { readonly place: Place; readonly machineId: 
                   <Show when={ballValue()} keyed>
                     {(value) => (
                       <Row label={`ボーダー（${value}円/玉）`}>
-                        <For each={formulaBorderLines(borderOf(formula().figures, value), supportGainOf(formula()), assumedSettingLevelOf(formula()))}>{(line, index) => <span class={index() === 0 ? "block" : "block text-xs text-text-muted"}>{line}</span>}</For>
+                        <For each={formulaBorderLines(borderOf(formula().figures, value), supportDriftOf(formula()), assumedSettingLevelOf(formula()))}>{(line, index) => <span class={index() === 0 ? "block" : "block text-xs text-text-muted"}>{line}</span>}</For>
                       </Row>
                     )}
                   </Show>

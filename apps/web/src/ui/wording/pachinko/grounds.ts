@@ -148,16 +148,30 @@ const lineOf = (step: Step, normalized: NormalizedSpecDto, labels: ReadonlyMap<s
         tone: "plain",
       }
     }
-    case "payout_with_support_gain": {
+    case "payout_with_support_drift": {
       const scale = arg(sub(step, "scale_measured"), 0)
       return {
-        text: `1R平均出玉 ${balls(arg(step, 0))} ＝ 出玉 ${balls(arg(sub(step, "balls_per_cycle") ?? sub(step, "balls_per_cycle_with_relief_drive"), 0))} ÷ ラウンド ${rounds(arg(sub(step, "rounds_per_cycle") ?? sub(step, "rounds_per_cycle_with_relief_drive"), 0))}${scale === undefined || scale === 1 ? "" : ` × 実測の比率 ${scale.toFixed(3)}`}（電サポ中の出玉増減が初当り以外の大当りだけに掛かるので、全ラウンドの平均）`,
+        text: `1R平均出玉 ${balls(arg(step, 0))} ＝ 出玉 ${balls(arg(sub(step, "balls_per_cycle") ?? sub(step, "balls_per_cycle_with_relief_drive"), 0))} ÷ ラウンド ${rounds(arg(sub(step, "rounds_per_cycle") ?? sub(step, "rounds_per_cycle_with_relief_drive"), 0))}${scale === undefined || scale === 1 ? "" : ` × 実測の比率 ${scale.toFixed(3)}`}（電サポ中の増減を電サポの回転ごとに足し引きするので、全ラウンドの平均）`,
         tone: "plain",
       }
     }
-    case "gained_on_support": {
-      const factor = givenNumber(step, "support_gain", 0)
-      return { text: `電サポ中の出玉増減 ${factor === undefined ? "--" : `${((factor - 1) * 100).toFixed(1).replace(/\.0$/, "")}%`}：${balls(arg(step, 1))} → ${balls(arg(step, 2))}`, tone: "plain" }
+    case "own_drift": {
+      const drift = givenNumber(step, "support_drift", 0)
+      const played = arg(sub(step, "spins_played_until") ?? sub(step, "spins_played_within"), 2)
+      const scale = arg(sub(step, "scale_measured"), 0)
+      return {
+        text: `${from(step.claim.args[0], normalized, labels)}：電サポ中の増減 ${balls(arg(step, 1))} ＝ 1回転 ${drift === undefined ? "--" : `${drift > 0 ? "+" : ""}${drift}玉`} × 電サポ ${spins(played)}${scale === undefined || scale === 1 ? "" : ` ÷ 実測の比率 ${scale.toFixed(3)}`}`,
+        tone: "plain",
+      }
+    }
+    case "spins_played_within": {
+      const support = givenIn(step, "support_spins")
+      const stop = arg(step, 1)
+      return { text: `電サポ ${spins(arg(step, 2))} ＝（1 −（1 − ${oneIn(stop === undefined ? undefined : 1 / stop)}）の ${arg(step, 0) ?? numberOf(support?.args[1]) ?? "--"}乗）× ${stop === undefined ? "--" : (1 / stop).toFixed(1)}（当たって終わるまでに回す平均）`, tone: "plain" }
+    }
+    case "spins_played_until": {
+      const stop = arg(step, 1)
+      return { text: `電サポ ${spins(arg(step, 2))} ＝ ${stop === undefined ? "--" : (1 / stop).toFixed(1)}（次の大当りまでに回す平均）`, tone: "plain" }
     }
     case "scale_measured":
       return { text: `実測の比率 ${arg(step, 0)?.toFixed(3) ?? "--"} ＝ 実測の1R出玉 ${balls(givenNumber(step, "measured", 0))} ÷ 賞球×カウント−カウント ${balls(arg(sub(step, "net_per_round"), 0))}`, tone: "plain" }
@@ -167,9 +181,8 @@ const lineOf = (step: Step, normalized: NormalizedSpecDto, labels: ReadonlyMap<s
       const outcome = givenIn(step, "outcome")
       const share = numberOf(outcome?.args[1])
       const own = numberOf(outcome?.args[3])
-      const gained = arg(sub(step, "gained_on_support"), 2) ?? own
       const after = arg(sub(step, "balls_into_mode"), 1) ?? 0
-      return { text: `${percent(share)}・${balls(own)}・${destination(outcome?.args[4], normalized, labels)}：（${balls(gained)} ＋ その後 ${balls(after)}）× ${percent(share)} ＝ ${balls(arg(step, 1))}`, tone: "plain" }
+      return { text: `${percent(share)}・${balls(own)}・${destination(outcome?.args[4], normalized, labels)}：（${balls(own)} ＋ その後 ${balls(after)}）× ${percent(share)} ＝ ${balls(arg(step, 1))}`, tone: "plain" }
     }
     case "balls_into_mode":
       return { text: `${destination(step.claim.args[0], normalized, labels)}以降の期待出玉 ${balls(arg(step, 1))}（計算エンジンが状態遷移を解いた値。下で検算します）`, tone: "plain" }
@@ -244,6 +257,10 @@ const lineOf = (step: Step, normalized: NormalizedSpecDto, labels: ReadonlyMap<s
       const where = from(step.claim.args[0], normalized, labels)
       const said = (term: Term | undefined): string => (atomOf(term) === "without" ? "電サポなし" : atomOf(term) === "on" ? "電サポあり" : "--")
       return checked(step, `${where}は${said(step.claim.args[2])}で、期待値基礎値どおり`, `${where}は${said(step.claim.args[2])}とされていますが、期待値基礎値では${said(step.claim.args[1])}です`)
+    }
+    case "check_support_spins": {
+      const where = from(step.claim.args[0], normalized, labels)
+      return checked(step, `${where}で電サポを回す回転は期待値基礎値どおり`, `${where}で電サポを回す回転が、期待値基礎値と違います`)
     }
     case "check_weights":
       return checked(step, "通常時の始まり方の割合は合計 100%", `通常時の始まり方の割合の合計が ${percent(arg(step, 0))} で、100% になりません`)

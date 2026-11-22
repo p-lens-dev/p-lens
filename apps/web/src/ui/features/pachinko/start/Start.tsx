@@ -8,7 +8,7 @@ import { rememberPlayed } from "../../../../application/recently-played"
 import { loadMachine, playSnapshotOf } from "../../../../application/pachinko/formulas"
 import { reliefDriveOf } from "../../../../application/pachinko/hyena-hunt"
 import { borderOf } from "../../../../core/pachinko/theoretical-value"
-import { assumedSettingLevelOf, basisOf, supportGainOf, type Basis, type FormulaId, type Formula } from "../../../../core/pachinko/formula"
+import { assumedSettingLevelOf, basisOf, supportDriftOf, type Basis, type FormulaId, type Formula } from "../../../../core/pachinko/formula"
 import { type Figures } from "../../../../core/pachinko/figures"
 import { autoSelect, selectById, type Selection } from "../../../../core/formula/standing"
 import type { PlayDraft, PlayVenue } from "../../../../core/live-play/draft"
@@ -202,7 +202,7 @@ function FormulaField(props: {
         <Match when={chosenFormula()} keyed>
           {(chosen) => (
             <Show when={props.ballValue} keyed>
-              {(value) => <p class="text-xs tabular-nums text-text-muted">ボーダー {formulaBorderText(borderOf(chosen.figures, value), supportGainOf(chosen), assumedSettingLevelOf(chosen))}</p>}
+              {(value) => <p class="text-xs tabular-nums text-text-muted">ボーダー {formulaBorderText(borderOf(chosen.figures, value), supportDriftOf(chosen), assumedSettingLevelOf(chosen))}</p>}
             </Show>
           )}
         </Match>

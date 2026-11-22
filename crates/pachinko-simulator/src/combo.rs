@@ -1,4 +1,4 @@
-use pachinko_domain::normalized::{NormalizedSpec, Outcome, PaidSpins, Target};
+use pachinko_domain::normalized::{NormalizedSpec, Outcome, Target};
 use pachinko_domain::probability::Probability;
 
 use crate::rng::Rng;
@@ -10,9 +10,9 @@ pub struct ComboResult {
     pub hits: u64,
     /// Balls the combo's rounds gained, as the spec's payout gives them.
     pub balls: u64,
-    /// Of those, the balls gained by jackpots won on the 電サポ, which a
-    /// formula's support gain changes (`PayoutYield`).
-    pub supported_balls: u64,
+    /// Spins the combo played on the 電サポ, each gaining or losing balls by
+    /// a formula's support drift (`PayoutYield`).
+    pub support_spins: u64,
     /// The combo was cut off at `COMBO_LIMIT` steps. A normalised spec ends
     /// with certainty, so this counts only freak runs, and is reported rather
     /// than hidden.
@@ -25,21 +25,20 @@ pub struct ComboResult {
     pub paid_spins: u64,
 }
 
-/// What a ball of the spec's payout yields under a formula's conditions:
-/// `scale` for every round — one, unless a round's payout was measured —
-/// and `support` besides for those won on the 電サポ, the support gain's
-/// factor.
+/// What a combo yields under a formula's conditions: `scale` for every
+/// ball of the spec's payout — one, unless a round's payout was measured —
+/// and `drift` balls besides for each spin on the 電サポ, the support drift.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PayoutYield {
     pub scale: f64,
-    pub support: f64,
+    pub drift: f64,
 }
 
 impl PayoutYield {
-    /// The spec's payout as it is: every ball one ball.
+    /// The spec's payout as it is: every ball one ball, and a spin on the 電サポ none.
     pub const AS_SPECIFIED: Self = Self {
         scale: 1.0,
-        support: 1.0,
+        drift: 0.0,
     };
 }
 
@@ -47,7 +46,7 @@ impl ComboResult {
     /// Balls the combo gained under a formula's conditions.
     #[allow(clippy::cast_precision_loss)]
     pub fn gained(&self, payout: PayoutYield) -> f64 {
-        (self.balls as f64 + (payout.support - 1.0) * self.supported_balls as f64) * payout.scale
+        self.balls as f64 * payout.scale + payout.drift * self.support_spins as f64
     }
 
     /// This combo's totals added to `self`'s, ending where `other` ended.
@@ -57,7 +56,7 @@ impl ComboResult {
             rounds: self.rounds + other.rounds,
             hits: self.hits + other.hits,
             balls: self.balls + other.balls,
-            supported_balls: self.supported_balls + other.supported_balls,
+            support_spins: self.support_spins + other.support_spins,
             truncated: false,
             carry: other.carry,
             paid_spins: self.paid_spins + other.paid_spins,
@@ -131,18 +130,22 @@ pub fn spins_until_hit(probability: Probability, rng: Rng) -> (u64, Rng) {
     (whole, next)
 }
 
-/// The spins a state shot at the heso played before it ended: every one of
-/// them where it ran out, and where a jackpot or an early end stopped it, a
-/// draw from the spins it could have stopped on, each as likely as reaching
-/// it and stopping there makes it.
-fn paid_spins_played(paid: PaidSpins, stopped: bool, rng: Rng) -> (u64, Rng) {
-    let all = u64::from(paid.spins);
+/// The spins a state played before it ended, at the heso or on the 電サポ:
+/// every one of them where it ran out, and where a jackpot or an early end
+/// stopped it, a draw from the spins it could have stopped on, each as
+/// likely as reaching it and stopping there makes it. A 確変 loop, which
+/// says no spins, plays until it stops.
+fn spins_played(spins: Option<u32>, chance: Probability, stopped: bool, rng: Rng) -> (u64, Rng) {
+    let Some(spins) = spins else {
+        return spins_until_hit(chance, rng);
+    };
+    let all = u64::from(spins);
     if !stopped {
         return (all, rng);
     }
     let (draw, next) = rng.next_unit();
-    let miss = paid.chance.complement().value();
-    let reached = 1.0 - miss.powf(f64::from(paid.spins));
+    let miss = chance.complement().value();
+    let reached = 1.0 - miss.powf(f64::from(spins));
     let spins = if miss <= 0.0 {
         1.0
     } else {
@@ -187,15 +190,16 @@ fn step(spec: &NormalizedSpec, walk: &Walk) -> Option<Walk> {
         .map(|state| state.outcomes.as_slice())
         .unwrap_or_default();
     let state = spec.states.get(index.get());
-    let supported = state.is_some_and(|state| state.supported);
     let paid = state.and_then(|state| state.paid);
+    let supported = state.and_then(|state| state.support_spins);
     let (outcome, rng) = pick(outcomes, walk.rng);
+    let stopped = outcome.is_some_and(|outcome| outcome.reward.hits > 0 || outcome.fills.is_some());
     let (paid_spins, rng) = match (paid, outcome) {
-        (Some(paid), Some(outcome)) => paid_spins_played(
-            paid,
-            outcome.reward.hits > 0 || outcome.fills.is_some(),
-            rng,
-        ),
+        (Some(paid), Some(_)) => spins_played(Some(paid.spins), paid.chance, stopped, rng),
+        (Some(_) | None, _) => (0, rng),
+    };
+    let (support_spins, rng) = match (supported, outcome) {
+        (Some(supported), Some(_)) => spins_played(supported.spins, supported.chance, stopped, rng),
         (Some(_) | None, _) => (0, rng),
     };
     let filled = match (state, outcome) {
@@ -209,12 +213,7 @@ fn step(spec: &NormalizedSpec, walk: &Walk) -> Option<Walk> {
             rounds: walk.result.rounds + u64::from(outcome.reward.rounds),
             hits: walk.result.hits + u64::from(outcome.reward.hits),
             balls: walk.result.balls + u64::from(outcome.reward.balls),
-            supported_balls: walk.result.supported_balls
-                + if supported {
-                    u64::from(outcome.reward.balls)
-                } else {
-                    0
-                },
+            support_spins: walk.result.support_spins + support_spins,
             truncated: false,
             carry: if outcome.reward.hits > 0 {
                 0
@@ -246,7 +245,7 @@ pub fn run_combo(spec: &NormalizedSpec, rng: Rng) -> (ComboResult, Rng) {
                 rounds: u64::from(outcome.reward.rounds),
                 hits: u64::from(outcome.reward.hits),
                 balls: u64::from(outcome.reward.balls),
-                supported_balls: 0,
+                support_spins: 0,
                 truncated: false,
                 carry: 0,
                 paid_spins: 0,

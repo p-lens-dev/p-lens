@@ -39,17 +39,17 @@ export const kindText = (kind: ModeKind): string => {
     case "leftover-queue":
       return `残保留 ${kind.draws}個`
     case "rushing":
-      return `継続率 ${probabilityText(kind.continuationRate)}`
+      return kind.spins === undefined ? `継続率 ${probabilityText(kind.continuationRate)}` : `継続率 ${probabilityText(kind.continuationRate)}・電サポ${kind.spins}回転`
     case "until-hit":
-      return "次回大当りまで"
+      return kind.chance === undefined ? "次回大当りまで" : `次回大当りまで・${probabilityText(kind.chance)}`
   }
 }
 
 export const roundPayoutText = (conditions: ConditionsDto, specNet: number): string =>
   conditions.roundPayout.type === "from-spec" ? `スペック通り（1R ${specNet}個）` : `実測 1R ${conditions.roundPayout.balls}個`
 
-/** 電サポ中の出玉増減 as the conditions say it, `-10%`; none where there is none. */
-export const supportGainText = (conditions: ConditionsDto): string | undefined => {
-  const points = conditions.supportGain?.basisPoints
-  return points === undefined || points === 0 ? undefined : `電サポ中の出玉増減 ${points > 0 ? "+" : ""}${String(points / 100)}%（初当り以外）`
+/** 電サポ中の増減 as the conditions say it, `-0.05玉/回転`; none where there is none. */
+export const supportDriftText = (conditions: ConditionsDto): string | undefined => {
+  const drift = conditions.supportDrift?.hundredthsPerSpin
+  return drift === undefined || drift === 0 ? undefined : `電サポ中の増減 ${drift > 0 ? "+" : ""}${hundredths(drift)}玉/回転`
 }

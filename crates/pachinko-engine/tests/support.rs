@@ -130,6 +130,7 @@ pub fn leftover_queue(draws: u32) -> Kind {
 pub fn rushing(points: u32) -> Kind {
     Kind::Rushing(Rushing {
         continuation_rate: percent(points),
+        spins: None,
     })
 }
 

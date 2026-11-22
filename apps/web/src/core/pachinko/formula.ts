@@ -82,8 +82,8 @@ export const assumedSettingLevelOf = (making: FormulaMaking): number | undefined
   return basis === undefined ? undefined : regularOf(basis.spec)?.assumedSettingLevel
 }
 
-/** A formula's 電サポ中の出玉増減, in basis points — `-500` is -5% —: none where its basis says none or it has no basis. */
-export const supportGainOf = (making: FormulaMaking): number => basisOf(making)?.conditions.supportGain?.basisPoints ?? 0
+/** A formula's 電サポ中の増減, in hundredths of a ball a spin — `-30` is 0.3 of a ball lost —: none where its basis says none or it has no basis. */
+export const supportDriftOf = (making: FormulaMaking): number => basisOf(making)?.conditions.supportDrift?.hundredthsPerSpin ?? 0
 
 /**
  * What a formula makes a play worth, to rank a harsher formula of a machine

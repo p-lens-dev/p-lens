@@ -45,6 +45,10 @@ fn check_entities(spec: &Spec) -> Result<BTreeSet<&ModeId>, SpecError> {
                 .iter()
                 .map(|entity| (entity, Component::UntilHit)),
         )
+        .chain(keyed(
+            &components.until_hit_chance,
+            Component::UntilHitChance,
+        ))
         .chain(keyed(&components.on_miss, Component::OnMiss))
         .chain(keyed(&components.lucky_trigger, Component::LuckyTrigger))
         .chain(keyed(&components.relief_drive, Component::ReliefDrive))
@@ -139,6 +143,9 @@ pub fn regular_play(spec: &Spec) -> Result<RegularPlay, SpecError> {
     if components.without_support.contains(entity) {
         return Err(stray(entity, Component::WithoutSupport));
     }
+    if components.until_hit_chance.contains_key(entity) {
+        return Err(stray(entity, Component::UntilHitChance));
+    }
     let game = components
         .regular_game
         .get(entity)
@@ -208,9 +215,12 @@ fn kind_of(
             .get(entity)
             .map(|rushing| ModeKind::Continuation {
                 rate: rushing.continuation_rate,
+                spins: rushing.spins,
             })
             .ok_or_else(missing),
-        [_] => Ok(ModeKind::UntilHit),
+        [_] => Ok(ModeKind::UntilHit {
+            chance: components.until_hit_chance.get(entity).copied(),
+        }),
     }
 }
 
@@ -228,6 +238,9 @@ fn mode_of(spec: &Spec, entity: &ModeId, regular: ProbabilitySource) -> Result<M
     }
     if components.assumed_setting_level.contains_key(entity) {
         return Err(stray(entity, Component::AssumedSettingLevel));
+    }
+    if components.until_hit_chance.contains_key(entity) && !components.until_hit.contains(entity) {
+        return Err(stray(entity, Component::UntilHitChance));
     }
     Ok(Mode {
         id: entity.clone(),

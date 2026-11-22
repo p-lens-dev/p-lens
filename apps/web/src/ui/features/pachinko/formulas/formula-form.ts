@@ -50,15 +50,15 @@ const percentOf = (text: string, field: string): Read<number> => {
   return read.ok && read.value > 10_000 ? Err({ field, reason: "out-of-range" }) : read
 }
 
-/** A signed percentage to two places as basis points, above -100% and at most +100%: `-10` is `-1000`. Empty is none. */
-const supportGainOf = (text: string, field: string): Read<number> => {
+/** Signed balls a spin to two places as hundredths, at most ten either way: `-0.3` is `-30`. Empty is none. */
+const supportDriftOf = (text: string, field: string): Read<number> => {
   const plain = tidyTyped(text).replace(/^[−－]/, "-").replace(/^＋/, "+")
   if (plain === "") return Ok(0)
   const negative = plain.startsWith("-")
   const read = hundredthsOf(plain.replace(/^[+-]/, ""), field)
   if (!read.ok) return read
-  const points = negative ? -read.value : read.value
-  return points <= -10_000 || points > 10_000 ? Err({ field, reason: "out-of-range" }) : Ok(points)
+  const hundredths = negative ? -read.value : read.value
+  return hundredths < -1000 || hundredths > 1000 ? Err({ field, reason: "out-of-range" }) : Ok(hundredths)
 }
 
 /** A whole number, none included: a 0R's rounds. */
@@ -158,7 +158,7 @@ export interface ModeForm {
   /** The combo at which the lucky trigger moves play on, counting the jackpot that entered the mode. */
   readonly triggerCombo: string
   readonly triggerTo: string
-  /** Whether the mode is played without the 電サポ, a 潜確 at the heso: the support gain leaves its jackpots alone. */
+  /** Whether the mode is played without the 電サポ, a 潜確 at the heso: the support drift leaves its spins alone. */
   readonly withoutSupport: boolean
   /** A 時短's early end, a c時短: its chance on each spin as 1/x, empty where it has none, and where play goes then. */
   readonly earlyEndChance: string
@@ -191,8 +191,8 @@ export interface BasisForm {
   readonly prizeBalls: string
   readonly count: string
   readonly measuredPayout: string
-  /** 電サポ中の出玉増減 in percent, `-10` for -10%; empty, there is none. */
-  readonly supportGain: string
+  /** 電サポ中の増減 in balls a spin, `-0.3` for 0.3 of a ball lost; empty, there is none. */
+  readonly supportDrift: string
   readonly spinsPerHour: string
 }
 
@@ -229,7 +229,7 @@ export const STARTING_BASIS: BasisForm = {
   prizeBalls: "15",
   count: "10",
   measuredPayout: "",
-  supportGain: "",
+  supportDrift: "",
   spinsPerHour: "",
 }
 
@@ -325,10 +325,15 @@ const kindOf = (mode: ModeForm): Read<ModeKind> => {
     }
     case "rushing": {
       const rate = rateOf(mode.continuationRate, `${mode.label}の継続率`)
-      return rate.ok ? Ok({ type: "rushing", continuationRate: rate.value }) : rate
+      const spins = ownCountOf(mode.spins, `${mode.label}の電サポ回数`)
+      if (!rate.ok) return rate
+      return spins.ok ? Ok({ type: "rushing", continuationRate: rate.value, spins: spins.value }) : spins
     }
-    case "until-hit":
-      return Ok({ type: "until-hit" })
+    case "until-hit": {
+      if (tidyTyped(mode.chance) === "") return Ok({ type: "until-hit", chance: undefined })
+      const chance = ratioOf(mode.chance, `${mode.label}の確率`)
+      return chance.ok ? Ok({ type: "until-hit", chance: chance.value }) : chance
+    }
   }
 }
 
@@ -392,18 +397,18 @@ export const readBasisForm = (form: BasisForm): Result<ReadBasis, readonly FormP
   const prize = countOf(form.prizeBalls, "賞球")
   const count = countOf(form.count, "カウント")
   const measured = optionalPositive(form.measuredPayout, "実測の1R出玉")
-  const gain = supportGainOf(form.supportGain, "電サポ中の出玉増減")
+  const drift = supportDriftOf(form.supportDrift, "電サポ中の増減")
   const speed = optionalPositive(form.spinsPerHour, "1時間の回転数")
   const reliefDrive = reliefDriveOf(form)
   const regularEarlyEnd = earlyEndRead(form.regularEarlyEndChance, form.regularEarlyEndTo, "通常時")
   const problems = [
-    ...problemsOf([regular, prize, count, measured, gain, speed]),
+    ...problemsOf([regular, prize, count, measured, drift, speed]),
     ...(firstHit.ok ? [] : firstHit.error),
     ...(reliefDrive.ok ? [] : reliefDrive.error),
     ...(regularEarlyEnd.ok ? [] : regularEarlyEnd.error),
     ...modes.flatMap((mode) => (mode.ok ? [] : mode.error)),
   ]
-  if (problems.length > 0 || !regular.ok || !firstHit.ok || !prize.ok || !count.ok || !measured.ok || !gain.ok || !speed.ok || !reliefDrive.ok || !regularEarlyEnd.ok) return Err(problems)
+  if (problems.length > 0 || !regular.ok || !firstHit.ok || !prize.ok || !count.ok || !measured.ok || !drift.ok || !speed.ok || !reliefDrive.ok || !regularEarlyEnd.ok) return Err(problems)
   return Ok({
     spec: assembleWorld(
       { chance: regular.value, allotment: firstHit.value, reliefDrive: reliefDrive.value, assumedSettingLevel: form.assumedSettingLevel, earlyEnd: regularEarlyEnd.value },
@@ -412,7 +417,7 @@ export const readBasisForm = (form: BasisForm): Result<ReadBasis, readonly FormP
     ),
     conditions: {
       roundPayout: measured.value === undefined ? { type: "from-spec" } : { type: "measured", balls: measured.value },
-      ...(gain.value === 0 ? {} : { supportGain: { basisPoints: gain.value } }),
+      ...(drift.value === 0 ? {} : { supportDrift: { hundredthsPerSpin: drift.value } }),
     },
     spinsPerHour: speed.value,
   })
@@ -449,8 +454,8 @@ export const basisFormOf = (spec: SpecDto, conditions: ConditionsDto, spinsPerHo
       key: mode.id,
       label: mode.label,
       kind: mode.kind.type,
-      spins: mode.kind.type === "special-time" || mode.kind.type === "rapid" ? String(mode.kind.spins) : "",
-      chance: ((own) => (own === undefined ? "" : probabilityText(own)))(mode.kind.type === "special-time" || mode.kind.type === "rapid" ? mode.kind.chance : undefined),
+      spins: ownCountText(mode.kind.type === "special-time" || mode.kind.type === "rapid" || mode.kind.type === "rushing" ? mode.kind.spins : undefined),
+      chance: ((own) => (own === undefined ? "" : probabilityText(own)))(mode.kind.type === "special-time" || mode.kind.type === "rapid" || mode.kind.type === "until-hit" ? mode.kind.chance : undefined),
       draws: mode.kind.type === "leftover-queue" ? String(mode.kind.draws) : "",
       continuationRate: mode.kind.type === "rushing" ? probabilityText(mode.kind.continuationRate) : "",
       allotment: rowsOf(mode.allotment),
@@ -469,7 +474,7 @@ export const basisFormOf = (spec: SpecDto, conditions: ConditionsDto, spinsPerHo
     prizeBalls: String(spec.resources.payout.prizeBalls),
     count: String(spec.resources.payout.count),
     measuredPayout: conditions.roundPayout.type === "measured" ? String(conditions.roundPayout.balls) : "",
-    supportGain: conditions.supportGain === undefined ? "" : hundredthsText(conditions.supportGain.basisPoints),
+    supportDrift: conditions.supportDrift === undefined ? "" : hundredthsText(conditions.supportDrift.hundredthsPerSpin),
     spinsPerHour: spinsPerHour === undefined ? "" : String(spinsPerHour),
   }
 }

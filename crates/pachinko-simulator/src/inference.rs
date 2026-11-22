@@ -760,6 +760,7 @@ mod tests {
                 ],
                 fills_gauge: 0,
                 supported: true,
+                support_spins: None,
                 paid: None,
             }],
             origins: vec![StateOrigin {

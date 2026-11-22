@@ -253,33 +253,43 @@ describe("a formula's grounds, reasoned", () => {
   })
 })
 
-describe("a formula's grounds under a support gain", () => {
-  const LESS_A_TENTH: ConditionsDto = { roundPayout: { type: "from-spec" }, supportGain: { basisPoints: -1000 } }
+describe("a formula's grounds under a support drift", () => {
+  const LESS_A_THIRD: ConditionsDto = { roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: -30 } }
+  const LASTING = { ...STARTING_BASIS, modes: STARTING_BASIS.modes.map((mode) => ({ ...mode, spins: "100" })) }
 
-  test("hold, the 1R payout an average over every round, the jackpots won on the 電サポ changed and the first not", async () => {
-    const { proof, analysis, basis } = await reasoned(specOf(STARTING_BASIS), undefined, same, LESS_A_TENTH)
+  test("hold, the 1R payout an average over every round, each spin on the 電サポ drifting and the jackpots not", async () => {
+    const { proof, analysis, basis } = await reasoned(specOf(LASTING), undefined, same, LESS_A_THIRD)
     expect(amiss(proof)).toEqual([])
-    expect(claimed(proof, "payout_with_support_gain")).toBeCloseTo(analysis.ballsPerRound, 9)
+    expect(claimed(proof, "payout_with_support_drift")).toBeCloseTo(analysis.ballsPerRound, 9)
     expect(analysis.ballsPerRound).toBeLessThan(140)
     const lines = groundsLines(proof, basis.normalized, new Map([["m1", "RUSH"]])).map((line) => line.text)
-    expect(lines.some((line) => line.startsWith("電サポ中の出玉増減 -10%"))).toBe(true)
+    expect(lines.some((line) => line.startsWith("RUSH：電サポ中の増減") && line.includes("1回転 -0.3玉"))).toBe(true)
   })
 
   test("leave a mode played without the 電サポ as the sheet pays it", async () => {
-    const latent = { ...STARTING_BASIS, modes: STARTING_BASIS.modes.map((mode) => ({ ...mode, withoutSupport: true })) }
-    const { proof, analysis } = await reasoned(specOf(latent), undefined, same, LESS_A_TENTH)
+    const latent = { ...LASTING, modes: LASTING.modes.map((mode) => ({ ...mode, withoutSupport: true })) }
+    const { proof, analysis } = await reasoned(specOf(latent), undefined, same, LESS_A_THIRD)
     expect(amiss(proof)).toEqual([])
     expect(analysis.ballsPerRound).toBeCloseTo(140, 9)
   })
 
   test("fail where a state is stored as played on the 電サポ and the sheet says it is not", async () => {
-    const latent = { ...STARTING_BASIS, modes: STARTING_BASIS.modes.map((mode) => ({ ...mode, withoutSupport: true })) }
+    const latent = { ...LASTING, modes: LASTING.modes.map((mode) => ({ ...mode, withoutSupport: true })) }
     const forgotten = (told: Told): Told => ({
       ...told,
       basis: { ...told.basis, normalized: { ...told.basis.normalized, states: told.basis.normalized.states.map(({ withoutSupport: _, ...state }) => state) } },
     })
-    const { proof } = await reasoned(specOf(latent), undefined, forgotten, LESS_A_TENTH)
+    const { proof } = await reasoned(specOf(latent), undefined, forgotten, LESS_A_THIRD)
     expect(amiss(proof)).toContainEqual(["check_support", "fails"])
+  })
+
+  test("fail where a state's spins on the 電サポ are stored otherwise than the sheet makes them", async () => {
+    const shortened = (told: Told): Told => ({
+      ...told,
+      basis: { ...told.basis, normalized: { ...told.basis.normalized, states: told.basis.normalized.states.map((state) => (state.supportSpins === undefined ? state : { ...state, supportSpins: { ...state.supportSpins, spins: 50 } })) } },
+    })
+    const { proof } = await reasoned(specOf(LASTING), undefined, shortened, LESS_A_THIRD)
+    expect(amiss(proof)).toContainEqual(["check_support_spins", "fails"])
   })
 })
 

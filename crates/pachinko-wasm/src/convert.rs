@@ -5,11 +5,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::num::{NonZeroU32, NonZeroU64};
 
 use pachinko_domain::conditions::{
-    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportGain,
+    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportDrift,
 };
 use pachinko_domain::normalized::{
     NormalizedRegularEarlyEnd, NormalizedReliefDrive, NormalizedSpec, Outcome, PaidSpins, Reward,
-    State, StateIndex, StateOrigin, Target,
+    State, StateIndex, StateOrigin, SupportSpins, Target,
 };
 use pachinko_domain::probability::{BasisPoints, Denominator, Probability, ProbabilitySource};
 use pachinko_domain::quantity::{Balls, PayoutRule, RoundCount, SpinCount};
@@ -38,8 +38,8 @@ use crate::dto::{
     InferenceSummaryDto, LocationDto, ModeEntryDto, NextDto, NormalizedRegularEarlyEndDto,
     NormalizedReliefDriveDto, NormalizedSpecDto, OriginDto, OtherRoundsDto, OutcomeDto,
     PaidSpinsDto, PlanDto, PlayDto, ProbabilityDto, ProgressDto, ReadingDto, ReliefDriveFiguresDto,
-    RestartDto, RestartKindDto, RoundPayoutDto, SpecDto, StateDto, SummaryDto, TargetDto,
-    UnsupportedDto, WayDto, WeighedDto,
+    RestartDto, RestartKindDto, RoundPayoutDto, RushingDto, SpecDto, StateDto, SummaryDto,
+    SupportSpinsDto, TargetDto, UnsupportedDto, WayDto, WeighedDto,
 };
 
 fn invalid(field: &str) -> ErrorDto {
@@ -195,6 +195,20 @@ fn assumed_setting_levels(dto: &ComponentsDto) -> Result<BTreeMap<ModeId, NonZer
     )
 }
 
+/// A RUSH by its continuation rate, and its 電サポ回数 where said.
+fn rushing(dto: &RushingDto, at: &str) -> Result<Rushing, ErrorDto> {
+    Ok(Rushing {
+        continuation_rate: probability_source(
+            &dto.continuation_rate,
+            &format!("{at}.continuationRate"),
+        )?,
+        spins: dto
+            .spins
+            .map(|spins| nonzero(spins, &format!("{at}.spins")).map(SpinCount::new))
+            .transpose()?,
+    })
+}
+
 fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
     const AT: &str = "spec.components";
     if let Some(name) = dto.unsupported.keys().next() {
@@ -247,20 +261,18 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
                 })
             },
         )?,
-        rushing: table(&dto.rushing, &format!("{AT}.rushing"), |rushing, at| {
-            Ok(Rushing {
-                continuation_rate: probability_source(
-                    &rushing.continuation_rate,
-                    &format!("{at}.continuationRate"),
-                )?,
-            })
-        })?,
+        rushing: table(&dto.rushing, &format!("{AT}.rushing"), rushing)?,
         until_hit: dto
             .until_hit
             .iter()
             .enumerate()
             .map(|(index, entity)| mode_id(entity, &format!("{AT}.untilHit[{index}]")))
             .collect::<Result<BTreeSet<_>, _>>()?,
+        until_hit_chance: table(
+            &dto.until_hit_chance,
+            &format!("{AT}.untilHitChance"),
+            probability_source,
+        )?,
         on_miss: table(&dto.on_miss, &format!("{AT}.onMiss"), |miss, at| {
             next(miss, at)
         })?,
@@ -413,6 +425,18 @@ pub fn normalized_spec(dto: &NormalizedSpecDto) -> Result<NormalizedSpec, ErrorD
                     )?,
                     fills_gauge: state.fills_gauge,
                     supported: !state.without_support,
+                    support_spins: state
+                        .support_spins
+                        .map(|support| -> Result<SupportSpins, ErrorDto> {
+                            Ok(SupportSpins {
+                                spins: support.spins,
+                                chance: probability(
+                                    support.chance,
+                                    &format!("normalized.states[{index}].supportSpins.chance"),
+                                )?,
+                            })
+                        })
+                        .transpose()?,
                     paid: state
                         .paid_spins
                         .map(|paid| -> Result<PaidSpins, ErrorDto> {
@@ -474,9 +498,9 @@ pub fn conditions(dto: &ConditionsDto) -> Result<CalculationConditions, ErrorDto
                 Balls::new(balls).ok_or_else(|| invalid("conditions.roundPayout.balls"))?,
             ),
         },
-        support_gain: dto.support_gain.map_or(Ok(SupportGain::NONE), |gain| {
-            SupportGain::new(gain.basis_points)
-                .ok_or_else(|| invalid("conditions.supportGain.basisPoints"))
+        support_drift: dto.support_drift.map_or(Ok(SupportDrift::NONE), |drift| {
+            SupportDrift::new(drift.hundredths_per_spin)
+                .ok_or_else(|| invalid("conditions.supportDrift.hundredthsPerSpin"))
         })?,
     })
 }
@@ -608,6 +632,10 @@ pub fn normalized_dto(spec: &NormalizedSpec) -> NormalizedSpecDto {
                     .collect(),
                 fills_gauge: state.fills_gauge,
                 without_support: !state.supported,
+                support_spins: state.support_spins.map(|support| SupportSpinsDto {
+                    spins: support.spins,
+                    chance: support.chance.value(),
+                }),
                 paid_spins: state.paid.map(|paid| PaidSpinsDto {
                     spins: paid.spins,
                     chance: paid.chance.value(),
@@ -737,6 +765,7 @@ fn component_name(component: Component) -> String {
         Component::LeftoverQueue => "leftoverQueue",
         Component::Rushing => "rushing",
         Component::UntilHit => "untilHit",
+        Component::UntilHitChance => "untilHitChance",
         Component::OnMiss => "onMiss",
         Component::LuckyTrigger => "luckyTrigger",
         Component::ReliefDrive => "reliefDrive",
@@ -827,6 +856,7 @@ pub fn solve_error_dto(error: SolveError) -> ErrorDto {
         reason: match error {
             SolveError::Singular => "singular",
             SolveError::DanglingTarget => "dangling-target",
+            SolveError::UnknownSupportSpins => "unknown-support-spins",
         }
         .to_owned(),
     }

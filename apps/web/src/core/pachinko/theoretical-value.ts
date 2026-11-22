@@ -87,7 +87,7 @@ const asDrifted = (figures: Figures, ratio: number | undefined): Figures => (rat
  * play's bonuses paid, counted or said (`asPaid`) — an over-entry lowers
  * the border, balls lost to a slack attacker raise it — and as the 電サポ's
  * drift, where the person counted it, says against the formula's
- * 電サポ中の出玉増減 (`asDrifted`): more lost raises the border, less lowers
+ * 電サポ中の増減 (`asDrifted`): more lost raises the border, less lowers
  * it. The spin performance never moves for either; the theoretical value
  * is worked out the same way whatever the round pays.
  */

@@ -36,8 +36,8 @@ export interface Consumption {
   /**
    * What the play's bonuses came to with the 電サポ's drift the person
    * counted, over what the formula looks for them to come to — its
-   * 電サポ中の出玉増減 on those won on the 電サポ: a round pays as much more,
-   * or less. None where no drift was counted, the formula's own then
+   * 電サポ中の増減 on each spin counted: a round pays as much more, or
+   * less. None where no drift was counted, the formula's own then
    * standing; one where it came as the formula said.
    */
   readonly supportRatio: number | undefined
@@ -61,14 +61,14 @@ interface Standing {
 const START: Standing = { regularSpins: 0, hesoSpins: 0, rentedBalls: 0, replayedBalls: 0, gained: 0, held: 0, unsaidSupportSpins: 0 }
 
 /**
- * What a play's consumption takes of its formula: the 電サポ中の出玉増減 that
+ * What a play's consumption takes of its formula: the 電サポ中の増減 that
  * the drift a person counted is set against (`supportRatioOf`), and the
  * spins a combo plays at the heso on average after a jackpot won in
  * regular games — a CZ a person writes as a 時短 — counted as paid for,
  * never measured, where the person counted no 電サポ drift, which then
  * holds them already.
  */
-export type PlayFormula = Pick<FormulaSnapshot, "supportGain" | "paidSpins">
+export type PlayFormula = Pick<FormulaSnapshot, "supportDrift" | "paidSpins">
 
 const rentedBallsOf = (outlay: number, terms: PlayTerms): number => (outlay * terms.rental.tokens) / terms.rental.yen
 
@@ -78,15 +78,6 @@ export const rentedForThousand = (terms: PlayTerms): number => rentedBallsOf(100
 const isRegular = (checkpoint: Checkpoint): boolean => checkpoint.phase === undefined || checkpoint.phase === "regular"
 
 const bonusGainOf = (checkpoint: Checkpoint): number => (checkpoint.event?.kind === "jackpot" && checkpoint.event.bonus !== undefined ? gainOf(checkpoint.event.bonus) : 0)
-
-/** Whether a jackpot's line was won on the 電サポ: in a 確変 or 時短, not in regular games. */
-const wonOnSupport = (checkpoint: Checkpoint): boolean => checkpoint.event?.kind === "jackpot" && !isRegular(checkpoint)
-
-/** A formula's 電サポ中の出玉増減, in basis points, as the factor a jackpot won on the 電サポ pays by: one where it has none. */
-const supportFactorOf = (supportGain: number | undefined): number => 1 + (supportGain ?? 0) / 10_000
-
-/** What a jackpot's bonus is looked for to bring to hand by its formula: what it paid, and — one won on the 電サポ — that changed by the formula's 電サポ中の出玉増減. */
-const broughtOf = (checkpoint: Checkpoint, factor: number): number => bonusGainOf(checkpoint) * (wonOnSupport(checkpoint) ? factor : 1)
 
 /** Whether a line says what the 電サポ drifted: one where the person counted it writes the running total of it, and no other does. */
 const saysDrift = (checkpoint: Checkpoint): boolean => checkpoint.support !== undefined
@@ -199,7 +190,7 @@ const playedOf = (standing: Known): number => standing.gained - standing.held
  * be measured by the balls they cost: not where spins were played between
  * them on a 確変 or 時短 whose drift the person did not count. The hand
  * after it holds that drift, which nothing can tell apart from what the
- * regular games cost; a formula's 電サポ中の出玉増減 is what the 電サポ is
+ * regular games cost; a formula's 電サポ中の増減 is what the 電サポ is
  * looked for to do, never what it did, and moves the border alone.
  */
 const measurableAcross = (from: Known, to: Known): boolean => from.unsaidSupportSpins === to.unsaidSupportSpins
@@ -273,21 +264,29 @@ export const consumptionOf = (ordered: readonly Checkpoint[], terms: PlayTerms, 
 }
 
 /**
+ * Spins played on a 電サポ whose drift the person counted: each 確変 or 時短
+ * line's spins since the line before, in a run that says what it drifted.
+ */
+const countedSupportSpinsOf = (ordered: readonly Checkpoint[], unsaid: readonly boolean[]): number =>
+  ordered.reduce<{ readonly spins: number; readonly counted: number }>(
+    (walked, checkpoint, line) => ({ spins: checkpoint.spins, counted: walked.counted + (!isRegular(checkpoint) && unsaid[line] !== true ? checkpoint.spins - walked.spins : 0) }),
+    { spins: ordered.at(0)?.spins ?? 0, counted: 0 },
+  ).counted
+
+/**
  * What the play's bonuses came to with the 電サポ's drift counted, over what
- * the formula looks for: every bonus at what it paid, the drift on top of
- * them, against the same bonuses with those won on the 電サポ changed by
- * the formula's 電サポ中の出玉増減. A bonus won on a 電サポ left uncounted
- * is taken as the formula looks for on both sides, its drift being
- * unknown. None where no drift was counted, or no bonus said what it paid.
+ * the formula looks for: every bonus at what it paid and the drift on top
+ * of them, against the same bonuses and the formula's 電サポ中の増減 on
+ * each spin of a 電サポ counted. A 電サポ left uncounted is on neither side,
+ * its drift being unknown. None where no drift was counted, or nothing was
+ * looked for.
  */
 const supportRatioOf = (ordered: readonly Checkpoint[], formula: PlayFormula | undefined): number | undefined => {
   if (!ordered.some(saysDrift)) return undefined
-  const factor = supportFactorOf(formula?.supportGain)
-  const unsaid = unsaidSupportOf(ordered)
-  const paid = ordered.reduce((sum, checkpoint, line) => sum + (unsaid[line] === true ? broughtOf(checkpoint, factor) : bonusGainOf(checkpoint)), 0)
-  const looked = ordered.reduce((sum, checkpoint) => sum + broughtOf(checkpoint, factor), 0)
+  const bonuses = ordered.reduce((sum, checkpoint) => sum + bonusGainOf(checkpoint), 0)
   const drift = ordered.findLast((checkpoint) => checkpoint.support !== undefined)?.support ?? 0
-  return looked > 0 ? (paid + drift) / looked : undefined
+  const looked = bonuses + ((formula?.supportDrift ?? 0) / 100) * countedSupportSpinsOf(ordered, unsaidSupportOf(ordered))
+  return looked > 0 ? (bonuses + drift) / looked : undefined
 }
 
 /**

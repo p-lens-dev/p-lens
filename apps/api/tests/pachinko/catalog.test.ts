@@ -55,20 +55,32 @@ describe("a simulated formula", () => {
     expect(kept?.basis.normalized.states[0].outcomes[0].hits).toBe(2)
   })
 
-  test("takes a support gain into the figures it is held to, keeps it, and keeps none where it is nought or left out", async () => {
+  test("takes a support drift into the figures it is held to, keeps it, and keeps none where it is nought or left out", async () => {
     const { client, machineId } = await registered(ALICE)
-    const sent = await simulated()
-    const conditions = { roundPayout: { type: "from-spec" }, supportGain: { basisPoints: -1000 } } as const
-    const analysis = JSON.parse(analyze(JSON.stringify({ source: { type: "spec", spec: sent.basis.spec }, conditions })))
+    const fixture = await simulated()
+    const world = fixture.basis.spec
+    const spec = { ...world, components: { ...world.components, rushing: { RUSH: { continuationRate: { type: "percent", basisPoints: 8000 }, spins: 100 } } } } as const
+    const sent = { ...fixture, basis: { ...fixture.basis, spec } }
+    const conditions = { roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: -30 } } as const
+    const analysis = JSON.parse(analyze(JSON.stringify({ source: { type: "spec", spec }, conditions })))
     const send = (body: unknown) => client.call("POST", `/machines/${machineId}/formulas`, { as: BOB, body })
     expect((await send({ ...sent, basis: { ...sent.basis, conditions } })).body.error).toEqual({ type: "figures-disagree-with-basis", field: "payoutPerRound" })
     const figures = { ...sent.figures, roundChanceOneIn: analysis.value.roundChanceOneIn, payoutPerRound: analysis.value.ballsPerRound }
     const made = await send({ ...sent, figures, basis: { ...sent.basis, conditions } })
     expect(made.status).toBe(201)
     expect((await formulasOf(client, machineId)).find((formula) => formula.id === made.body.id)?.basis.conditions).toEqual(conditions)
-    const nought = await send({ ...sent, basis: { ...sent.basis, conditions: { roundPayout: { type: "from-spec" }, supportGain: { basisPoints: 0 } } } })
+    const nought = await send({ ...sent, basis: { ...sent.basis, conditions: { roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: 0 } } } })
     expect((await formulasOf(client, machineId)).find((formula) => formula.id === nought.body.id)?.basis.conditions).toEqual({ roundPayout: { type: "from-spec" } })
-    expect((await send({ ...sent, basis: { ...sent.basis, conditions: { roundPayout: { type: "from-spec" }, supportGain: { basisPoints: -10_000 } } } })).body.error).toMatchObject({ field: "basis.conditions.supportGain" })
+    expect((await send({ ...sent, basis: { ...sent.basis, conditions: { roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: -1001 } } } })).body.error).toMatchObject({ field: "basis.conditions.supportDrift" })
+  })
+
+  test("is refused a support drift where a RUSH says no 電サポ回数, in the engine's own terms", async () => {
+    const { client, machineId } = await registered(ALICE)
+    const sent = await simulated()
+    const conditions = { roundPayout: { type: "from-spec" }, supportDrift: { hundredthsPerSpin: -30 } } as const
+    const reply = await client.call("POST", `/machines/${machineId}/formulas`, { as: BOB, body: { ...sent, basis: { ...sent.basis, conditions } } })
+    expect(reply.status).toBe(422)
+    expect(reply.body.error).toEqual({ type: "basis-rejected", error: { type: "solve-failed", reason: "unknown-support-spins" } })
   })
 
   test("is refused when the engine cannot read its basis, in the engine's own terms", async () => {

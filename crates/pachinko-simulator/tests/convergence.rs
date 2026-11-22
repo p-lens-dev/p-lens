@@ -3,7 +3,7 @@
 use std::num::{NonZeroU32, NonZeroU64};
 
 use pachinko_domain::conditions::{
-    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportGain,
+    BallValue, CalculationConditions, PlayConditions, RoundPayout, SpinPerformance, SupportDrift,
 };
 use pachinko_domain::normalized::NormalizedSpec;
 use pachinko_domain::probability::{BasisPoints, Denominator, ProbabilitySource};
@@ -119,6 +119,11 @@ fn allot(points: u32, next: Next) -> Allotment {
 
 /// The made-up machine of the design: 1/100, half into an 80% RUSH, 10R everywhere.
 fn made_up() -> NormalizedSpec {
+    made_up_lasting(None)
+}
+
+/// The made-up machine, its RUSH lasting `spins` where they are said.
+fn made_up_lasting(spins: Option<u32>) -> NormalizedSpec {
     let spec = world(
         &RegularPlay {
             chance: ProbabilitySource::Ratio {
@@ -134,6 +139,7 @@ fn made_up() -> NormalizedSpec {
             label: "RUSH".to_owned(),
             kind: Kind::Rushing(Rushing {
                 continuation_rate: ProbabilitySource::Percent(BasisPoints::new(8000).expect("80%")),
+                spins: spins.map(|spins| SpinCount::new(nonzero(spins))),
             }),
             allotment: vec![allot(10_000, Next::Mode(rush()))],
             on_miss: Next::Regular,
@@ -198,7 +204,7 @@ fn chains_converge_on_the_analytical_engine() {
         &spec,
         &CalculationConditions {
             round_payout: RoundPayout::FromSpec,
-            support_gain: SupportGain::NONE,
+            support_drift: SupportDrift::NONE,
         },
     )
     .expect("solves");
@@ -230,7 +236,7 @@ fn the_mean_result_lies_within_five_standard_errors_of_the_theoretical_value() {
         &spec,
         &CalculationConditions {
             round_payout: RoundPayout::FromSpec,
-            support_gain: SupportGain::NONE,
+            support_drift: SupportDrift::NONE,
         },
     )
     .expect("solves");
@@ -278,7 +284,7 @@ fn the_estimated_round_chance_holds_the_exact_one_within_its_margin() {
         &spec,
         &CalculationConditions {
             round_payout: RoundPayout::FromSpec,
-            support_gain: SupportGain::NONE,
+            support_drift: SupportDrift::NONE,
         },
     )
     .expect("solves")
@@ -319,6 +325,7 @@ fn with_relief_drive() -> NormalizedSpec {
                     continuation_rate: ProbabilitySource::Percent(
                         BasisPoints::new(8000).expect("80%"),
                     ),
+                    spins: None,
                 }),
                 allotment: vec![allot(10_000, Next::Mode(rush()))],
                 on_miss: Next::Regular,
@@ -340,7 +347,7 @@ fn with_relief_drive() -> NormalizedSpec {
 
 const FROM_SPEC: CalculationConditions = CalculationConditions {
     round_payout: RoundPayout::FromSpec,
-    support_gain: SupportGain::NONE,
+    support_drift: SupportDrift::NONE,
 };
 
 fn hyena_hunting_play() -> PlayConditions {
@@ -482,11 +489,11 @@ fn counted_time_shortening_and_a_spent_relief_drive_agree_between_sampling_and_t
 }
 
 #[test]
-fn a_support_gain_takes_the_mean_result_where_the_engine_does() {
-    let spec = made_up();
+fn a_support_drift_takes_the_mean_result_where_the_engine_does() {
+    let spec = made_up_lasting(Some(100));
     let conditions = CalculationConditions {
         round_payout: RoundPayout::FromSpec,
-        support_gain: SupportGain::new(-1000).expect("-10%"),
+        support_drift: SupportDrift::new(-500).expect("five balls a spin"),
     };
     let analysis = analyze(&spec, &conditions).expect("solves");
     let base = plan(4_000, 3_000);
@@ -494,7 +501,7 @@ fn a_support_gain_takes_the_mean_result_where_the_engine_does() {
         setup: SessionSetup {
             payout: PayoutYield {
                 scale: analysis.payout_scale,
-                support: conditions.support_gain.factor(),
+                drift: conditions.support_drift.balls_per_spin(),
             },
             ..base.setup
         },
@@ -557,7 +564,7 @@ fn the_spins_a_cz_plays_at_the_heso_are_paid_for_as_the_exact_engine_pays_for_th
         &spec,
         &CalculationConditions {
             round_payout: RoundPayout::FromSpec,
-            support_gain: SupportGain::NONE,
+            support_drift: SupportDrift::NONE,
         },
     )
     .expect("solves")

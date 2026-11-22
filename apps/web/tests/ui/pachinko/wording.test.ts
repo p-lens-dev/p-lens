@@ -20,13 +20,16 @@ describe("a basis as it reads", () => {
   })
 
   test("names a mode by its label, and each kind of mode as its spec sheet does", () => {
-    const modes: readonly ModeView[] = [{ id: "m1", label: "神RUSH", kind: { type: "until-hit" }, allotment: [], onMiss: { type: "regular" }, luckyTrigger: undefined, withoutSupport: false, earlyEnd: undefined }]
+    const modes: readonly ModeView[] = [{ id: "m1", label: "神RUSH", kind: { type: "until-hit", chance: undefined }, allotment: [], onMiss: { type: "regular" }, luckyTrigger: undefined, withoutSupport: false, earlyEnd: undefined }]
     expect(nextText({ type: "mode", mode: "m1" }, modes)).toBe("神RUSH")
     expect(nextText({ type: "regular" }, modes)).toBe("通常")
     expect(kindText({ type: "special-time", spins: 100, chance: { type: "ratio", numerator: 1, denominatorHundredths: 5000 } })).toBe("ST 100回転・1/50")
     expect(kindText({ type: "rapid", spins: 100, chance: undefined })).toBe("時短 100回転")
     expect(kindText({ type: "rapid", spins: 30, chance: { type: "ratio", numerator: 1, denominatorHundredths: 6680 } })).toBe("時短 30回転・1/66.8")
     expect(kindText({ type: "leftover-queue", draws: 4 })).toBe("残保留 4個")
+    expect(kindText({ type: "rushing", continuationRate: { type: "percent", basisPoints: 8000 }, spins: undefined })).toBe("継続率 80%")
+    expect(kindText({ type: "rushing", continuationRate: { type: "percent", basisPoints: 8000 }, spins: 130 })).toBe("継続率 80%・電サポ130回転")
+    expect(kindText({ type: "until-hit", chance: { type: "ratio", numerator: 1, denominatorHundredths: 9990 } })).toBe("次回大当りまで・1/99.9")
   })
 
   test("says what a round pays", () => {
@@ -71,10 +74,10 @@ describe("a bonus's rounds as they read", () => {
 })
 
 describe("a formula's border", () => {
-  test("says its 電サポ増減率 always, and the setting level it was read at where it says one", () => {
-    expect(formulaBorderText(19.9, -500, 1)).toBe("19.9回転/千円・電サポ増減率-5%・設定1で計算")
-    expect(formulaBorderText(20.7, 0, undefined)).toBe("20.7回転/千円・電サポ増減率0%")
-    expect(formulaBorderText(20.7, 350, undefined)).toBe("20.7回転/千円・電サポ増減率+3.5%")
-    expect(formulaBorderLines(19.9, -500, 1)).toEqual(["19.9回転/千円", "電サポ増減率-5%", "設定1で計算"])
+  test("says its 電サポ増減 always, a spin's balls, and the setting level it was read at where it says one", () => {
+    expect(formulaBorderText(19.9, -5, 1)).toBe("19.9回転/千円・電サポ増減-0.05玉/回転・設定1で計算")
+    expect(formulaBorderText(20.7, 0, undefined)).toBe("20.7回転/千円・電サポ増減0玉/回転")
+    expect(formulaBorderText(20.7, 30, undefined)).toBe("20.7回転/千円・電サポ増減+0.3玉/回転")
+    expect(formulaBorderLines(19.9, -5, 1)).toEqual(["19.9回転/千円", "電サポ増減-0.05玉/回転", "設定1で計算"])
   })
 })

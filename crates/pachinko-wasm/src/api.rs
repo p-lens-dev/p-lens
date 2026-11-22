@@ -73,7 +73,7 @@ pub(crate) fn payout_yield(
         scale: solve(spec, conditions)
             .map_err(convert::solve_error_dto)?
             .payout_scale,
-        support: conditions.support_gain.factor(),
+        drift: conditions.support_drift.balls_per_spin(),
     })
 }
 

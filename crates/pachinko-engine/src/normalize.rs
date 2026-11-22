@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use pachinko_domain::normalized::{
     NormalizedRegularEarlyEnd, NormalizedReliefDrive, NormalizedSpec, Outcome, PaidSpins, Reward,
-    State, StateIndex, StateOrigin, Target,
+    State, StateIndex, StateOrigin, SupportSpins, Target,
 };
 use pachinko_domain::probability::{BasisPoints, Probability, ProbabilityError, ProbabilitySource};
 use pachinko_domain::quantity::PayoutRule;
@@ -269,8 +269,8 @@ fn chance_before_the_end(kind: ModeKind, at: &Location) -> Result<Probability, S
         ModeKind::Runout { spins, chance, .. } => {
             Ok(positive(chance, at)?.at_least_once_in(spins.get()))
         }
-        ModeKind::UntilHit => Ok(Probability::ONE),
-        ModeKind::Continuation { rate } => positive(rate, at),
+        ModeKind::UntilHit { .. } => Ok(Probability::ONE),
+        ModeKind::Continuation { rate, .. } => positive(rate, at),
     }
 }
 
@@ -323,7 +323,7 @@ fn fills_gauge(kind: ModeKind) -> u32 {
             fills_gauge: true,
             ..
         } => spins.get().get(),
-        ModeKind::Runout { .. } | ModeKind::UntilHit | ModeKind::Continuation { .. } => 0,
+        ModeKind::Runout { .. } | ModeKind::UntilHit { .. } | ModeKind::Continuation { .. } => 0,
     }
 }
 
@@ -337,7 +337,54 @@ fn paid_spins(mode: &Mode, at: &Location) -> Result<Option<PaidSpins>, SpecError
             spins: spins.get().get(),
             chance: positive(chance, at)?,
         })),
-        ModeKind::Runout { .. } | ModeKind::UntilHit | ModeKind::Continuation { .. } => Ok(None),
+        ModeKind::Runout { .. } | ModeKind::UntilHit { .. } | ModeKind::Continuation { .. } => {
+            Ok(None)
+        }
+    }
+}
+
+fn probability_at(value: f64, at: &Location) -> Result<Probability, SpecError> {
+    Probability::new(value).map_err(|problem| SpecError::InvalidProbability {
+        at: at.clone(),
+        problem: probability_problem(problem),
+    })
+}
+
+/// The spins a mode plays on the 電サポ, where its kind tells them: an ST's
+/// or a 時短's until a jackpot or their last; a 確変 loop's until a jackpot
+/// at the chance it says; a RUSH's within its 電サポ回数, at the one chance
+/// a spin that wins its rate within them. A mode off the 電サポ plays none
+/// there, and a loop that says no chance, or a RUSH no spins, is left
+/// unknown.
+fn support_spins(mode: &Mode, at: &Location) -> Result<Option<SupportSpins>, SpecError> {
+    if !mode.supported {
+        return Ok(None);
+    }
+    match mode.kind {
+        ModeKind::Runout { spins, chance, .. } => Ok(Some(SupportSpins {
+            spins: Some(spins.get().get()),
+            chance: positive(chance, at)?,
+        })),
+        ModeKind::UntilHit {
+            chance: Some(chance),
+        } => Ok(Some(SupportSpins {
+            spins: None,
+            chance: positive(chance, at)?,
+        })),
+        ModeKind::Continuation {
+            rate,
+            spins: Some(spins),
+        } => {
+            let count = spins.get().get();
+            let missed = positive(rate, at)?.complement().value();
+            Ok(Some(SupportSpins {
+                spins: Some(count),
+                chance: probability_at(1.0 - missed.powf(1.0 / f64::from(count)), at)?,
+            }))
+        }
+        ModeKind::UntilHit { chance: None } | ModeKind::Continuation { spins: None, .. } => {
+            Ok(None)
+        }
     }
 }
 
@@ -491,17 +538,21 @@ fn state_of(
             outcomes: early_end_outcomes(layout, mode, combo, payout, gauge, race, &at)?,
             fills_gauge: fills_gauge(mode.kind),
             supported: mode.supported,
+            support_spins: mode
+                .supported
+                .then(|| -> Result<SupportSpins, SpecError> {
+                    Ok(SupportSpins {
+                        spins: Some(race.spins),
+                        chance: probability_at(race.hit + race.end, &at)?,
+                    })
+                })
+                .transpose()?,
             paid: mode
                 .at_heso
                 .then(|| -> Result<PaidSpins, SpecError> {
                     Ok(PaidSpins {
                         spins: race.spins,
-                        chance: Probability::new(race.hit + race.end).map_err(|problem| {
-                            SpecError::InvalidProbability {
-                                at: at.clone(),
-                                problem: probability_problem(problem),
-                            }
-                        })?,
+                        chance: probability_at(race.hit + race.end, &at)?,
                     })
                 })
                 .transpose()?,
@@ -526,6 +577,7 @@ fn state_of(
         outcomes: hits.into_iter().chain(miss).collect(),
         fills_gauge: fills_gauge(mode.kind),
         supported: mode.supported,
+        support_spins: support_spins(mode, &at)?,
         paid: paid_spins(mode, &at)?,
     })
 }

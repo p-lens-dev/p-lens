@@ -19,7 +19,7 @@ const signButtonClass = "flex h-10 w-7 shrink-0 items-center justify-center roun
  * once it is turned to a gain: balls won on the 電サポ by one's own hand,
  * the hardest of play. Turned so, it buzzes as a held spin turning purple
  * does, where the device can. Left empty it was not counted: the border
- * takes the formula's 電サポ中の出玉増減, and the spin performance is not
+ * takes the formula's 電サポ中の増減, and the spin performance is not
  * measured across the 電サポ; a nought typed is a count of none. The second
  * is 玉の受渡し: balls handed in by other players or handed to them, which
  * the hand moves by from the next line on where it is not counted again,

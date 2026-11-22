@@ -13,7 +13,7 @@ const SAT_DOWN: Checkpoint = { spins: 0, outlay: 0, counter: { spins: 0, jackpot
 
 const TEN_ROUNDS = { name: "10R", payout: 1500, spent: 100 }
 
-/** A formula of a machine whose 電サポ loses 5%: what its engine solved, the loss in its round already. */
+/** A formula of a machine whose 電サポ loses 1.25 balls a spin: what its engine solved, the loss in its round already. */
 const LOSING: Figures = { roundChanceOneIn: 12, payoutPerRound: 133, totalChanceOneIn: undefined, spinsPerHour: undefined }
 
 const reading = (fields: Partial<Reading> & Pick<Reading, "counterSpins">): Reading => ({
@@ -51,9 +51,13 @@ const played = (atJackpot: Partial<Reading>, atEnd: Partial<Reading>, held: numb
     reading({ counterSpins: 300, held }),
   ])
 
-const WON_ON_SUPPORT = 3 * 1400
+/** What the RUSH's 160 spins on the 電サポ — 10, 20 and 30 to its jackpots, then 100 to its end — lose at 1.25 balls a spin. */
+const LOST = 200
 
-const LOST = WON_ON_SUPPORT * 0.05
+/** The formula's 電サポ中の増減 that looks for that loss, in hundredths of a ball a spin. */
+const LOSING_DRIFT = -125
+
+const WON_ON_SUPPORT = 3 * 1400
 
 /** The hand counted as the jackpot came, before its bonus paid: ¥21,000 bought and 400 spins played at 20 a thousand. */
 const COUNTED_AT_JACKPOT = { rented: 21_000, held: 250 }
@@ -64,32 +68,32 @@ const WHOLE = 250 + 4 * 1400
 /** What 200 regular spins at 20 a thousand cost. */
 const AFTER = 2500
 
-const performanceOf = (log: readonly Checkpoint[], supportGain: number | undefined): number | undefined => {
-  const measured = consumptionOf(log, TERMS, supportGain === undefined ? undefined : { supportGain }).measured
+const performanceOf = (log: readonly Checkpoint[], supportDrift: number | undefined): number | undefined => {
+  const measured = consumptionOf(log, TERMS, supportDrift === undefined ? undefined : { supportDrift }).measured
   return measured === undefined ? undefined : spinPerformanceOf(measured, TERMS)
 }
 
-const worth = (log: readonly Checkpoint[], supportGain: number | undefined) => {
-  const consumption = consumptionOf(log, TERMS, supportGain === undefined ? undefined : { supportGain })
+const worth = (log: readonly Checkpoint[], supportDrift: number | undefined) => {
+  const consumption = consumptionOf(log, TERMS, supportDrift === undefined ? undefined : { supportDrift })
   const measured = consumption.measured
   return { spinPerformance: measured === undefined ? undefined : spinPerformanceOf(measured, TERMS), value: playTheoreticalValue(LOSING, TERMS, consumption) }
 }
 
-describe("the 電サポ's drift left unsaid, on a machine whose formula says it loses 5%", () => {
+describe("the 電サポ's drift left unsaid, on a machine whose formula says it loses 1.25 balls a spin", () => {
   const lost = played(COUNTED_AT_JACKPOT, { held: WHOLE - LOST }, WHOLE - LOST - AFTER)
   const none = played(COUNTED_AT_JACKPOT, { held: WHOLE }, WHOLE - AFTER)
 
   test("never moves the spin performance: the regular games either side of the RUSH are measured, and the RUSH is not", () => {
-    expect(consumptionOf(lost, TERMS, { supportGain: -500 }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5250, replayedBalls: 0 })
-    expect(consumptionOf(none, TERMS, { supportGain: -500 }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5250, replayedBalls: 0 })
-    expect(performanceOf(lost, -500)).toBe(20)
-    expect(performanceOf(none, -500)).toBe(20)
+    expect(consumptionOf(lost, TERMS, { supportDrift: LOSING_DRIFT }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5250, replayedBalls: 0 })
+    expect(consumptionOf(none, TERMS, { supportDrift: LOSING_DRIFT }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5250, replayedBalls: 0 })
+    expect(performanceOf(lost, LOSING_DRIFT)).toBe(20)
+    expect(performanceOf(none, LOSING_DRIFT)).toBe(20)
   })
 
-  test("comes to the same spin performance whatever the formula's 電サポ中の出玉増減, or with no formula", () => {
-    expect(performanceOf(none, 0)).toBe(performanceOf(none, -500) ?? 0)
-    expect(performanceOf(none, undefined)).toBe(performanceOf(none, -500) ?? 0)
-    expect(performanceOf(lost, 0)).toBe(performanceOf(lost, -500) ?? 0)
+  test("comes to the same spin performance whatever the formula's 電サポ中の増減, or with no formula", () => {
+    expect(performanceOf(none, 0)).toBe(performanceOf(none, LOSING_DRIFT) ?? 0)
+    expect(performanceOf(none, undefined)).toBe(performanceOf(none, LOSING_DRIFT) ?? 0)
+    expect(performanceOf(lost, 0)).toBe(performanceOf(lost, LOSING_DRIFT) ?? 0)
   })
 
   test("measures up to the last rental before the jackpot where the hand was not counted at it, and again from the 電サポ's end", () => {
@@ -100,19 +104,19 @@ describe("the 電サポ's drift left unsaid, on a machine whose formula says it 
       reading({ counterSpins: 100, phase: "special", held: 4 * 1400 }),
       reading({ counterSpins: 300, held: 4 * 1400 - AFTER }),
     ])
-    expect(consumptionOf(rented, TERMS, { supportGain: -500 }).measured).toEqual({ spins: 580, balls: 7250, rentedBalls: 4750, replayedBalls: 0 })
+    expect(consumptionOf(rented, TERMS, { supportDrift: LOSING_DRIFT }).measured).toEqual({ spins: 580, balls: 7250, rentedBalls: 4750, replayedBalls: 0 })
   })
 
   test("measures nothing across the RUSH where the hand is known on neither side of it but at the count after it", () => {
-    expect(consumptionOf(played({}, {}, 2890), TERMS, { supportGain: -500 }).measured).toBeUndefined()
-    expect(consumptionOf(played({}, { held: 4 * 1400 }, 4 * 1400 - AFTER), TERMS, { supportGain: -500 }).measured).toEqual({ spins: 200, balls: AFTER, rentedBalls: 0, replayedBalls: 0 })
+    expect(consumptionOf(played({}, {}, 2890), TERMS, { supportDrift: LOSING_DRIFT }).measured).toBeUndefined()
+    expect(consumptionOf(played({}, { held: 4 * 1400 }, 4 * 1400 - AFTER), TERMS, { supportDrift: LOSING_DRIFT }).measured).toEqual({ spins: 200, balls: AFTER, rentedBalls: 0, replayedBalls: 0 })
   })
 })
 
 describe("the 電サポ's drift counted", () => {
   test("follows the hand across the RUSH, so the regular games are measured over it", () => {
     const counted = played({}, { supported: -LOST, driftCounted: true }, 5000 + WON_ON_SUPPORT + 1400 - LOST - 7500)
-    expect(consumptionOf(counted, TERMS, { supportGain: -500 }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5000, replayedBalls: 0 })
+    expect(consumptionOf(counted, TERMS, { supportDrift: LOSING_DRIFT }).measured).toEqual({ spins: 600, balls: 7500, rentedBalls: 5000, replayedBalls: 0 })
     expect(performanceOf(counted, 0)).toBe(20)
   })
 
@@ -122,10 +126,10 @@ describe("the 電サポ's drift counted", () => {
   })
 })
 
-describe("the border and theoretical value of a play on a machine whose formula says its 電サポ loses 5%", () => {
-  const unsaid = worth(played(COUNTED_AT_JACKPOT, { held: WHOLE - LOST }, WHOLE - LOST - AFTER), -500)
-  const saidAsLooked = worth(played(COUNTED_AT_JACKPOT, { supported: -LOST, driftCounted: true, held: WHOLE - LOST }, WHOLE - LOST - AFTER), -500)
-  const saidNone = worth(played(COUNTED_AT_JACKPOT, { supported: 0, driftCounted: true, held: WHOLE }, WHOLE - AFTER), -500)
+describe("the border and theoretical value of a play on a machine whose formula says its 電サポ loses 1.25 balls a spin", () => {
+  const unsaid = worth(played(COUNTED_AT_JACKPOT, { held: WHOLE - LOST }, WHOLE - LOST - AFTER), LOSING_DRIFT)
+  const saidAsLooked = worth(played(COUNTED_AT_JACKPOT, { supported: -LOST, driftCounted: true, held: WHOLE - LOST }, WHOLE - LOST - AFTER), LOSING_DRIFT)
+  const saidNone = worth(played(COUNTED_AT_JACKPOT, { supported: 0, driftCounted: true, held: WHOLE }, WHOLE - AFTER), LOSING_DRIFT)
 
   test("measure the same regular games whether the drift is said or not", () => {
     expect(unsaid.spinPerformance).toBe(20)

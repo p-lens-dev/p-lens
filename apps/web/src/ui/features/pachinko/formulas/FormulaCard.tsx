@@ -2,7 +2,7 @@ import { For, Show, type JSX } from "solid-js"
 
 import { borderOf } from "../../../../core/pachinko/theoretical-value"
 import { netAdoptions, netVerifications, usesWeighTheirMost, type FormulaListing, type Mark, type MyMarks, type Selection } from "../../../../core/formula/standing"
-import { assumedSettingLevelOf, supportGainOf, type Formula } from "../../../../core/pachinko/formula"
+import { assumedSettingLevelOf, supportDriftOf, type Formula } from "../../../../core/pachinko/formula"
 import { BoltIcon, HandIcon, HeartIcon, QuestionIcon, ShieldIcon } from "../../../primitives/icons"
 import { formulaIdLabel } from "../../../wording/catalog"
 import { formulaBorderLines, markedFormulaText, oneInText } from "../../../wording/pachinko/formula"
@@ -120,7 +120,7 @@ export function FormulaCard(props: {
             <div>
               <dt class="text-xs text-text-muted">ボーダー</dt>
               <dd class="flex flex-col tabular-nums text-text-primary">
-                <For each={formulaBorderLines(borderOf(figures(), value), supportGainOf(props.listing.formula), assumedSettingLevelOf(props.listing.formula))}>{(line, index) => <span class={index() === 0 ? undefined : "text-xs text-text-muted"}>{line}</span>}</For>
+                <For each={formulaBorderLines(borderOf(figures(), value), supportDriftOf(props.listing.formula), assumedSettingLevelOf(props.listing.formula))}>{(line, index) => <span class={index() === 0 ? undefined : "text-xs text-text-muted"}>{line}</span>}</For>
               </dd>
             </div>
           )}

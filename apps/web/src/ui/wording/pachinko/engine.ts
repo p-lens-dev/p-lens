@@ -69,7 +69,9 @@ const describeEngineError = (error: EngineErrorDto): string => {
           return "ラッキートリガーは2連目以降にしてください。1連目はそのモードに入った大当りです。"
       }
     case "solve-failed":
-      return "計算できませんでした。スペックに終わらない連チャンがあります。"
+      return error.reason === "unknown-support-spins"
+        ? "電サポ中の増減を計算するには、継続率のモードに電サポ回数、次回までのモードに大当り確率が要ります。"
+        : "計算できませんでした。スペックに終わらない連チャンがあります。"
   }
 }
 

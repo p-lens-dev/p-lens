@@ -6,8 +6,8 @@ export type ModeKind =
   | { readonly type: "special-time"; readonly spins: number; readonly chance: ProbabilityDto }
   | { readonly type: "rapid"; readonly spins: number; readonly chance: ProbabilityDto | undefined }
   | { readonly type: "leftover-queue"; readonly draws: number }
-  | { readonly type: "rushing"; readonly continuationRate: ProbabilityDto }
-  | { readonly type: "until-hit" }
+  | { readonly type: "rushing"; readonly continuationRate: ProbabilityDto; readonly spins: number | undefined }
+  | { readonly type: "until-hit"; readonly chance: ProbabilityDto | undefined }
 
 /** A mode as a query assembles it from its entity's components. */
 export interface ModeView {
@@ -17,7 +17,7 @@ export interface ModeView {
   readonly allotment: readonly AllotmentDto[]
   readonly onMiss: NextDto
   readonly luckyTrigger: LuckyTriggerDto | undefined
-  /** Whether the mode is said to be played without the 電サポ — a 潜確 at the heso — so that the support gain does not touch its jackpots; a leftover queue is so whether it says so or not. */
+  /** Whether the mode is said to be played without the 電サポ — a 潜確 at the heso — so that the support drift does not touch its spins; a leftover queue is so whether it says so or not. */
   readonly withoutSupport: boolean
   /** How a 時短 may end early, a c時短: its chance on each spin and where play goes then; none for every other mode. */
   readonly earlyEnd: EarlyEndDto | undefined
@@ -65,8 +65,8 @@ const kindOf = (components: ComponentsDto, entity: string): ModeKind | undefined
   const queue = components.leftoverQueue?.[entity]
   if (queue !== undefined) return { type: "leftover-queue", draws: queue.draws }
   const rushing = components.rushing?.[entity]
-  if (rushing !== undefined) return { type: "rushing", continuationRate: rushing.continuationRate }
-  return components.untilHit?.includes(entity) === true ? { type: "until-hit" } : undefined
+  if (rushing !== undefined) return { type: "rushing", continuationRate: rushing.continuationRate, spins: rushing.spins }
+  return components.untilHit?.includes(entity) === true ? { type: "until-hit", chance: components.untilHitChance?.[entity] } : undefined
 }
 
 /** Every mode whose entity has the components a mode needs, in the order the entities were made. */
@@ -102,7 +102,8 @@ export const assembleWorld = (
   const specialTimes = modes.flatMap((mode) => (mode.kind.type === "special-time" ? [[mode.id, { spins: mode.kind.spins, chance: mode.kind.chance }] as const] : []))
   const rapids = modes.flatMap((mode) => (mode.kind.type === "rapid" ? [[mode.id, { spins: mode.kind.spins, ...(mode.kind.chance === undefined ? {} : { chance: mode.kind.chance }) }] as const] : []))
   const queues = modes.flatMap((mode) => (mode.kind.type === "leftover-queue" ? [[mode.id, { draws: mode.kind.draws }] as const] : []))
-  const rushings = modes.flatMap((mode) => (mode.kind.type === "rushing" ? [[mode.id, { continuationRate: mode.kind.continuationRate }] as const] : []))
+  const rushings = modes.flatMap((mode) => (mode.kind.type === "rushing" ? [[mode.id, { continuationRate: mode.kind.continuationRate, ...(mode.kind.spins === undefined ? {} : { spins: mode.kind.spins }) }] as const] : []))
+  const loopChances = modes.flatMap((mode) => (mode.kind.type === "until-hit" && mode.kind.chance !== undefined ? [[mode.id, mode.kind.chance] as const] : []))
   const triggers = modes.flatMap((mode) => (mode.luckyTrigger === undefined ? [] : [[mode.id, mode.luckyTrigger] as const]))
   const unsupported = modes.filter((mode) => mode.withoutSupport).map((mode) => mode.id)
   const earlyEnds = [
@@ -121,6 +122,7 @@ export const assembleWorld = (
       ...(queues.length === 0 ? {} : { leftoverQueue: record(queues) }),
       ...(rushings.length === 0 ? {} : { rushing: record(rushings) }),
       ...(modes.some((mode) => mode.kind.type === "until-hit") ? { untilHit: modes.filter((mode) => mode.kind.type === "until-hit").map((mode) => mode.id) } : {}),
+      ...(loopChances.length === 0 ? {} : { untilHitChance: record(loopChances) }),
       onMiss: record(modes.map((mode) => [mode.id, mode.onMiss] as const)),
       ...(triggers.length === 0 ? {} : { luckyTrigger: record(triggers) }),
       ...(regular.reliefDrive === undefined ? {} : { reliefDrive: record([[REGULAR_ENTITY, regular.reliefDrive]]) }),

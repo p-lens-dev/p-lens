@@ -73,14 +73,14 @@ rule(cycle_spent, cycle_from(spent, Spins, Rounds),
 % Where a share pays its rounds by a prize of its own, a round has no one
 % payout: the figure is every round's gain over every round, over the long
 % run, scaled by what a measured round is of the spec's. So too where a
-% support gain changes the jackpots won on the 電サポ and not the first.
+% support drift changes the balls by each spin played on the 電サポ.
 rule(payout_from_spec, payout_per_round(Balls),
-     ( \+ given(own_payout), \+ given(support_gain(_)), \+ given(measured(_)), net_per_round(Balls) )).
-rule(payout_measured, payout_per_round(Balls), ( \+ given(own_payout), \+ given(support_gain(_)), given(measured(Balls)) )).
+     ( \+ given(own_payout), \+ given(support_drift(_)), \+ given(measured(_)), net_per_round(Balls) )).
+rule(payout_measured, payout_per_round(Balls), ( \+ given(own_payout), \+ given(support_drift(_)), given(measured(Balls)) )).
 rule(payout_by_share, payout_per_round(Balls),
      ( given(own_payout), balls_per_cycle(B), rounds_per_cycle(R), payout_scale(Scale), Balls is B * Scale / R )).
-rule(payout_with_support_gain, payout_per_round(Balls),
-     ( \+ given(own_payout), given(support_gain(_)), balls_per_cycle(B), rounds_per_cycle(R), payout_scale(Scale), Balls is B * Scale / R )).
+rule(payout_with_support_drift, payout_per_round(Balls),
+     ( \+ given(own_payout), given(support_drift(_)), balls_per_cycle(B), rounds_per_cycle(R), payout_scale(Scale), Balls is B * Scale / R )).
 rule(net_per_round, net_per_round(Net), ( given(payout(Prize, Count)), Net is Prize * Count - Count )).
 rule(scale_as_spec, payout_scale(1), \+ given(measured(_))).
 rule(scale_measured, payout_scale(Scale), ( given(measured(Balls)), net_per_round(Net), Net > 0, Scale is Balls / Net )).
@@ -95,19 +95,22 @@ rule(balls_per_cycle_with_relief_drive, balls_per_cycle(B),
 
 % A first jackpot's balls: each share of its allotment, what its own rounds
 % gain and what the mode it leads to gains from there; a state's likewise,
-% its own rounds' gain changed by the support gain where the state is
-% played on the 電サポ — never a first jackpot's, nor a state's played
-% without it.
+% and besides what its spins on the 電サポ gain by the support drift — each
+% spin's drift, in balls of the spec's payout so that the scale leaves it as
+% said, times the spins played until it stops or its last. A first jackpot
+% plays no spins, nor a state that does not tell its spins on the 電サポ.
 rule(balls_per_first_hit, balls_per_first_hit(B), balls_from(first_hit, B)).
 rule(balls_from, balls_from(From, B),
-     ( findall(Part, paid(From, Part), Parts), sum_list(Parts, B) )).
+     ( findall(Part, paid(From, Part), Parts), sum_list(Parts, Paid), own_drift(From, Own), B is Paid + Own )).
 rule(paid, paid(From, Part),
-     ( given(outcome(From, Share, _, Balls, Target, _, _)), gained(From, Balls, Gained), balls_after(Target, After), Part is Share * (Gained + After) )).
-rule(gained_first_hit, gained(first_hit, Balls, Balls), true).
-rule(gained_without_gain, gained(From, Balls, Balls), ( From \== first_hit, \+ given(support_gain(_)) )).
-rule(gained_without_support, gained(From, Balls, Balls), ( given(support_gain(_)), given(without_support(From)) )).
-rule(gained_on_support, gained(From, Balls, Gained),
-     ( From \== first_hit, given(support_gain(Factor)), \+ given(without_support(From)), Gained is Balls * Factor )).
+     ( given(outcome(From, Share, _, Balls, Target, _, _)), balls_after(Target, After), Part is Share * (Balls + After) )).
+rule(own_drift_none, own_drift(_, 0), \+ given(support_drift(_))).
+rule(own_drift_off_support, own_drift(From, 0), ( given(support_drift(_)), \+ given(support_spins(From, _, _)) )).
+rule(own_drift, own_drift(From, Own),
+     ( given(support_drift(Drift)), given(support_spins(From, Spins, Stop)), payout_scale(Scale), spins_played(Spins, Stop, Played),
+       Own is Drift / Scale * Played )).
+rule(spins_played_until, spins_played(none, Stop, Played), Played is 1.0 / Stop).
+rule(spins_played_within, spins_played(Spins, Stop, Played), ( Spins \== none, Played is (1 - (1 - Stop) ** Spins) / Stop )).
 rule(balls_back_to_regular, balls_after(end, 0), true).
 rule(balls_into_mode, balls_after(state(Index), After), given(state_balls(Index, After))).
 rule(weighted_balls, weighted_balls(Kind, Weight, Weighted),
@@ -209,6 +212,25 @@ rule(made_on_support, made_support(Index, on),
      ( given(origin(Index, Mode, _)), \+ given(spec_mode(Mode, leftover_queue(_))), \+ given(spec_without_support(Mode)) )).
 rule(stored_without_support, stored_support(Index, without), given(without_support(Index))).
 rule(stored_on_support, stored_support(Index, on), \+ given(without_support(Index))).
+% The spins a state on the 電サポ plays there, made again from the sheet: an
+% ST's or a 時短's, so many until a jackpot at its chance — a c時短's at its
+% chance of either — a RUSH's within its 電サポ回数 at the one chance a spin
+% that wins its rate within them, and a 確変 loop's until a jackpot at the
+% chance it says. A RUSH saying no 電サポ回数, or a loop no chance, tells none.
+rule(made_support_special_time, made_support_spins(Index, Spins, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, special_time(Spins, Hit))) )).
+rule(made_support_rapid, made_support_spins(Index, Spins, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid(Spins))), \+ given(spec_early_end(Mode, _)),
+       given(spec_regular(Hit)) )).
+rule(made_support_rapid_at, made_support_spins(Index, Spins, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid_at(Spins, Hit))), \+ given(spec_early_end(Mode, _)) )).
+rule(made_support_early_end, made_support_spins(Index, Spins, Stop),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), race(Mode, Hit, End, Spins), Stop is Hit + End )).
+rule(made_support_rushing, made_support_spins(Index, Spins, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, rushing(Rate))), given(spec_rushing_spins(Mode, Spins)),
+       Hit is 1 - (1 - Rate) ** (1.0 / Spins) )).
+rule(made_support_until_hit, made_support_spins(Index, none, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, until_hit)), given(spec_until_hit_chance(Mode, Hit)) )).
 
 % The 遊タイム's long run, checked rather than believed. A point of a combo
 % is a state, the spins filled toward the 遊タイム on the way out, and
@@ -295,6 +317,9 @@ rule(check_heso, heso_check(Index, Made, Stored, Verdict),
        heso_alike(Made, Stored, Verdict) )).
 rule(check_support, support_check(Index, Made, Stored, Verdict),
      ( made_support(Index, Made), stored_support(Index, Stored), same(Made, Stored, Verdict) )).
+rule(check_support_spins, support_spins_check(Index, Made, Stored, Verdict),
+     ( findall(Spins-Stop, made_support_spins(Index, Spins, Stop), Made), findall(Spins-Stop, given(support_spins(Index, Spins, Stop)), Stored),
+       heso_alike(Made, Stored, Verdict) )).
 rule(check_fills, fills_check(Index, Mine, Engine, Verdict),
      ( given(fills(Index, Engine)), made_fills(Index, Mine), Gap is abs(Mine - Engine), verdict(Gap, 0, Verdict) )).
 rule(check_endings, endings_check(Count, Wrong, Verdict),
@@ -355,7 +380,7 @@ rule(state_solved, state_solved(Index),
        ( balls_vary -> state_balls_check(Index, _, _, _) ; true ),
        ( given(heso(_, _, _)) -> state_heso_check(Index, _, _, _) ; true ) )).
 rule(balls_vary_by_share, balls_vary, given(own_payout)).
-rule(balls_vary_by_support, balls_vary, ( \+ given(own_payout), given(support_gain(_)) )).
+rule(balls_vary_by_support, balls_vary, ( \+ given(own_payout), given(support_drift(_)) )).
 rule(chain, chain,
      ( shares_check(first_hit, _, _), findall(Index, state_whole(Index), _), ends_check(_, _) )).
 rule(state_whole, state_whole(Index), ( given(state(Index)), shares_check(Index, _, _) )).
@@ -363,8 +388,9 @@ rule(made, made,
      ( regular_check(_, _, _), made_check(first_hit, _), findall(Index, state_made(Index), _), relief_drive_check(_, _, _) )).
 rule(state_made, state_made(Index),
      ( given(state(Index)), made_check(Index, _), ( given(relief_drive(_, _)) -> fills_check(Index, _, _, _) ; true ),
-       ( given(support_gain(_)) -> support_check(Index, _, _, _) ; true ),
+       ( given(support_drift(_)) -> support_checked(Index) ; true ),
        ( given(spec_without_support(_)) -> heso_check(Index, _, _, _) ; true ) )).
+rule(support_checked, support_checked(Index), ( support_check(Index, _, _, _), support_spins_check(Index, _, _, _) )).
 rule(remarks, remarks, findall(Remark, remark(Remark), _)).
 
 % prove(Goal, Proof): Goal holds, and Proof says why.
@@ -419,9 +445,9 @@ worked(heso_alike(_, _, _)).
 worked(between(_, _, _)).
 worked(point_key(_, _, _, _)).
 
-% The heso spins a state is made with and the ones it is stored with alike:
-% none either way, or one each, the same spins at a chance apart by no more
-% than rounding.
+% The heso spins a state is made with and the ones it is stored with alike —
+% or its spins on the 電サポ: none either way, or one each, the same spins
+% at a chance apart by no more than rounding.
 heso_alike([], [], holds) :- !.
 heso_alike([Spins-Made], [Spins-Stored], holds) :- abs(Made - Stored) =< 1.0e-9, !.
 heso_alike(_, _, fails).

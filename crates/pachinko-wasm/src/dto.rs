@@ -110,6 +110,9 @@ pub struct LeftoverQueueDto {
 #[serde(rename_all = "camelCase")]
 pub struct RushingDto {
     pub continuation_rate: ProbabilityDto,
+    /// Its 電サポ回数, left out where the sheet says none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spins: Option<u32>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -173,6 +176,8 @@ pub struct ComponentsDto {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub until_hit: Vec<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub until_hit_chance: BTreeMap<String, ProbabilityDto>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub on_miss: BTreeMap<String, NextDto>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub lucky_trigger: BTreeMap<String, LuckyTriggerDto>,
@@ -227,16 +232,29 @@ pub struct StateDto {
     #[serde(default, skip_serializing_if = "is_zero")]
     pub fills_gauge: u32,
     /// Whether the state is played without the 電サポ; left out where it is
-    /// played on it, so a spec normalised before the support gain reads as
-    /// played on it throughout, which no condition it was stored with
-    /// changes.
+    /// played on it, so a spec normalised before modes could be played off
+    /// it reads as played on it throughout.
     #[serde(default, skip_serializing_if = "is_false")]
     pub without_support: bool,
+    /// The spins the state plays on the 電サポ, where its mode tells them;
+    /// left out otherwise, so a spec normalised before reads as telling none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub support_spins: Option<SupportSpinsDto>,
     /// The spins the state plays at the heso, paid for as regular spins;
     /// left out for every other state, so a spec normalised before reads as
     /// paying for none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paid_spins: Option<PaidSpinsDto>,
+}
+
+/// Spins played on the 電サポ until the state stops, at this chance a spin,
+/// or the last of them; a 確変 loop says no spins.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SupportSpinsDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spins: Option<u32>,
+    pub chance: f64,
 }
 
 /// Spins played at the heso until a jackpot or the last of them, at this chance.
@@ -308,17 +326,17 @@ pub enum RoundPayoutDto {
 #[serde(rename_all = "camelCase")]
 pub struct ConditionsDto {
     pub round_payout: RoundPayoutDto,
-    /// 電サポ中の出玉増減, left out where there is none.
+    /// 電サポ中の増減, left out where there is none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub support_gain: Option<SupportGainDto>,
+    pub support_drift: Option<SupportDriftDto>,
 }
 
-/// What the balls a jackpot won on the 電サポ gains are changed by, in basis
-/// points of them: `-1000` is -10%.
+/// What each spin played on the 電サポ gains or loses, in hundredths of a
+/// ball: `-30` is 0.3 of a ball lost a spin.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct SupportGainDto {
-    pub basis_points: i32,
+pub struct SupportDriftDto {
+    pub hundredths_per_spin: i32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
