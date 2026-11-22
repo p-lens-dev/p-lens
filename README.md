@@ -35,13 +35,19 @@ A book is kept by double entry in hledger, in an account tree that is small on p
 費用:貸玉差額                  the rental spread on balls
 費用:貸メダル差額              the rental spread on medals
 費用:再プレイ手数料            replay fees
+費用:失効損                    savings a parlor took back, lapsed or a membership withdrawn; no play's
 純資産:開始残高                savings a person already had when the book began
 純資産:残高調整                a count of savings put right to what the parlor says
 純資産:特殊景品                what the special prizes of a prize exchange are worth
 純資産:端玉景品等              what the odd tokens a prize exchange leaves are worth, in whole yen, a prize taken or not
 純資産:換算調整勘定            the part of a yen a prize exchange leaves over
-純資産:玉の受け渡し            balls handed to or by other players at a ノリ打ち, kept out of results (medals: 純資産:メダルの受け渡し)
+純資産:玉の受け渡し            balls handed to or by other players at a ノリ打ち, kept out of results
+純資産:メダルの受け渡し        medals handed to or by other players at a ノリ打ち, kept out of results
+純資産:簿外貯玉                balls a play at no parlor began with, drew on or had left: savings the book does not keep
+純資産:簿外貯メダル            medals a play at no parlor began with, drew on or had left: savings the book does not keep
 統計:期待値                    the theoretical value (virtual postings only)
+統計:期待値:推定               a theoretical value inferred for a play told of afterwards (virtual postings only)
+統計:時間                      the seconds a play lasted (virtual postings only)
 ```
 
 Three things make the model what it is.
