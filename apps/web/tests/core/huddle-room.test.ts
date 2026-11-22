@@ -116,7 +116,7 @@ describe("a huddle's room", () => {
   })
 
   test("says what the others are in by their game, on a row and on the rail", () => {
-    expect([huddleStandingText("jackpot", "pachinko"), huddleStandingText("jackpot", "pachislot"), huddleStandingText("rapid", "pachinko"), huddleStandingText("finished", "pachislot")]).toEqual(["大当り中", "AT中", "時短中", "終了"])
+    expect([huddleStandingText({ type: "jackpot" }, "pachinko"), huddleStandingText({ type: "jackpot" }, "pachislot"), huddleStandingText({ type: "rapid" }, "pachinko"), huddleStandingText({ type: "finished" }, "pachislot"), huddleStandingText({ type: "bonus", bonus: "BIG", line: 3 }, "pachislot")]).toEqual(["大当り中", "AT中", "時短中", "終了", "BIG当選"])
     expect(huddleRoomLabel([])).toBe("ノリ打ち")
     expect(huddleRoomLabel(["pachinko", "pachinko"])).toBe("ノリ打ち（大当り中 2 人）")
     expect(huddleRoomLabel(["pachislot"])).toBe("ノリ打ち（AT中 1 人）")

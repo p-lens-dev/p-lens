@@ -4,7 +4,7 @@ import { loadTodaysPlays } from "../../../application/live-play"
 import type { Huddle } from "../../../core/huddle/huddle"
 import { ofHuddleDay } from "../../../core/huddle/room"
 import { givenUp, huddleArrivalOf, huddlePostOf, huddleWithdrawalOf, latestEntries, type HuddleEntry } from "../../../core/huddle/post"
-import { huddleTurnOf, jackpotsNow, louderTurn } from "../../../core/huddle/standing"
+import { huddleTurnOf, louderTurn, wonNow } from "../../../core/huddle/standing"
 import type { PlayDraft } from "../../../core/live-play/draft"
 import type { PlayId } from "../../../core/play/play"
 import { openHuddleLine, showingEvery, type CrossingServices, type HuddleLine, type HuddleProblem } from "../../../crossing"
@@ -42,8 +42,8 @@ const changedSince = (drafts: readonly PlayDraft[], shown: ReadonlyMap<string, s
  * huddle, and nothing is drawn.
  *
  * It also says when the way back to the day's list is urged: as who of the
- * others is in a jackpot changes — one wins one, one's ends — and not while
- * one goes on, until the list is looked at, which is anywhere but one's
+ * others has won changes — one wins a jackpot or a bonus, one's jackpot
+ * ends — and not while one goes on, until the list is looked at, which is anywhere but one's
  * own play.
  */
 export function HuddleRunner(props: { readonly place: Place; readonly crossing: CrossingServices }): JSX.Element {
@@ -163,9 +163,9 @@ export function HuddleRunner(props: { readonly place: Place; readonly crossing: 
     held.arrived = false
     showSoon()
   }, { defer: true }))
-  const jackpots = createMemo(() => jackpotsNow(app.huddle.others()))
+  const won = createMemo(() => wonNow(app.huddle.others()))
   const onOwnPlay = (): boolean => props.place.kind === "live-play" || props.place.kind === "live-record" || props.place.kind === "live-cabinet"
-  createEffect(on(jackpots, (now, before) => {
+  createEffect(on(won, (now, before) => {
     if (before !== undefined && onOwnPlay()) line.setUrged((so) => louderTurn(so, huddleTurnOf(before, now)))
   }))
   createEffect(() => {

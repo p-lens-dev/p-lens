@@ -32,7 +32,7 @@ export interface HuddleLine {
   readonly setHeard: Setter<Reach<HuddleProblem>>
   readonly told: Accessor<Reach<HuddleProblem>>
   readonly setTold: Setter<Reach<HuddleProblem>>
-  /** How who of the others is in a jackpot turned since the day's list was last looked at — a jackpot won, or only ended — or nothing: one's own play's screen urges the way back to it until it is. */
+  /** How who of the others has won turned since the day's list was last looked at — a jackpot or a bonus won, or only a win ended — or nothing: one's own play's screen urges the way back to it until it is. */
   readonly urged: Accessor<HuddleTurn | undefined>
   readonly setUrged: Setter<HuddleTurn | undefined>
   readonly keptUp: Accessor<string | undefined>

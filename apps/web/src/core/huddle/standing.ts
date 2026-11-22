@@ -4,22 +4,37 @@ import type { HuddleEntry, HuddlePlay } from "./post"
 import { parsePlayLog, type Checkpoint } from "../play-log/checkpoint"
 import { EVERY_JACKPOT, liveSummary } from "../play-log/live"
 import { inPlayOrder } from "../play-log/performance"
+import * as Pachislot from "../pachislot"
 import type { PlayGameKind } from "../play/play"
 
 /**
  * Where one of the others' plays stands, as its log last says: over, in a
  * jackpot — an AT won, on a pachislot AT machine, or a pachinko run still
- * in 確変 — in 時短, as its bar was switched to it, or being played.
+ * in 確変 — in 時短, as its bar was switched to it, a bonus just won on a
+ * pachislot bonus machine — by its label, on the line of the log it was
+ * read on, counting from the first, so that one won on the next line is
+ * another — or being played.
  */
-export type HuddleStanding = "finished" | "jackpot" | "rapid" | "playing"
+export type HuddleStanding =
+  | { readonly type: "finished" }
+  | { readonly type: "jackpot" }
+  | { readonly type: "rapid" }
+  | { readonly type: "bonus"; readonly bonus: string; readonly line: number }
+  | { readonly type: "playing" }
+
+const bonusWonOf = (play: Play, ordered: readonly Checkpoint[]): HuddleStanding => {
+  const won = play.gameKind === "pachislot" && play.pachislot !== undefined ? Pachislot.lastBonusWonOf(ordered, play.pachislot.formula) : undefined
+  return won === undefined ? { type: "playing" } : { type: "bonus", bonus: won.label, line: ordered.length }
+}
 
 export const huddleStandingOf = (play: Play): HuddleStanding => {
   const read = parsePlayLog(play.log)
-  if (!read.ok) return "playing"
-  if (read.value.some((checkpoint) => checkpoint.event?.kind === "finished")) return "finished"
-  const last = inPlayOrder(read.value).at(-1)
-  if (last?.event?.kind === "jackpot") return "jackpot"
-  return last?.event?.kind === "rapid-began" ? "rapid" : "playing"
+  if (!read.ok) return { type: "playing" }
+  if (read.value.some((checkpoint) => checkpoint.event?.kind === "finished")) return { type: "finished" }
+  const ordered = inPlayOrder(read.value)
+  const last = ordered.at(-1)
+  if (last?.event?.kind === "jackpot") return { type: "jackpot" }
+  return last?.event?.kind === "rapid-began" ? { type: "rapid" } : bonusWonOf(play, ordered)
 }
 
 /** Whether a reading was of regular games: no jackpot or other event on it, and, on a pachinko play, not in 時短 or 確変. */
@@ -40,7 +55,7 @@ export const jackpotStreakOf = (play: Play): number => {
 }
 
 /** The others' plays in a jackpot: each the one its player is on, while they are still in the huddle. */
-const inJackpot = (plays: readonly HuddlePlay[]): readonly HuddlePlay[] => plays.filter((shown) => shown.latest && !shown.departed && huddleStandingOf(shown.post.play) === "jackpot")
+const inJackpot = (plays: readonly HuddlePlay[]): readonly HuddlePlay[] => plays.filter((shown) => shown.latest && !shown.departed && huddleStandingOf(shown.post.play).type === "jackpot")
 
 /** The game of each of the others in a jackpot now, those who have said nothing for long left out — theirs is likely over by now: what the room wears on the rail. */
 export const othersInJackpot = (plays: readonly HuddlePlay[], idle: ReadonlySet<string>): readonly PlayGameKind[] =>
@@ -62,27 +77,29 @@ export const idleMembers = (entries: readonly HuddleEntry[], now: number): Reado
   return new Set([...lastSaid].filter(([, said]) => now - Date.parse(said) >= IDLE_AFTER).map(([member]) => member))
 }
 
-/**
- * Who of the others still in the huddle is in a jackpot on the play they
- * are on, as one word —
- * each one's member and play, in order — the same for the same people in
- * the same jackpots: it changes as one of them wins one, or one's ends,
- * and not while one goes on.
- */
-export const jackpotsNow = (plays: readonly HuddlePlay[]): string =>
-  inJackpot(plays)
-    .map((shown) => `${shown.post.member} ${shown.post.play.id}`)
-    .toSorted()
-    .join("\n")
+/** Who of the others still in the huddle has won on the play they are on, each by their member and play, and a bonus by the line it was won on too: a jackpot as long as it goes on, a bonus only on the line that read it. */
+const winnersOf = (plays: readonly HuddlePlay[]): readonly string[] =>
+  plays
+    .filter((shown) => shown.latest && !shown.departed)
+    .flatMap((shown) => ((standing) => (standing.type === "jackpot" ? [`${shown.post.member} ${shown.post.play.id}`] : standing.type === "bonus" ? [`${shown.post.member} ${shown.post.play.id} ${standing.line}`] : []))(huddleStandingOf(shown.post.play)))
 
 /**
- * How the huddle's game turned between who was in a jackpot and who is
- * now: one won one — from regular games, or one more beside another's —
- * or only ones that went on ended; nothing where it did not turn.
+ * Who of the others still in the huddle has won on the play they are on,
+ * as one word — each one's member and play, in order — the same for the
+ * same people in the same wins: it changes as one of them wins a jackpot
+ * or a bonus, or one's ends, and not while a jackpot goes on.
+ */
+export const wonNow = (plays: readonly HuddlePlay[]): string => winnersOf(plays).toSorted().join("\n")
+
+/**
+ * How the huddle's game turned between who had won and who has now: one
+ * won a jackpot or a bonus — from regular games, or one more beside
+ * another's — or only wins that went on ended; nothing where it did not
+ * turn.
  */
 export type HuddleTurn = "won" | "ended"
 
-const rosterOf = (jackpots: string): ReadonlySet<string> => new Set(jackpots === "" ? [] : jackpots.split("\n"))
+const rosterOf = (won: string): ReadonlySet<string> => new Set(won === "" ? [] : won.split("\n"))
 
 export const huddleTurnOf = (before: string, now: string): HuddleTurn | undefined => {
   if (before === now) return undefined
@@ -90,5 +107,5 @@ export const huddleTurnOf = (before: string, now: string): HuddleTurn | undefine
   return [...rosterOf(now)].some((who) => !was.has(who)) ? "won" : "ended"
 }
 
-/** A turn seen on top of one not yet looked at: a jackpot won stays the louder until the list is looked at. */
+/** A turn seen on top of one not yet looked at: a win stays the louder until the list is looked at. */
 export const louderTurn = (so: HuddleTurn | undefined, now: HuddleTurn | undefined): HuddleTurn | undefined => (so === "won" || now === "won" ? "won" : (now ?? so))
