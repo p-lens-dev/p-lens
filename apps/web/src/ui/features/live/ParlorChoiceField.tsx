@@ -10,7 +10,7 @@ import { seal } from "../../../mummer"
 
 const SUBMIT_PARLOR = "一覧にない店舗を申請する"
 
-const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-border text-text-secondary hover:border-text-secondary hover:text-text-primary [&_svg]:size-5"
+const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
 
 /** The parlor a play started at none may still be said to have been at, chosen and never typed, with the way to submit one the list lacks: it stands where a play at a parlor has its name. */
 export function ParlorChoiceField(props: { readonly parlor: ParlorChoice }): JSX.Element {

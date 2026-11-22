@@ -99,7 +99,7 @@ export function FormulaView(props: { readonly place: Place; readonly machineId: 
                   </Show>
                   <Show when={ballValue()} keyed>
                     {(value) => (
-                      <Row label={`ボーダー（${value}円/玉）`}>
+                      <Row label={`現金ボーダー（${value}円/玉）`}>
                         <For each={formulaBorderLines(borderOf(formula().figures, value), supportDriftOf(formula()), assumedSettingLevelOf(formula()))}>{(line, index) => <span class={index() === 0 ? "block" : "block text-xs text-text-muted"}>{line}</span>}</For>
                       </Row>
                     )}

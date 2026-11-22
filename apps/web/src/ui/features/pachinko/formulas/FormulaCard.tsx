@@ -118,7 +118,7 @@ export function FormulaCard(props: {
         <Show when={props.ballValue} keyed>
           {(value) => (
             <div>
-              <dt class="text-xs text-text-muted">ボーダー</dt>
+              <dt class="text-xs text-text-muted">現金ボーダー</dt>
               <dd class="flex flex-col tabular-nums text-text-primary">
                 <For each={formulaBorderLines(borderOf(figures(), value), supportDriftOf(props.listing.formula), assumedSettingLevelOf(props.listing.formula))}>{(line, index) => <span class={index() === 0 ? undefined : "text-xs text-text-muted"}>{line}</span>}</For>
               </dd>
