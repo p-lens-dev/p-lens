@@ -21,6 +21,9 @@ await load()
 
 const FROM_SPEC: ConditionsDto = { roundPayout: { type: "from-spec" } }
 
+/** A c時短 with a 遊タイム is reasoned over a long run of thousands of points: about thirteen seconds a proof, past bun's five. */
+const LONG_RUN_TIMEOUT = 60_000
+
 const solved = (spec: SpecDto, conditions: ConditionsDto = FROM_SPEC): { readonly basis: Basis; readonly analysis: AnalysisDto } => {
   const reply = JSON.parse(analyze(JSON.stringify({ source: { type: "spec", spec }, conditions }))) as Envelope<AnalysisDto>
   if (!reply.ok) throw new Error(JSON.stringify(reply.error))
@@ -410,7 +413,7 @@ describe("a formula's grounds where a 時短 may end early", () => {
     const fills = basis.normalized.states.flatMap((state) => state.outcomes.flatMap((outcome) => (outcome.fills === undefined ? [] : [outcome.fills])))
     expect(fills).toContain(3)
     expect(fills).toContain(299)
-  })
+  }, LONG_RUN_TIMEOUT)
 
   test("fail where an early end is stored as filling the gauge by other spins than the sheet makes it", async () => {
     const shifted = (told: Told): Told => ({
@@ -422,5 +425,5 @@ describe("a formula's grounds where a 時短 may end early", () => {
     })
     const { proof } = await reasoned(cTime(true), undefined, shifted)
     expect(amiss(proof).map(([rule]) => rule)).toContain("check_made")
-  })
+  }, LONG_RUN_TIMEOUT)
 })

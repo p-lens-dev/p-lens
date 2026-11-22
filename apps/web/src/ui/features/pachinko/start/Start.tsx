@@ -202,7 +202,7 @@ function FormulaField(props: {
         <Match when={chosenFormula()} keyed>
           {(chosen) => (
             <Show when={props.ballValue} keyed>
-              {(value) => <p class="text-xs tabular-nums text-text-muted">ボーダー {formulaBorderText(borderOf(chosen.figures, value), supportDriftOf(chosen), assumedSettingLevelOf(chosen))}</p>}
+              {(value) => <p class="text-xs tabular-nums text-text-muted">現金ボーダー {formulaBorderText(borderOf(chosen.figures, value), supportDriftOf(chosen), assumedSettingLevelOf(chosen))}</p>}
             </Show>
           )}
         </Match>
