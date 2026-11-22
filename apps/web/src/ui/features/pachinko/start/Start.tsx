@@ -394,7 +394,7 @@ export function ParlorField(props: {
           tabIndex={-1}
           onMouseDown={(event) => event.preventDefault()}
           onClick={submit}
-          class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-border text-text-secondary hover:border-text-secondary hover:text-text-primary [&_svg]:size-5"
+          class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
         >
           <PlusIcon />
         </button>
