@@ -10,16 +10,12 @@ import { UNDER_THE_HOOD_TITLE } from "../../wording/under-the-hood"
 import { useWelcome } from "../onboarding/welcome"
 
 /**
- * A question mark in the top bar's corner that says what P-Lens is — a
- * private book of one's play, kept as text on the device, filled from what
- * is recorded at the cabinet, and shared among friends — and how far the
- * book goes: from cash rented into balls or medals to prizes given for
- * them, inside the parlor, and nothing of what becomes of a prize after;
- * and at its foot,
+ * A question mark in the top bar's corner that says what P-Lens is in a
+ * line — a private book of one's play, filled from what is recorded at the
+ * cabinet — leaving how far the book goes and how it is kept to
+ * このアプリの仕様; and at its foot,
  * where its licences are and, where the deployment has one, where the
- * product's own site is. Its words
- * are those of the release: sharing is named
- * before it is built, and the app is not released until it is. It drops down from the mark and stays
+ * product's own site is. It drops down from the mark and stays
  * until closed, with nothing darkened behind it. The welcome is opened
  * again from its foot, before the documents the
  * deployment puts before people, its terms and its privacy policy, which
@@ -61,10 +57,7 @@ export function AboutButton(): JSX.Element {
             </button>
           </div>
           <section class="flex flex-col gap-2 text-sm leading-relaxed text-text-secondary">
-            <p>パチンコ・パチスロの収支をつける、プライベートな帳簿アプリです。</p>
-            <p>つけるのは、遊技の記録としての収支です。現金で玉・メダルを借りてから景品に交換するまで、パチンコ店の中で起きたことだけを記録します。景品を受け取ったあとのことは扱いません。</p>
-            <p>打っている間にデータカウンターと投資額を記録すると、仕訳を自動で作り、期待値も残します。貯玉は店ごとの通貨として、交換率と一緒に記録します。</p>
-            <p>帳簿は会計ソフト hledger のテキスト形式で、この端末に保存されます。仲間うちで共有して、連結会計もできます。</p>
+            <p>パチンコ・パチスロの収支をつける、プライベートな帳簿アプリです。打ちながら記録すれば、仕訳と期待値が自動で残ります。</p>
           </section>
           <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
             <button

@@ -22,7 +22,8 @@ function Fold(props: { readonly title: string; readonly children: JSX.Element })
 /**
  * このアプリの仕様: what cannot be seen from the screens alone, each folded under a
  * heading that says it in a line — what the colours of the buttons say,
- * that cash never rises, when a day turns, how a reading's outlay is
+ * that cash never rises, how a book is kept as hledger's text with savings
+ * as each parlor's currency and shared and consolidated, when a day turns, how a reading's outlay is
  * counted, how a spin performance and a border are, how far a measured
  * spin performance may stand from the cabinet's own, how a stretch
  * across a jackpot is measured where its hand was not counted, what the marks beside
@@ -47,6 +48,10 @@ export function UnderTheHoodView(props: { readonly place: Place }): JSX.Element 
           <Fold title="勝ち分の記録（現金は増加しない）">
             <p>勝った分は、現金ではなく景品（特殊景品・端玉景品等）として帳簿に残ります。玉やメダルを景品に替えるときに出る端数は、換算調整勘定で合わせます。</p>
             <p>記録するのは、現金で玉やメダルを借りてから景品に交換するまでです。景品を受け取ったあとのことは記録しません。</p>
+          </Fold>
+          <Fold title="帳簿の形式（hledger のテキスト）">
+            <p>帳簿は会計ソフト hledger のテキスト形式で、この端末に保存されます。貯玉は店ごとの通貨として、交換率と一緒に記録します。</p>
+            <p>帳簿は仲間うちで共有でき、複数の帳簿をまとめた連結会計も見られます。</p>
           </Fold>
           <Fold title="日付の区切り（標準は午前5時）">
             <p>稼働の日付は営業日で数えます。0時から5時までの稼働は、前の日の分になります。切り替わる時刻は、設定の「日付の区切り」で変えられます。</p>
