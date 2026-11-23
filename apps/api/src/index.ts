@@ -27,6 +27,8 @@ interface Env {
   /** Rate-limiting bindings: every write by address, and registering something new by address. Unbound, not limited. */
   readonly WRITE_LIMIT?: RateLimiter
   readonly CREATE_LIMIT?: RateLimiter
+  /** Where the deployment's terms of use are read, e.g. `https://app.example.com/terms.md`; named to a request refused for coming from elsewhere. Unset, none is named. */
+  readonly TERMS_URL?: string
 }
 
 const started: { pachinkoEngine: PachinkoEngine.Engine | undefined; pachislotEngine: PachislotEngine.Engine | undefined } = { pachinkoEngine: undefined, pachislotEngine: undefined }
@@ -72,5 +74,6 @@ export default {
       humanCheck: humanCheckOf(env.TURNSTILE_SECRET, originPolicyOf(env.ALLOWED_ORIGINS)),
       quotas: STANDARD_QUOTAS,
       basePath: (env.API_BASE_PATH ?? "").replace(/\/+$/, ""),
+      terms: env.TERMS_URL === undefined || env.TERMS_URL === "" ? undefined : env.TERMS_URL,
     }),
 } satisfies ExportedHandler<Env>

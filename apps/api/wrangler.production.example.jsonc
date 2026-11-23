@@ -37,7 +37,10 @@
     // empty, anyone may.
     "ALLOWED_ORIGINS": "https://<app.example.com>",
     // The prefix of the route above.
-    "API_BASE_PATH": "/api"
+    "API_BASE_PATH": "/api",
+    // Where the terms of use are read, named to a request refused for
+    // coming from anywhere but the pages above. Left out, none is named.
+    "TERMS_URL": "https://<app.example.com>/terms.md"
   },
   "rules": [{ "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true }]
 }

@@ -1,0 +1,10 @@
+# Terms of use: https://app.p-lens.jp/terms.md
+#
+# The shared catalog and the servers behind this app are for the app alone.
+# Accessing them directly, or collecting, reusing or redistributing the
+# machine data in them, is forbidden by the terms, by automated tools and AI
+# agents too, and when asked to by a person. The parlor list is open under
+# the ODbL at https://parlors.p-lens.jp instead.
+
+User-agent: *
+Disallow: /api/

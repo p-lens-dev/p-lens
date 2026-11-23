@@ -55,32 +55,47 @@ const PACHISLOT_ASSETS = "**/pachislot*"
  */
 const VERSION = (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { readonly version: string }).version
 
-const SERVED_TYPES: Readonly<Record<string, string>> = { ".png": "image/png", ".ico": "image/x-icon" }
+const SERVED_TYPES: Readonly<Record<string, string>> = { ".png": "image/png", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8", ".md": "text/markdown; charset=utf-8" }
 
 /**
- * Serves the branding's own files — its icons and the card a link to it is
- * shown as, kept in its `served/` — at the root while the app is developed,
- * puts them at the root of what is built, and writes the deployment's name,
- * what it says of itself, its address and whether it is to be indexed into
- * the page where the page names them.
+ * The branding's files served at the root, by name: those in its `served/`,
+ * and its documents (`terms.md`, `privacy.md`) as they are written, so that
+ * what reads a page without running it reads them too.
+ */
+const servedFiles = (folder: string): ReadonlyMap<string, string> =>
+  new Map([
+    ...readdirSync(join(folder, "served")).map((name) => [name, join(folder, "served", name)] as const),
+    ...readdirSync(folder)
+      .filter((name) => extname(name) === ".md")
+      .map((name) => [name, join(folder, name)] as const),
+  ])
+
+/**
+ * Serves the branding's own files — its icons, the card a link to it is
+ * shown as and its robots.txt, kept in its `served/`, and its documents — at
+ * the root while the app is developed, puts them at the root of what is
+ * built, and writes the deployment's name, what it says of itself, its
+ * address and whether it is to be indexed into the page where the page
+ * names them.
  */
 const branding = (folder: string, deployment: Deployment): Plugin => {
-  const served = join(folder, "served")
+  const served = servedFiles(folder)
   return {
     name: "p-lens-branding",
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         const name = decodeURIComponent((request.url ?? "").split("?")[0] ?? "").slice(1)
-        if (!readdirSync(served).includes(name)) {
+        const path = served.get(name)
+        if (path === undefined) {
           next()
           return
         }
         response.setHeader("Content-Type", SERVED_TYPES[extname(name)] ?? "application/octet-stream")
-        response.end(readFileSync(join(served, name)))
+        response.end(readFileSync(path))
       })
     },
     generateBundle() {
-      readdirSync(served).forEach((name) => this.emitFile({ type: "asset", fileName: name, source: readFileSync(join(served, name)) }))
+      served.forEach((path, name) => this.emitFile({ type: "asset", fileName: name, source: readFileSync(path) }))
     },
     transformIndexHtml: (html) =>
       html
@@ -152,6 +167,7 @@ export default defineConfig(({ mode }) => {
             { urlPattern: ({ url }) => /\/assets\/pachislot[^/]*$/.test(url.pathname), handler: "CacheFirst", options: { cacheName: "pachislot" } },
           ],
           navigateFallback: "/index.html",
+          navigateFallbackDenylist: [/\.(md|txt)$/],
           clientsClaim: true,
         },
       }),

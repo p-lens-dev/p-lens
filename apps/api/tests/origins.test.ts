@@ -45,6 +45,11 @@ describe("the pages a deployment serves the app from", () => {
     expect((await client.call("GET", "/catalog")).status).toBe(403)
   })
 
+  test("name the deployment's terms of use to a request refused for coming from elsewhere, where it names them", async () => {
+    const client = await api({ origins: originPolicyOf(APP), terms: "https://app.example/terms.md" })
+    expect((await client.call("GET", "/catalog")).body.error).toEqual({ type: "forbidden-origin", terms: "https://app.example/terms.md" })
+  })
+
   test("is the API's own origin too, when it is served under the app's", async () => {
     const client = await api({ origins: originPolicyOf("https://api.test"), basePath: "/api" })
     expect((await client.call("GET", "/api/catalog/version", { site: "same-origin" })).status).toBe(200)

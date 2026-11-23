@@ -32,6 +32,8 @@ export interface Ports {
   readonly humanCheck: HumanCheck
   /** How much one device, and one address, may register in a day; none, and registering is not counted. */
   readonly quotas: Quotas | undefined
+  /** Where the deployment's terms of use are read, given to a request refused for coming from elsewhere; none, and it is not named. */
+  readonly terms: string | undefined
 }
 
 const READS = new Set(["GET", "HEAD"])
@@ -93,7 +95,7 @@ export const handle = async (request: Request, ports: Ports): Promise<Response> 
   }
   const corsOrigin = readableFrom(ports.origins, request)
   if (request.method === "OPTIONS") return preflightResponse(corsOrigin)
-  if (!fromOurPages(ports.origins, request)) return errorResponse({ type: "forbidden-origin" }, corsOrigin)
+  if (!fromOurPages(ports.origins, request)) return errorResponse(ports.terms === undefined ? { type: "forbidden-origin" } : { type: "forbidden-origin", terms: ports.terms }, corsOrigin)
   if (path === undefined) return errorResponse({ type: "not-found", what: "route" }, corsOrigin)
   const admission = await admitted(request, path, ports)
   return admission.ok ? answered(ROUTES, request, url, path, ports, corsOrigin) : errorResponse(admission.error, corsOrigin)

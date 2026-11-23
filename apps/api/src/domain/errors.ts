@@ -12,8 +12,8 @@ export type ApiError =
       readonly reason: "missing" | "not-text" | "too-long" | "not-an-id" | "not-json" | "unknown-value" | "not-positive" | "not-a-date" | "too-early" | "too-far-ahead" | "forbidden" | "names-setting-level" | "not-a-list" | "too-many" | "not-a-chance"
     }
   | { readonly type: "unauthenticated" }
-  /** A request from anywhere but the pages this deployment serves the app from. */
-  | { readonly type: "forbidden-origin" }
+  /** A request from anywhere but the pages this deployment serves the app from, with the deployment's terms of use, where it names them. */
+  | { readonly type: "forbidden-origin"; readonly terms?: string }
   /** More writes from one address than its limit takes, for now. */
   | { readonly type: "too-many-requests" }
   /** Registering something without the check that a person on the app's page is doing it. */

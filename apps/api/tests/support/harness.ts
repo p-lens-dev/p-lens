@@ -101,10 +101,11 @@ export interface Setup {
   readonly limits: Limits
   readonly humanCheck: HumanCheck
   readonly quotas: Quotas | undefined
+  readonly terms: string | undefined
   readonly effects: Effects
 }
 
-const OPEN: Omit<Setup, "effects"> = { origins: { type: "any" }, basePath: "", adminToken: undefined, limits: async () => true, humanCheck: async () => true, quotas: undefined }
+const OPEN: Omit<Setup, "effects"> = { origins: { type: "any" }, basePath: "", adminToken: undefined, limits: async () => true, humanCheck: async () => true, quotas: undefined, terms: undefined }
 
 /** A cache standing in for the edge's: what is kept stays, for the life of a test's API. */
 const heldCatalogCache = (): CatalogCache => {
