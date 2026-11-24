@@ -53,8 +53,34 @@ describe("a figure typed by hand", () => {
 
 describe("a spec value typed", () => {
   test("is refused as too fine, not as no number, when it has more than two places", () => {
-    const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: "319.688" })
-    expect(read.ok ? [] : read.error).toContainEqual({ field: "通常時の大当り確率", reason: "too-fine" })
+    const read = readBasisForm({ ...STARTING_BASIS, firstHit: STARTING_BASIS.firstHit.map((row, index) => (index === 0 ? { ...row, share: "50.125" } : row)) })
+    expect(read.ok ? [] : read.error).toContainEqual({ field: "初当り 1行目の振分", reason: "too-fine" })
+  })
+
+  test("as a chance is kept to four places, and refused as too fine beyond", () => {
+    const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: "319.68812" })
+    expect(read.ok ? [] : read.error).toContainEqual({ field: "通常時の大当り確率", reason: "too-fine-chance" })
+  })
+
+  test("as a chance to two places is 1 in it, as ever", () => {
+    const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: "319.68" })
+    expect(read.ok && read.value.spec.components.regularGame).toEqual({ regular: expect.objectContaining({ chance: { type: "ratio", numerator: 1, denominatorHundredths: 31_968 } }) })
+  })
+
+  test("as a chance to a third or fourth place is written exactly, and comes back as typed", () => {
+    for (const [typed, numerator, denominatorHundredths] of [["1.583", 10, 1583], ["1.0029", 100, 10_029]] as const) {
+      const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: typed })
+      expect(read.ok && read.value.spec.components.regularGame).toEqual({ regular: expect.objectContaining({ chance: { type: "ratio", numerator, denominatorHundredths } }) })
+      expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).regularOneIn).toBe(typed)
+    }
+  })
+
+  test("as a chance written as a ratio of another numerator comes back as its 1/x", () => {
+    const read = readBasisForm({ ...STARTING_BASIS, regularOneIn: "1.583" })
+    if (!read.ok) throw new Error("reads")
+    const spec = JSON.parse(JSON.stringify(read.value.spec).replace('"numerator":10,"denominatorHundredths":1583', '"numerator":1000,"denominatorHundredths":158300')) as SpecDto
+    expect(JSON.stringify(spec)).toContain('"numerator":1000')
+    expect(basisFormOf(spec, read.value.conditions, undefined).regularOneIn).toBe("1.583")
   })
 })
 

@@ -65,6 +65,7 @@ const REASONS: Readonly<Record<FormProblem["reason"], string>> = {
   required: "未入力",
   "not-a-number": "数字ではありません",
   "too-fine": "小数は2桁までです",
+  "too-fine-chance": "小数は4桁までです",
   "not-whole": "整数で入れてください",
   "out-of-range": "範囲外です",
   "no-attacker": "0Rには付けられません",

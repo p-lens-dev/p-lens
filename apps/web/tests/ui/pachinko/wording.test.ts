@@ -10,6 +10,8 @@ import { gradeFloorText } from "../../../src/ui/wording/pachinko/play"
 describe("a basis as it reads", () => {
   test("keeps probabilities in the form the sheet wrote them", () => {
     expect(probabilityText({ type: "ratio", numerator: 1, denominatorHundredths: 31_970 })).toBe("1/319.7")
+    expect(probabilityText({ type: "ratio", numerator: 10, denominatorHundredths: 1583 })).toBe("1/1.583")
+    expect(probabilityText({ type: "ratio", numerator: 100, denominatorHundredths: 10_029 })).toBe("1/1.0029")
     expect(probabilityText({ type: "percent", basisPoints: 8150 })).toBe("81.5%")
     expect(shareText(5000)).toBe("50%")
   })

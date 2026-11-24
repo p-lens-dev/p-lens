@@ -5,11 +5,13 @@ import type { Figures } from "../../../../core/pachinko/figures"
 import { assembleWorld, modesOf, regularOf, type ModeKind, type ModeView } from "../../../../core/pachinko/world"
 import { Err, Ok, type Result } from "../../../../core/result/result"
 import { tidyTyped } from "../../../../core/text/tidy"
+import { oneInText } from "./spec-text"
 
 /**
  * A field that could not be read, named as the form names it.
  *
  * - `too-fine`: a number written to more places than a spec is kept in, two.
+ * - `too-fine-chance`: a chance's 1/x written to more places than it is kept in, four.
  * - `not-whole`: a count that is not a whole number.
  * - `no-attacker`: an attacker named for a 0R, which opens none.
  * - `queued-at-heso`: spins said both to be queued already and to be shot at the heso.
@@ -17,7 +19,7 @@ import { tidyTyped } from "../../../../core/text/tidy"
  */
 export interface FormProblem {
   readonly field: string
-  readonly reason: "required" | "not-a-number" | "too-fine" | "not-whole" | "out-of-range" | "no-attacker" | "queued-at-heso" | "trigger-on-part"
+  readonly reason: "required" | "not-a-number" | "too-fine" | "too-fine-chance" | "not-whole" | "out-of-range" | "no-attacker" | "queued-at-heso" | "trigger-on-part"
 }
 
 type Read<T> = Result<T, FormProblem>
@@ -39,11 +41,6 @@ const hundredthsOf = (text: string, field: string): Read<number> => {
   const digits = digitsOf(text, field)
   if (!digits.ok) return digits
   return digits.value.fraction.length > 2 ? Err({ field, reason: "too-fine" }) : Ok(Number(digits.value.whole) * 100 + Number(digits.value.fraction.padEnd(2, "0")))
-}
-
-const positiveHundredths = (text: string, field: string): Read<number> => {
-  const read = hundredthsOf(text, field)
-  return read.ok && read.value === 0 ? Err({ field, reason: "out-of-range" }) : read
 }
 
 /** A percentage as basis points, at most 100%. */
@@ -259,9 +256,24 @@ export const freshModeKey = (modes: readonly ModeForm[]): string =>
 
 const nextOf = (next: string): NextDto => (next === REGULAR ? { type: "regular" } : { type: "mode", mode: next })
 
+/** A typed 1/x as exact ten-thousandths of x: `1.583` is `15830`. Never through a float. */
+const tenThousandthsOf = (text: string, field: string): Read<number> => {
+  const digits = digitsOf(text, field)
+  if (!digits.ok) return digits
+  return digits.value.fraction.length > 4 ? Err({ field, reason: "too-fine-chance" }) : Ok(Number(digits.value.whole) * 10_000 + Number(digits.value.fraction.padEnd(4, "0")))
+}
+
+/**
+ * A typed 1/x as a ratio, x to four places: to two it is 1 in x as ever, a third place is written as
+ * 10 in ten times x (`1.583` is 10 in 15.83) and a fourth as 100 in a hundred times x, so that what
+ * was written to two is unchanged.
+ */
 const ratioOf = (text: string, field: string): Read<ProbabilityDto> => {
-  const read = positiveHundredths(text, field)
-  return read.ok ? Ok({ type: "ratio", numerator: 1, denominatorHundredths: read.value }) : read
+  const read = tenThousandthsOf(text, field)
+  if (!read.ok) return read
+  const x = read.value
+  if (x === 0) return Err({ field, reason: "out-of-range" })
+  return Ok(x % 100 === 0 ? { type: "ratio", numerator: 1, denominatorHundredths: x / 100 } : x % 10 === 0 ? { type: "ratio", numerator: 10, denominatorHundredths: x / 10 } : { type: "ratio", numerator: 100, denominatorHundredths: x })
 }
 
 const rateOf = (text: string, field: string): Read<ProbabilityDto> => {
@@ -452,7 +464,7 @@ export const readBasisForm = (form: BasisForm): Result<ReadBasis, readonly FormP
 const hundredthsText = (hundredths: number): string => (hundredths / 100).toFixed(2).replace(/\.?0+$/, "")
 
 const probabilityText = (probability: ProbabilityDto): string =>
-  probability.type === "ratio" ? hundredthsText(probability.denominatorHundredths) : hundredthsText(probability.basisPoints)
+  probability.type === "ratio" ? oneInText(probability.numerator, probability.denominatorHundredths) : hundredthsText(probability.basisPoints)
 
 const ownCountText = (count: number | undefined): string => (count === undefined ? "" : String(count))
 

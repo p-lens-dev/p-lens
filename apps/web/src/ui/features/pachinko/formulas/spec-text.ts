@@ -5,11 +5,13 @@ import type { ModeKind, ModeView } from "../../../../core/pachinko/world"
 /** Hundredths as a plain decimal, without trailing zeros: `31970` is `319.7`. */
 const hundredths = (value: number): string => (value / 100).toFixed(2).replace(/\.?0+$/, "")
 
-/** A probability as the spec sheet wrote it: `1/319.7`, or `81%`. */
+/** A ratio's x of 1/x to four places at most, without trailing zeros: 10 in 15.83 is `1.583`, 1 in 319.70 is `319.7`. */
+export const oneInText = (numerator: number, denominatorHundredths: number): string =>
+  (denominatorHundredths / numerator / 100).toFixed(4).replace(/\.?0+$/, "")
+
+/** A probability as the spec sheet wrote it: `1/319.7`, `1/1.583`, or `81%`. */
 export const probabilityText = (probability: ProbabilityDto): string =>
-  probability.type === "ratio"
-    ? `${probability.numerator}/${hundredths(probability.denominatorHundredths)}`
-    : `${hundredths(probability.basisPoints)}%`
+  probability.type === "ratio" ? `1/${oneInText(probability.numerator, probability.denominatorHundredths)}` : `${hundredths(probability.basisPoints)}%`
 
 /** Several probabilities side by side, as a row lists them: `1/49.91・1/77.74`; none where there are none. */
 export const probabilitiesText = (probabilities: readonly ProbabilityDto[]): string | undefined => (probabilities.length === 0 ? undefined : probabilities.map(probabilityText).join("・"))
