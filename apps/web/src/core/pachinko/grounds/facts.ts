@@ -109,6 +109,9 @@ const modeFacts = (mode: ModeView, place: number, spec: SpecDto, places: Places)
   given(`spec_on_miss(${place}, ${next(mode.onMiss, places)})`),
   ...(mode.luckyTrigger === undefined ? [] : [given(`spec_lucky_trigger(${place}, ${mode.luckyTrigger.atCombo}, ${places.get(mode.luckyTrigger.to) ?? -1})`)]),
   ...(mode.withoutSupport ? [given(`spec_without_support(${place})`)] : []),
+  ...(mode.reliefCounted === undefined ? [] : [given(`spec_relief_counted(${place}, ${String(mode.reliefCounted)})`)]),
+  ...(mode.queued ? [given(`spec_queued(${place})`)] : []),
+  ...(mode.comboOf === undefined ? [] : [given(`spec_combo_of(${place}, ${places.get(mode.comboOf) ?? -1})`)]),
   ...(mode.earlyEnd === undefined
     ? []
     : [
@@ -120,7 +123,7 @@ const modeFacts = (mode: ModeView, place: number, spec: SpecDto, places: Places)
 /**
  * The spec as its sheet was written, for the chain to be made from again:
  * the regular game's chance, its allotment and its 遊タイム, each mode's
- * kind, allotment, where a miss goes and its lucky trigger, and which mode
+ * kind, allotment, where a miss goes, its lucky trigger and what it says apart from its kind, and which mode
  * and combo each state of the stored chain stands for.
  */
 const sheetFacts = (spec: SpecDto, normalized: NormalizedSpecDto): readonly string[] => {

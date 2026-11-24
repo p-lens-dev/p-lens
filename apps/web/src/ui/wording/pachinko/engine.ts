@@ -18,6 +18,11 @@ const COMPONENT_NAMES: Readonly<Record<string, string>> = {
   luckyTrigger: "ラッキートリガー",
   reliefDrive: "遊タイム",
   assumedSettingLevel: "計算した設定",
+  withoutSupport: "電サポなし・ヘソで打つ",
+  earlyEnd: "c時短",
+  reliefCounted: "遊タイムまでの回転に数える",
+  queued: "保留で消化",
+  comboOf: "連の数え方",
 }
 
 /** A component's name as the form calls it. */
@@ -67,6 +72,8 @@ const describeEngineError = (error: EngineErrorDto): string => {
           return "ラッキートリガーの移行先が同じモードです。"
         case "lucky-trigger-on-entry":
           return "ラッキートリガーは2連目以降にしてください。1連目はそのモードに入った大当りです。"
+        case "combo-of-part":
+          return "連の数え方で選んだモードが、それ自身または別のモードの続きになっています。連は、続きでないモードで数えてください。"
       }
     case "solve-failed":
       return error.reason === "unknown-support-spins"

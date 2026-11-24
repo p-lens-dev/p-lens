@@ -12,10 +12,12 @@ import { tidyTyped } from "../../../../core/text/tidy"
  * - `too-fine`: a number written to more places than a spec is kept in, two.
  * - `not-whole`: a count that is not a whole number.
  * - `no-attacker`: an attacker named for a 0R, which opens none.
+ * - `queued-at-heso`: spins said both to be queued already and to be shot at the heso.
+ * - `trigger-on-part`: a lucky trigger on a mode whose combo is counted as part of another's.
  */
 export interface FormProblem {
   readonly field: string
-  readonly reason: "required" | "not-a-number" | "too-fine" | "not-whole" | "out-of-range" | "no-attacker"
+  readonly reason: "required" | "not-a-number" | "too-fine" | "not-whole" | "out-of-range" | "no-attacker" | "queued-at-heso" | "trigger-on-part"
 }
 
 type Read<T> = Result<T, FormProblem>
@@ -160,10 +162,25 @@ export interface ModeForm {
   readonly triggerTo: string
   /** Whether the mode is played without the 電サポ, a 潜確 at the heso: the support drift leaves its spins alone. */
   readonly withoutSupport: boolean
-  /** A 時短's early end, a c時短: its chance on each spin as 1/x, empty where it has none, and where play goes then. */
+  /** The early end, a c時短, of a mode whose spins run out: its chance on each spin as 1/x, empty where it has none, and where play goes then. */
   readonly earlyEndChance: string
   readonly earlyEndTo: readonly EarlyEndRow[]
+  /** Whether its spins count toward the 遊タイム where said otherwise than its kind counts them (`countsByKind`); undefined, as its kind does. */
+  readonly reliefCounted: boolean | undefined
+  /** Whether an ST's or a 時短's spins are queued already, drawn off the 電サポ at no cost as a leftover queue's are. */
+  readonly queued: boolean
+  /** The key of the mode its combo is counted as part of; empty, its own. */
+  readonly comboOf: string
 }
+
+/** The kinds whose spins run out, which alone may end early, be queued, or count toward the 遊タイム otherwise than by kind. */
+export const runsOut = (kind: ModeKindName): boolean => kind === "special-time" || kind === "rapid" || kind === "leftover-queue"
+
+/** The kinds that may be said to be queued: a leftover queue is so by kind. */
+export const mayBeQueued = (kind: ModeKindName): boolean => kind === "special-time" || kind === "rapid"
+
+/** Whether a kind's spins count toward the 遊タイム unless said otherwise: a 時短's and a leftover queue's do, an ST's do not. */
+export const countsByKind = (kind: ModeKindName): boolean => kind === "rapid" || kind === "leftover-queue"
 
 /** One share of where a 時短 ended early goes, as text: its share in percent and where. */
 export interface EarlyEndRow {
@@ -211,6 +228,9 @@ export const newMode = (key: string, label: string): ModeForm => ({
   withoutSupport: false,
   earlyEndChance: "",
   earlyEndTo: [EARLY_END_ROW],
+  reliefCounted: undefined,
+  queued: false,
+  comboOf: "",
 })
 
 /** A starting point most specs are a few edits away from: a first jackpot, half into a RUSH. */
@@ -337,7 +357,7 @@ const kindOf = (mode: ModeForm): Read<ModeKind> => {
   }
 }
 
-/** A 時短's early end as typed: none where its chance is left empty or the mode is no 時短; otherwise its chance and every share of where it goes. */
+/** An early end as typed: none where its chance is left empty; otherwise its chance and every share of where it goes. */
 const earlyEndRead = (typed: string, rows: readonly EarlyEndRow[], label: string): Result<EarlyEndDto | undefined, readonly FormProblem[]> => {
   if (tidyTyped(typed) === "") return Ok(undefined)
   const chance = ratioOf(typed, `${label}のc時短の確率`)
@@ -348,7 +368,7 @@ const earlyEndRead = (typed: string, rows: readonly EarlyEndRow[], label: string
 }
 
 const earlyEndOf = (mode: ModeForm): Result<EarlyEndDto | undefined, readonly FormProblem[]> =>
-  mode.kind === "rapid" ? earlyEndRead(mode.earlyEndChance, mode.earlyEndTo, mode.label) : Ok(undefined)
+  runsOut(mode.kind) ? earlyEndRead(mode.earlyEndChance, mode.earlyEndTo, mode.label) : Ok(undefined)
 
 const modeOf = (mode: ModeForm): Result<ModeView, readonly FormProblem[]> => {
   const kind = kindOf(mode)
@@ -356,8 +376,11 @@ const modeOf = (mode: ModeForm): Result<ModeView, readonly FormProblem[]> => {
   const allotment = allotmentOf(mode.allotment, mode.label)
   const triggerCombo = mode.triggerTo === "" ? Ok(undefined) : countOf(mode.triggerCombo, `${mode.label}のラッキートリガーの連数`)
   const label: Read<string> = mode.label.trim() === "" ? Err({ field: "モード名", reason: "required" }) : Ok(mode.label.trim())
-  const problems = [...problemsOf([kind, triggerCombo, label]), ...(allotment.ok ? [] : allotment.error), ...(earlyEnd.ok ? [] : earlyEnd.error)]
-  if (!kind.ok || !allotment.ok || !triggerCombo.ok || !label.ok || !earlyEnd.ok) return Err(problems)
+  const queued = mayBeQueued(mode.kind) && mode.queued
+  const queuedAtHeso: Read<undefined> = queued && mode.withoutSupport ? Err({ field: `${mode.label}の保留消化`, reason: "queued-at-heso" }) : Ok(undefined)
+  const triggerOnPart: Read<undefined> = mode.comboOf !== "" && mode.triggerTo !== "" ? Err({ field: `${mode.label}のラッキートリガー`, reason: "trigger-on-part" }) : Ok(undefined)
+  const problems = [...problemsOf([kind, triggerCombo, label, queuedAtHeso, triggerOnPart]), ...(allotment.ok ? [] : allotment.error), ...(earlyEnd.ok ? [] : earlyEnd.error)]
+  if (!kind.ok || !allotment.ok || !triggerCombo.ok || !label.ok || !earlyEnd.ok || !queuedAtHeso.ok || !triggerOnPart.ok) return Err(problems)
   return Ok({
     id: mode.key,
     label: label.value,
@@ -367,6 +390,9 @@ const modeOf = (mode: ModeForm): Result<ModeView, readonly FormProblem[]> => {
     luckyTrigger: triggerCombo.value === undefined ? undefined : { atCombo: triggerCombo.value, to: mode.triggerTo },
     withoutSupport: mode.withoutSupport,
     earlyEnd: earlyEnd.value,
+    reliefCounted: runsOut(mode.kind) && mode.reliefCounted !== undefined && mode.reliefCounted !== countsByKind(mode.kind) ? mode.reliefCounted : undefined,
+    queued,
+    comboOf: mode.comboOf === "" ? undefined : mode.comboOf,
   })
 }
 
@@ -465,6 +491,9 @@ export const basisFormOf = (spec: SpecDto, conditions: ConditionsDto, spinsPerHo
       withoutSupport: mode.withoutSupport,
       earlyEndChance: mode.earlyEnd === undefined ? "" : probabilityText(mode.earlyEnd.chance),
       earlyEndTo: earlyEndRowsOf(mode.earlyEnd),
+      reliefCounted: mode.reliefCounted,
+      queued: mode.queued,
+      comboOf: mode.comboOf ?? "",
     })),
     reliefDriveGauge: regular?.reliefDrive === undefined ? "" : String(regular.reliefDrive.gauge),
     reliefDriveTo: regular?.reliefDrive?.to ?? "",

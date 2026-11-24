@@ -30,6 +30,14 @@ const arg = (step: Step | undefined, index: number): number | undefined => numbe
 
 const sub = (step: Step, rule: string): Step | undefined => stepsUnder(step).find((inner) => inner.rule === rule)
 
+/** A mode whose spins run out, by the rule that read it off the sheet: its kind, and whose chance it plays at. */
+const RUNS_KINDS: Readonly<Record<string, string>> = {
+  runs_special_time: "ST",
+  runs_rapid: "時短",
+  runs_rapid_at: "時短・独自の確率",
+  runs_leftover_queue: "残保留",
+}
+
 const givenNumber = (step: Step, functor: string, index: number): number | undefined => numberOf(givenIn(step, functor)?.args[index])
 
 /** Where a share leads, as the person wrote the spec: back to the regular game, or into a mode by its label. */
@@ -288,25 +296,12 @@ const lineOf = (step: Step, normalized: NormalizedSpecDto, labels: ReadonlyMap<s
       const none = Array.isArray(made) && made.length === 0 && Array.isArray(stored) && stored.length === 0
       return none ? undefined : checked(step, "遊タイムの回転数と行き先は期待値基礎値どおり", "遊タイムの回転数か行き先が、期待値基礎値と違います")
     }
-    case "reach_special_time": {
-      const kind = compoundOf(givenIn(step, "spec_mode")?.args[1], "special_time", 2)
-      const hit = numberOf(kind?.args[1])
-      return { text: `${modeAt(step.claim.args[0], labels)}：次の大当りまで続く確率 ${percent(arg(step, 1))} ＝ 1 −（1 − ${oneIn(hit === undefined ? undefined : 1 / hit)}）の ${numberOf(kind?.args[0]) ?? "--"}乗（ST）`, tone: "plain" }
-    }
-    case "reach_rapid":
-    case "reach_leftover_queue": {
-      const kind = givenIn(step, "spec_mode")?.args[1]
-      const spins = numberOf(compoundOf(kind, "rapid", 1)?.args[0] ?? compoundOf(kind, "leftover_queue", 1)?.args[0])
-      const hit = givenNumber(step, "spec_regular", 0)
-      return {
-        text: `${modeAt(step.claim.args[0], labels)}：大当りを引く確率 ${percent(arg(step, 1))} ＝ 1 −（1 − ${oneIn(hit === undefined ? undefined : 1 / hit)}）の ${spins ?? "--"}乗（${step.rule === "reach_rapid" ? "時短" : "残保留"}）`,
-        tone: "plain",
-      }
-    }
-    case "reach_rapid_at": {
-      const kind = compoundOf(givenIn(step, "spec_mode")?.args[1], "rapid_at", 2)
-      const hit = numberOf(kind?.args[1])
-      return { text: `${modeAt(step.claim.args[0], labels)}：大当りを引く確率 ${percent(arg(step, 1))} ＝ 1 −（1 − ${oneIn(hit === undefined ? undefined : 1 / hit)}）の ${numberOf(kind?.args[0]) ?? "--"}乗（時短・独自の確率）`, tone: "plain" }
+    case "reach_runs": {
+      const runs = step.premises.flatMap((premise) => (premise.type === "step" && premise.claim.functor === "runs" ? [premise] : [])).at(0)
+      const hit = numberOf(runs?.claim.args[2])
+      const kind = runs === undefined ? undefined : RUNS_KINDS[runs.rule]
+      const reached = runs?.rule === "runs_special_time" ? "次の大当りまで続く確率" : "大当りを引く確率"
+      return { text: `${modeAt(step.claim.args[0], labels)}：${reached} ${percent(arg(step, 1))} ＝ 1 −（1 − ${oneIn(hit === undefined ? undefined : 1 / hit)}）の ${numberOf(runs?.claim.args[1]) ?? "--"}乗（${kind ?? "--"}）`, tone: "plain" }
     }
     case "reach_rushing":
       return { text: `${modeAt(step.claim.args[0], labels)}：継続率 ${percent(arg(step, 1))}（期待値基礎値のまま）`, tone: "plain" }

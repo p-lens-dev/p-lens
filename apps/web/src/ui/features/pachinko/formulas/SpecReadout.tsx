@@ -84,7 +84,7 @@ export function SpecReadout(props: { readonly basis: Basis; readonly bonuses: re
       </Show>
       <For each={modes()}>
         {(mode) => (
-          <Block title={mode.label} subtitle={`${kindText(mode.kind)}${mode.withoutSupport || mode.kind.type === "leftover-queue" ? "・電サポなし" : ""}`}>
+          <Block title={mode.label} subtitle={`${kindText(mode.kind)}${mode.queued ? "・保留で消化" : mode.withoutSupport || mode.kind.type === "leftover-queue" ? "・電サポなし" : ""}${mode.reliefCounted === undefined ? "" : mode.reliefCounted ? "・遊タイムに数える" : "・遊タイムに数えない"}`}>
             <AllotmentTable allotment={mode.allotment} modes={modes()} />
             <p class="text-sm text-text-secondary">
               終了後: {nextText(mode.onMiss, modes())}
@@ -93,6 +93,9 @@ export function SpecReadout(props: { readonly basis: Basis; readonly bonuses: re
               </Show>
               <Show when={mode.earlyEnd} keyed>
                 {(earlyEnd) => ` ／ ${earlyEndText(earlyEnd, modes())}`}
+              </Show>
+              <Show when={mode.comboOf} keyed>
+                {(head) => ` ／ 連は ${nextText({ type: "mode", mode: head }, modes())} の続きで数える`}
               </Show>
             </p>
           </Block>

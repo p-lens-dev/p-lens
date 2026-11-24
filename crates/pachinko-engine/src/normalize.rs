@@ -7,7 +7,8 @@ use pachinko_domain::normalized::{
 use pachinko_domain::probability::{BasisPoints, Probability, ProbabilityError, ProbabilitySource};
 use pachinko_domain::quantity::PayoutRule;
 use pachinko_domain::spec::{
-    Allotment, EarlyEnd, EarlyEndShare, Mode, ModeId, ModeKind, Next, ReliefDrive, Spec,
+    Allotment, EarlyEnd, EarlyEndShare, LuckyTrigger, Mode, ModeId, ModeKind, Next, ReliefDrive,
+    Spec,
 };
 use pachinko_domain::version::SchemaVersion;
 
@@ -135,9 +136,12 @@ struct Layout<'spec> {
 impl<'spec> Layout<'spec> {
     fn of(all: &'spec [Mode]) -> Result<Self, SpecError> {
         let modes = unique_modes(all)?;
+        check_combo_heads(&modes)?;
         let expanded: Vec<(&Mode, u32)> = all
             .iter()
-            .flat_map(|mode| (1..=combo_states(mode)).map(move |combo| (mode, combo)))
+            .flat_map(|mode| {
+                (1..=combo_states(head_of(&modes, mode))).map(move |combo| (mode, combo))
+            })
             .collect();
         if expanded.len() > STATE_LIMIT {
             return Err(SpecError::UnsupportedSpec {
@@ -177,9 +181,27 @@ impl<'spec> Layout<'spec> {
         }
     }
 
+    /// The lucky trigger counting `mode`'s combo where play goes to `next`,
+    /// and the mode it goes to: where `next` is a mode of the same count, the
+    /// trigger of the mode they are both part of, if it has one.
+    fn counting(&self, mode: &Mode, next: &Next) -> Option<(&'spec ModeId, &'spec LuckyTrigger)> {
+        let Next::Mode(target) = next else {
+            return None;
+        };
+        let head = head_of(&self.modes, self.modes.get(&mode.id)?);
+        let other = self.modes.get(target)?;
+        if head_of(&self.modes, other).id != head.id {
+            return None;
+        }
+        head.lucky_trigger
+            .as_ref()
+            .map(|trigger| (&other.id, trigger))
+    }
+
     /// Where a jackpot won in `mode` at `combo` sends play. A jackpot that
-    /// keeps play in a mode with a lucky trigger adds to the combo; the one
-    /// that makes the trigger's combo moves play to the mode it leads to.
+    /// keeps play among the modes of one count with a lucky trigger adds to
+    /// the combo; the one that makes the trigger's combo moves play to the
+    /// mode it leads to.
     fn after_hit(
         &self,
         mode: &Mode,
@@ -187,10 +209,10 @@ impl<'spec> Layout<'spec> {
         next: &Next,
         at: &Location,
     ) -> Result<Target, SpecError> {
-        match (next, &mode.lucky_trigger) {
-            (Next::Mode(target), Some(trigger)) if *target == mode.id => {
+        match self.counting(mode, next) {
+            Some((target, trigger)) => {
                 if combo + 1 < trigger.at_combo.get() {
-                    self.state(&mode.id, combo + 1, at)
+                    self.state(target, combo + 1, at)
                 } else if self.modes.contains_key(&trigger.to) {
                     self.state(&trigger.to, 1, at)
                 } else {
@@ -200,9 +222,53 @@ impl<'spec> Layout<'spec> {
                     })
                 }
             }
-            _ => self.entering(next, at),
+            None => self.entering(next, at),
         }
     }
+
+    /// Where play goes from `mode` at `combo` with no jackpot: into a mode of
+    /// the same count with a lucky trigger at the combo it stands at, the
+    /// combo carried on; anywhere else at its first state.
+    fn carrying(
+        &self,
+        mode: &Mode,
+        combo: u32,
+        next: &Next,
+        at: &Location,
+    ) -> Result<Target, SpecError> {
+        match self.counting(mode, next) {
+            Some((target, _)) => self.state(target, combo, at),
+            None => self.entering(next, at),
+        }
+    }
+}
+
+/// The mode whose combo `mode`'s is counted as part of: the one it says, or itself.
+fn head_of<'spec>(modes: &BTreeMap<&'spec ModeId, &'spec Mode>, mode: &'spec Mode) -> &'spec Mode {
+    mode.combo_of
+        .as_ref()
+        .and_then(|head| modes.get(head).copied())
+        .unwrap_or(mode)
+}
+
+/// Every mode a combo is counted as part of is one there is, itself counted
+/// as part of none.
+fn check_combo_heads(modes: &BTreeMap<&ModeId, &Mode>) -> Result<(), SpecError> {
+    modes.values().try_for_each(|mode| match &mode.combo_of {
+        None => Ok(()),
+        Some(head) => match modes.get(head) {
+            None => Err(SpecError::UnknownMode {
+                at: Location::Mode(mode.id.clone()),
+                mode: head.clone(),
+            }),
+            Some(found) if found.combo_of.is_some() || found.id == mode.id => {
+                Err(SpecError::UnsupportedSpec {
+                    reason: Unsupported::ComboOfPart,
+                })
+            }
+            Some(_) => Ok(()),
+        },
+    })
 }
 
 fn unique_modes(modes: &[Mode]) -> Result<BTreeMap<&ModeId, &Mode>, SpecError> {
@@ -485,7 +551,12 @@ fn early_end_outcomes(
         at,
         |next| layout.after_hit(mode, combo, next, at),
     )?;
-    let ends = early_end_steps(race.spins, gauge)
+    let steps = if fills_gauge(mode.kind) == 0 {
+        vec![(1, race.spins, Some(0))]
+    } else {
+        early_end_steps(race.spins, gauge)
+    };
+    let ends = steps
         .into_iter()
         .flat_map(|(from, to, fills)| shares.iter().map(move |share| (from, to, fills, share)))
         .map(|(from, to, fills, share)| -> Result<Outcome, SpecError> {
@@ -494,7 +565,7 @@ fn early_end_outcomes(
                     race.ended_between(from, to) * share.share.probability().value(),
                 )?,
                 reward: Reward::default(),
-                next: layout.entering(&share.next, at)?,
+                next: layout.carrying(mode, combo, &share.next, at)?,
                 fills,
             })
         })
@@ -505,7 +576,7 @@ fn early_end_outcomes(
             Ok(Outcome {
                 probability: ran_out,
                 reward: Reward::default(),
-                next: layout.entering(&mode.on_miss, at)?,
+                next: layout.carrying(mode, combo, &mode.on_miss, at)?,
                 fills: None,
             })
         })
@@ -568,7 +639,7 @@ fn state_of(
             Ok(Outcome {
                 probability: risk,
                 reward: Reward::default(),
-                next: layout.entering(&mode.on_miss, &at)?,
+                next: layout.carrying(mode, combo, &mode.on_miss, &at)?,
                 fills: None,
             })
         })

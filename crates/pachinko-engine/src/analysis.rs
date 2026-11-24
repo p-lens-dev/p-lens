@@ -32,7 +32,11 @@ impl EngineVersion {
     /// 8: a spin played on the 電サポ gains or loses balls by a formula's
     ///    support drift, where the jackpots won there were changed by its
     ///    support gain.
-    pub const CURRENT: Self = Self(8);
+    /// 9: a mode's properties combine apart from its kind: whether its spins
+    ///    count toward the 遊タイム, whether they are queued already, a
+    ///    c時短 on any mode whose spins run out, and the mode its combo is
+    ///    counted as part of.
+    pub const CURRENT: Self = Self(9);
 
     pub fn get(self) -> u32 {
         self.0

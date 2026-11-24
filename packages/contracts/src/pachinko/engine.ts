@@ -107,10 +107,16 @@ export interface ComponentsDto {
   readonly reliefDrive?: Readonly<Record<string, ReliefDriveDto>>
   /** Modes played without the 電サポ — a 潜確 at the heso — whose spins the support drift does not touch; a leftover queue is so whether it is named here or not. */
   readonly withoutSupport?: readonly string[]
-  /** A 時短 that each spin may end early without a jackpot — a c時短 — and where play goes then. On the regular game, the same: a spin of it that is no jackpot may lead off to a 時短, the relief gauge counting on through it. */
+  /** A mode whose spins run out that each spin may end early without a jackpot — a c時短 — and where play goes then. On the regular game, the same: a spin of it that is no jackpot may lead off to a 時短, the relief gauge counting on through it. */
   readonly earlyEnd?: Readonly<Record<string, EarlyEndDto>>
   /** The setting level the regular game's figures were read at, on a machine with setting levels this world does not otherwise tell apart. It says what the figures are; nothing is worked out from it. */
   readonly assumedSettingLevel?: Readonly<Record<string, number>>
+  /** Whether a mode's spins fill the relief gauge, where the machine counts them otherwise than its kind does: an ST's, which count for none by kind; a 時短's or a leftover queue's, which count by kind. Only a mode whose spins run out has it. */
+  readonly reliefCounted?: Readonly<Record<string, boolean>>
+  /** Modes whose spins are queued already, drawn off the 電サポ at no cost as a leftover queue's are, whatever their kind: a 時短 at the 電チュー's chance for a 一種二種混合機's leftover queue. Only a mode whose spins run out has it, and never one in `withoutSupport`. */
+  readonly queued?: readonly string[]
+  /** The mode a mode's combo is counted as part of: a jackpot or a miss keeping play among the modes of one count carries the combo on, and the lucky trigger of the mode they are part of works from any of them. A mode with a lucky trigger of its own is part of none, and the mode named is itself part of none. */
+  readonly comboOf?: Readonly<Record<string, string>>
 }
 
 /** A 時短 ended early, or a regular game led off: on each spin at `chance`, without a jackpot, to where its shares say; the spins played until then fill the relief gauge. */
@@ -473,7 +479,7 @@ export type EngineErrorDto =
   | { readonly type: "non-absorbing-model"; readonly mode: string }
   | {
       readonly type: "unsupported-spec"
-      readonly reason: { readonly type: "too-many-states"; readonly states: number; readonly limit: number } | { readonly type: "lucky-trigger-to-itself" } | { readonly type: "lucky-trigger-on-entry" }
+      readonly reason: { readonly type: "too-many-states"; readonly states: number; readonly limit: number } | { readonly type: "lucky-trigger-to-itself" } | { readonly type: "lucky-trigger-on-entry" } | { readonly type: "combo-of-part" }
     }
   | { readonly type: "solve-failed"; readonly reason: "singular" | "dangling-target" | "unknown-support-spins" }
 

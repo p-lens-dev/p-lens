@@ -1054,8 +1054,21 @@ walking down the trail and back keeps the work in hand.
   `leftoverQueue` (残保留), `rushing` (a RUSH by its continuation rate),
   `untilHit` (確変 loop), `onMiss`, `luckyTrigger` ("3連で LT" is
   `atCombo: 3`), `reliefDrive` (遊タイム), `withoutSupport` (a mode played
-  without the 電サポ, a 潜確 at the heso) and `label`; `payout` is a
-  resource.
+  without the 電サポ, a 潜確 at the heso), `earlyEnd` (c時短),
+  `reliefCounted` (whether a mode's spins count toward the 遊タイム, said
+  where it differs from its kind), `queued` (a mode whose spins are queued
+  already, drawn off the 電サポ at no cost as a leftover queue's are),
+  `comboOf` (the mode a mode's combo is counted as part of) and `label`;
+  `payout` is a resource.
+  A kind says only how a mode ends; what else a mode whose spins run out
+  is — its own chance, whether its spins count toward the 遊タイム, whether
+  they are queued, whether it may end early — is a component of its own,
+  combined with any of those kinds rather than bundled into one: a
+  一種二種混合機's leftover queue at the 電チュー's chance is a 時短 with its
+  chance and `queued`; a machine counting every spin toward its 遊タイム has
+  `reliefCounted: true` on its ST. A component an engine does not know is
+  refused by its name, never read past, which is why each is a table of its
+  own rather than a field added to one.
   A share of an allotment pays its rounds by that rule unless it names its
   own `prizeBalls` or `count` — a 4R through a ten-ball attacker beside a
   10R through a fifteen-ball one — and where one jackpot opens more than one
@@ -1113,16 +1126,23 @@ walking down the trail and back keeps the work in hand.
   `Continuation` by its rate. Normalising turns the assembled modes into
   states; history dependence is lifted into the states (a mode with a lucky
   trigger becomes one state per combo short of it), never into the solver.
+  A combo is counted within one mode unless a mode says it is part of
+  another's (`comboOf`): among the modes of one count a jackpot adds to the
+  combo and a miss or an early end carries it as it stands, every one of
+  them having a state per combo short of the trigger of the mode they are
+  part of — a RUSH split into its first spin at the heso and the rest is
+  the RUSH whole, its lucky trigger counted across the split.
 - **A 遊タイム is the regular game's relief drive.** Spins at the regular
   game's chance without a jackpot fill the relief gauge; once it holds so
   many, play enters a mode (usually a long 時短) with nothing won. As the
   machines do: the gauge empties at every jackpot; a 時短's spins — at the
   regular game's chance or its own — and a leftover queue's fill it
   (`fills_gauge`, from the kind of mode, never inferred from its chance) and
-  an ST's do not. A 時短 may end early (`earlyEnd`, a c時短): each spin it
+  an ST's do not, unless the mode says otherwise (`reliefCounted`). A mode
+  whose spins run out may end early (`earlyEnd`, a c時短): each spin it
   wins at its chance, ends at the c時短's, or goes on, and an early end
   leads where its shares say, filling the gauge by the spins played until
-  then. Those spins are gathered into steps of five (`EARLY_END_STEP`),
+  then where its spins count, and by none where they do not. Those spins are gathered into steps of five (`EARLY_END_STEP`),
   each filling by its middle spin, and every spin from the 遊タイム's count
   on as one: the long run keeps a point per step rather than per spin —
   花の慶次 裂99's border comes out 16.5855 against 16.5861 spin by spin,

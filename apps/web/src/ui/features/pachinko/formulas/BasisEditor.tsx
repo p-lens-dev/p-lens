@@ -2,11 +2,12 @@ import { For, Index, Show, type JSX } from "solid-js"
 
 import { Button } from "../../../primitives/button"
 import { CloseIcon, PlusIcon, TrashIcon } from "../../../primitives/icons"
+import { HelpPopover } from "../../../primitives/popover"
 import { Select, type SelectOption } from "../../../primitives/select"
 import { TextField } from "../../../primitives/text-field"
 import { ToggleGroup, ToggleGroupItem } from "../../../primitives/toggle-group"
 import { modeTitle } from "../../../wording/pachinko/formula"
-import { type AllotmentRow, type BasisForm, type EarlyEndRow, EMPTY_ROUNDS, EMPTY_ROW, type ModeForm, type ModeKindName, REGULAR, type RoundsRow, freshModeKey, newMode } from "./formula-form"
+import { type AllotmentRow, type BasisForm, type EarlyEndRow, EMPTY_ROUNDS, EMPTY_ROW, type ModeForm, type ModeKindName, REGULAR, type RoundsRow, countsByKind, freshModeKey, mayBeQueued, newMode, runsOut } from "./formula-form"
 
 const KINDS: readonly { readonly kind: ModeKindName; readonly label: string }[] = [
   { kind: "rushing", label: "継続率" },
@@ -45,8 +46,35 @@ function RoundsFields(props: {
   )
 }
 
+/** How rounds and shares are written where a spec sheet counts them its own way: the V round, short rounds, rounds that differ by attacker, a 時短 entered without a jackpot, and 直撃 in a 電サポ. */
+function RoundsHelp(): JSX.Element {
+  return (
+    <HelpPopover label="ラウンドと振分の書き方" title="ラウンドと振分の書き方">
+      <p>V入賞のための1玉だけのラウンドは、R数に入れません。「実4R」なら4Rと書きます。</p>
+      <p>出玉がほとんどないショートラウンドや突確は、0Rと書きます。</p>
+      <p>アタッカーごとに賞球やカウントが違うラウンドは、＋で別アタッカーのラウンドを足して分けます。</p>
+      <p>大当りなしで時短に入る突サポは、0Rの振分で時短へ行くか、時短や通常時のc時短で書きます。</p>
+      <p>電サポ中に電チューの直撃で振分が変わる機種は、小当りVと直撃の割合で混ぜた振分を書きます。V 1/7.0・直撃 1/300なら、直撃の振分を約2.3%、Vの振分を約97.7%の重みで足し合わせます。</p>
+    </HelpPopover>
+  )
+}
+
+/** How the modes are chosen where a machine's 電サポ, 残保留 or 遊タイム does not fit them at first sight. */
+function ModesHelp(): JSX.Element {
+  return (
+    <HelpPopover label="続き方の選び方" title="続き方の選び方">
+      <p>ST・時短・残保留は、決まった回転数で終わるモードの書き始めの形です。遊タイムまでの回転に数えるか、保留で消化するか、c時短があるかは、どれを選んでも下のチェックや欄で変えられます。</p>
+      <p>電サポの1回転目がヘソの保留で抽選される機種は、モードを2つに分けます。1つ目は1回転で、確率はそのモードと同じ、振分は初当りの振分（ヘソ）にして、終了後を2つ目へ。2つ目は残りの回転数で、そのモード本来の振分です。一種二種混合機なら、1つ目の確率は通常時の確率にします。ラッキートリガーは2つ目に付け、1つ目の「連の数え方」を2つ目の続きにします。</p>
+      <p>「連の数え方」は、ラッキートリガーの何連目を、どのモードと通して数えるかです。ふつうはそのモードの中だけで数え、別のモードへ移ると1連目からになります。続きにしたモードの間では、大当りでもハズレで移っても連が途切れず、数える側のモードのラッキートリガーがどちらでも効きます。CZを挟んでも連が続く機種にも使えます。</p>
+      <p>電サポ後の残保留は、高確率のまま消化するならSTの回転数に含め、通常時の確率で電チューの振分なら残保留で書きます。一種二種混合機の残保留は電チューの確率で抽選されるので、時短中と同じ確率の時短4回転にして「保留で消化」にチェックを入れます。</p>
+    </HelpPopover>
+  )
+}
+
 function AllotmentEditor(props: {
   readonly title: string
+  /** An explanation beside the title, given where the rows are first met. */
+  readonly help?: JSX.Element
   readonly rows: readonly AllotmentRow[]
   readonly modes: readonly ModeForm[]
   /** The machine's own prize and count, shown waiting in rounds that name none. */
@@ -57,7 +85,10 @@ function AllotmentEditor(props: {
   const set = (index: number, row: AllotmentRow): void => props.onChange(replaced(props.rows, index, row))
   return (
     <div class="flex flex-col gap-2">
-      <span class="text-xs font-bold uppercase tracking-wide text-text-secondary">{props.title}</span>
+      <div class="flex items-center gap-1">
+        <span class="text-xs font-bold uppercase tracking-wide text-text-secondary">{props.title}</span>
+        {props.help}
+      </div>
       <Index each={props.rows}>
         {(row, index) => (
           <div class="flex flex-col gap-1.5">
@@ -137,7 +168,7 @@ function EarlyEndEditor(props: {
           c時短の行き先
         </Button>
       </div>
-      <p class="text-xs text-text-muted">時短中の1回転ごとに、この確率で大当りなしに時短が終わり、行き先へ移ります。終わるまでの回転も遊タイムまでの回転数に数えます。空欄なら c時短はありません。</p>
+      <p class="text-xs text-text-muted">1回転ごとに、この確率で大当りなしに終わり、行き先へ移ります。終わるまでの回転は、遊タイムまでの回転に数えるところなら数えます。空欄なら c時短はありません。</p>
     </div>
   )
 }
@@ -161,6 +192,7 @@ function ModeEditor(props: {
         <div class="min-w-0 flex-1">
           <TextField label="モード名" value={props.mode.label} onChange={set("label")} placeholder="RUSH・LT・時短…" />
         </div>
+        <ModesHelp />
         <Button variant="outline" size="icon" aria-label="このモードを削除" title="このモードを削除" onClick={() => props.onRemove()}>
           <TrashIcon />
         </Button>
@@ -204,14 +236,31 @@ function ModeEditor(props: {
           <TextField label="回転数" value={props.mode.spins} onChange={set("spins")} inputMode="numeric" suffix="回転" />
           <TextField label="大当り確率 1/" value={props.mode.chance} onChange={set("chance")} inputMode="decimal" />
         </div>
-        <p class="text-xs text-text-muted">大当り確率が空欄なら通常時と同じです。一種二種混合機で、時短中は小当りも合わせた確率になる機種は、その確率を入れてください。時短の回転は遊タイムまでの回転数に数えます。</p>
-        <EarlyEndEditor chance={props.mode.earlyEndChance} rows={props.mode.earlyEndTo} destinations={destinations(others(), props.modes)} onChange={(earlyEndChance, earlyEndTo) => props.onChange({ ...props.mode, earlyEndChance, earlyEndTo })} />
+        <p class="text-xs text-text-muted">大当り確率が空欄なら通常時と同じです。一種二種混合機で、時短中は小当りも合わせた確率になる機種は、小当りVと直撃を合わせた確率を入れてください（V 1/6.7・直撃 1/219なら1/6.5）。</p>
       </Show>
       <Show when={props.mode.kind === "leftover-queue"}>
         <div class="w-40">
           <TextField label="残保留" value={props.mode.draws} onChange={set("draws")} inputMode="numeric" suffix="個" />
         </div>
         <p class="text-xs text-text-muted">通常時の確率で抽選します。高確率のまま消化する機種は、STの回転数に含めてください。</p>
+      </Show>
+      <Show when={runsOut(props.mode.kind)}>
+        <EarlyEndEditor chance={props.mode.earlyEndChance} rows={props.mode.earlyEndTo} destinations={destinations(others(), props.modes)} onChange={(earlyEndChance, earlyEndTo) => props.onChange({ ...props.mode, earlyEndChance, earlyEndTo })} />
+        <label class="flex cursor-pointer items-center gap-2 self-start text-sm text-text-primary">
+          <input
+            type="checkbox"
+            checked={props.mode.reliefCounted ?? countsByKind(props.mode.kind)}
+            onChange={(event) => set("reliefCounted")(event.currentTarget.checked === countsByKind(props.mode.kind) ? undefined : event.currentTarget.checked)}
+            class="size-5 shrink-0 accent-accent"
+          />
+          遊タイムまでの回転に数える
+        </label>
+      </Show>
+      <Show when={mayBeQueued(props.mode.kind)}>
+        <label class="flex cursor-pointer items-center gap-2 self-start text-sm text-text-primary">
+          <input type="checkbox" checked={props.mode.queued} onChange={(event) => set("queued")(event.currentTarget.checked)} class="size-5 shrink-0 accent-accent" />
+          保留で消化（玉を使わず電サポもなし。残保留と同じ）
+        </label>
       </Show>
       <AllotmentEditor title="このモード中の大当り振分" rows={props.mode.allotment} modes={props.modes} prizeBalls={props.prizeBalls} count={props.count} onChange={set("allotment")} />
       <div class="grid max-w-xl grid-cols-2 gap-2 @roomy:grid-cols-3 [&>*]:min-w-0">
@@ -226,6 +275,13 @@ function ModeEditor(props: {
         <Show when={props.mode.triggerTo !== ""}>
           <TextField label="何連目で移行" value={props.mode.triggerCombo} onChange={set("triggerCombo")} inputMode="numeric" suffix="連目" />
         </Show>
+        <Select
+          label="連の数え方"
+          placeholder="このモードで数える"
+          options={[{ value: "", label: "このモードで数える" }, ...modeOptions(others(), props.modes).map((option) => ({ ...option, label: `${option.label}の続き` }))]}
+          value={props.mode.comboOf}
+          onChange={set("comboOf")}
+        />
       </div>
       <label class="flex cursor-pointer items-center gap-2 self-start text-sm text-text-primary">
         <input type="checkbox" checked={props.mode.withoutSupport} onChange={(event) => set("withoutSupport")(event.currentTarget.checked)} class="size-5 shrink-0 accent-accent" />
@@ -295,7 +351,14 @@ function ReliefDriveEditor(props: { readonly form: BasisForm; readonly onChange:
   }
   return (
     <div class="flex flex-col gap-1.5">
-      <span class="text-xs font-bold uppercase tracking-wide text-text-secondary">遊タイム</span>
+      <div class="flex items-center gap-1">
+        <span class="text-xs font-bold uppercase tracking-wide text-text-secondary">遊タイム</span>
+        <HelpPopover label="遊タイムまでの回転数" title="遊タイムまでの回転数">
+          <p>時短と残保留の回転は数え、STの回転は数えないのが、はじめの形です。</p>
+          <p>電サポ中の回転も数える機種（「総回転数で」など）は、STのモードで「遊タイムまでの回転に数える」にチェックを入れます。</p>
+          <p>低確率の回転だけを数える機種（「時短は含まない」など）は、時短のモードでそのチェックを外します。</p>
+        </HelpPopover>
+      </div>
       <div class="grid max-w-md grid-cols-[8rem_minmax(0,1fr)] items-end gap-2">
         <TextField label="発動まで" value={props.form.reliefDriveGauge} onChange={(reliefDriveGauge) => props.onChange({ ...props.form, reliefDriveGauge })} inputMode="numeric" suffix="回転" placeholder="なし" />
         <Select
@@ -306,7 +369,7 @@ function ReliefDriveEditor(props: { readonly form: BasisForm; readonly onChange:
           onChange={(reliefDriveTo) => (reliefDriveTo === NEW_RAPID_MODE ? makeRapidMode() : props.onChange({ ...props.form, reliefDriveTo }))}
         />
       </div>
-      <p class="text-xs text-text-muted">大当り後、通常の確率でこの回転数ハマると移行先のモードへ。時短と残保留の回転も数え、ST中は数えません。大当りで0に戻り、遊タイムは大当り間に1回だけです。</p>
+      <p class="text-xs text-text-muted">大当り後、通常の確率でこの回転数ハマると移行先のモードへ。時短と残保留の回転も数え、ST中は数えません（モードごとに変えられます）。大当りで0に戻り、遊タイムは大当り間に1回だけです。</p>
     </div>
   )
 }
@@ -325,7 +388,7 @@ export function BasisEditor(props: { readonly form: BasisForm; readonly onChange
       <div class="w-48">
         <TextField label="通常時の大当り確率 1/" value={props.form.regularOneIn} onChange={set("regularOneIn")} inputMode="decimal" />
       </div>
-      <AllotmentEditor title="初当りの振分" rows={props.form.firstHit} modes={props.form.modes} prizeBalls={props.form.prizeBalls} count={props.form.count} onChange={set("firstHit")} />
+      <AllotmentEditor title="初当りの振分" help={<RoundsHelp />} rows={props.form.firstHit} modes={props.form.modes} prizeBalls={props.form.prizeBalls} count={props.form.count} onChange={set("firstHit")} />
       <Index each={props.form.modes}>
         {(mode, index) => (
           <ModeEditor

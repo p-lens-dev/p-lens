@@ -121,27 +121,39 @@ rule(balls_filled, cycle_balls(filled(Filled), Balls),
        Balls is (1 - Reach) * B + Reach * After )).
 rule(balls_spent, cycle_balls(spent, Balls), balls_per_first_hit(Balls)).
 
-% The chain made again from the spec sheet. A mode reaches its next jackpot
-% before it ends by its kind: an ST or a 時短 — at the regular game's chance
-% or its own — or a leftover queue within its spins, a RUSH by its rate, a 確変 loop always. A jackpot there is allotted
-% by the mode's shares; a mode with a lucky trigger counts its combo, and
-% the jackpot that makes the trigger's moves play on.
-rule(reach_special_time, reach(Mode, Chance),
-     ( given(spec_mode(Mode, special_time(Spins, Hit))), Chance is 1 - (1 - Hit) ** Spins )).
-rule(reach_rapid, reach(Mode, Chance),
-     ( given(spec_mode(Mode, rapid(Spins))), \+ given(spec_early_end(Mode, _)), given(spec_regular(Hit)), Chance is 1 - (1 - Hit) ** Spins )).
-rule(reach_rapid_at, reach(Mode, Chance),
-     ( given(spec_mode(Mode, rapid_at(Spins, Hit))), \+ given(spec_early_end(Mode, _)), Chance is 1 - (1 - Hit) ** Spins )).
+% The chain made again from the spec sheet. A mode whose spins run out — an
+% ST at its own chance, a 時短 at the regular game's or its own, a leftover
+% queue at the regular game's — plays so many spins at one chance; what
+% else it is, whether its spins count toward the 遊タイム, whether they are
+% queued, whether it may end early, it says apart from its kind. A mode
+% reaches its next jackpot before it ends within its spins, a RUSH by its
+% rate, a 確変 loop always. A jackpot there is allotted by the mode's
+% shares; a mode with a lucky trigger counts its combo, and the jackpot that
+% makes the trigger's moves play on.
+rule(runs_special_time, runs(Mode, Spins, Hit), given(spec_mode(Mode, special_time(Spins, Hit)))).
+rule(runs_rapid, runs(Mode, Spins, Hit), ( given(spec_mode(Mode, rapid(Spins))), given(spec_regular(Hit)) )).
+rule(runs_rapid_at, runs(Mode, Spins, Hit), given(spec_mode(Mode, rapid_at(Spins, Hit)))).
+rule(runs_leftover_queue, runs(Mode, Draws, Hit), ( given(spec_mode(Mode, leftover_queue(Draws))), given(spec_regular(Hit)) )).
+rule(reach_runs, reach(Mode, Chance),
+     ( runs(Mode, Spins, Hit), \+ given(spec_early_end(Mode, _)), Chance is 1 - (1 - Hit) ** Spins )).
 
-% A 時短 that may end early — a c時短 — races spin by spin: a jackpot at its
-% chance, an early end at the c時短's, else on to the next spin. It wins
-% before it ends either way as often as the race says; it ends early
-% between two spins as often as each spin on the way is reached and ends
-% there; and it runs out where it reaches its last spin and goes on past it.
-rule(race_rapid, race(Mode, Hit, End, Spins),
-     ( given(spec_mode(Mode, rapid(Spins))), given(spec_regular(Hit)), given(spec_early_end(Mode, End)) )).
-rule(race_rapid_at, race(Mode, Hit, End, Spins),
-     ( given(spec_mode(Mode, rapid_at(Spins, Hit))), given(spec_early_end(Mode, End)) )).
+% Whether a mode's spins count toward the 遊タイム: where it says, as it
+% says; otherwise a 時短's and a leftover queue's do and an ST's do not.
+rule(counted_said, counted(Mode), given(spec_relief_counted(Mode, true))).
+rule(counted_by_kind, counted(Mode),
+     ( \+ given(spec_relief_counted(Mode, _)), runs(Mode, _, _), \+ given(spec_mode(Mode, special_time(_, _))) )).
+% Whether a mode's spins are queued already, costing nothing off the 電サポ:
+% a leftover queue's, or a mode's said to be.
+rule(queued_leftover_queue, queued(Mode), given(spec_mode(Mode, leftover_queue(_)))).
+rule(queued_said, queued(Mode), ( given(spec_queued(Mode)), \+ given(spec_mode(Mode, leftover_queue(_))) )).
+
+% A mode whose spins run out that may end early — a c時短 — races spin by
+% spin: a jackpot at its chance, an early end at the c時短's, else on to the
+% next spin. It wins before it ends either way as often as the race says; it
+% ends early between two spins as often as each spin on the way is reached
+% and ends there; and it runs out where it reaches its last spin and goes on
+% past it.
+rule(race_runs, race(Mode, Hit, End, Spins), ( runs(Mode, Spins, Hit), given(spec_early_end(Mode, End)) )).
 rule(reach_early_end, reach(Mode, Chance),
      ( race(Mode, Hit, End, Spins), Keep is 1 - Hit - End, Chance is Hit * (1 - Keep ** Spins) / (Hit + End) )).
 rule(ended_between, ended_between(Mode, From, To, Chance),
@@ -149,20 +161,20 @@ rule(ended_between, ended_between(Mode, From, To, Chance),
 rule(ran_out_early_end, ran_out(Mode, Risk), ( race(Mode, Hit, End, Spins), Risk is (1 - Hit - End) ** Spins )).
 rule(ran_out, ran_out(Mode, Risk), ( \+ given(spec_early_end(Mode, _)), reach(Mode, Reach), Risk is 1 - Reach )).
 
-% The spins a 時短 ended early is taken to have ended at, step by step, as
+% The spins a mode ended early is taken to have ended at, step by step, as
 % the engine gathers them so the long run with a 遊タイム stays small:
 % steps of five spins below the 遊タイム's count, each filling the gauge by
 % its middle spin, and every spin from the count on as one step filling it
-% whole. Without a 遊タイム the spins are one step, filling by its middle.
+% whole. Without a 遊タイム the spins are one step, filling by its middle;
+% and a mode whose spins count for none is one step filling none.
 rule(early_step_below, early_step(Mode, From, To, Fills),
-     ( given(spec_relief_drive(Gauge, _)), race(Mode, _, _, Spins), Below is min(Spins, Gauge - 1), Last is (Below + 4) // 5 - 1,
+     ( given(spec_relief_drive(Gauge, _)), counted(Mode), race(Mode, _, _, Spins), Below is min(Spins, Gauge - 1), Last is (Below + 4) // 5 - 1,
        between(0, Last, Step), From is Step * 5 + 1, To is min(From + 4, Below), Fills is (From + To) // 2 )).
 rule(early_step_rest, early_step(Mode, Gauge, Spins, Gauge),
-     ( given(spec_relief_drive(Gauge, _)), race(Mode, _, _, Spins), Gauge =< Spins )).
+     ( given(spec_relief_drive(Gauge, _)), counted(Mode), race(Mode, _, _, Spins), Gauge =< Spins )).
 rule(early_step_whole, early_step(Mode, 1, Spins, Fills),
-     ( \+ given(spec_relief_drive(_, _)), race(Mode, _, _, Spins), Fills is (Spins + 1) // 2 )).
-rule(reach_leftover_queue, reach(Mode, Chance),
-     ( given(spec_mode(Mode, leftover_queue(Draws))), given(spec_regular(Hit)), Chance is 1 - (1 - Hit) ** Draws )).
+     ( \+ given(spec_relief_drive(_, _)), counted(Mode), race(Mode, _, _, Spins), Fills is (Spins + 1) // 2 )).
+rule(early_step_uncounted, early_step(Mode, 1, Spins, 0), ( \+ counted(Mode), race(Mode, _, _, Spins) )).
 rule(reach_rushing, reach(Mode, Chance), given(spec_mode(Mode, rushing(Chance)))).
 rule(reach_until_hit, reach(Mode, 1), given(spec_mode(Mode, until_hit))).
 
@@ -172,44 +184,45 @@ rule(made_hit, made(Index, outcome(Chance, Rounds, Balls, Target, Hits, 0)),
      ( given(origin(Index, Mode, Combo)), reach(Mode, Reach), given(spec_share(mode(Mode), Share, Rounds, Balls, Next, Hits)),
        Chance is Reach * Share, lands(Mode, Combo, Next, Target) )).
 rule(made_early_end, made(Index, outcome(Chance, 0, 0, Target, 0, Fills)),
-     ( given(origin(Index, Mode, _)), early_step(Mode, From, To, Fills), given(spec_early_end_share(Mode, Share, Next)),
-       ended_between(Mode, From, To, Ended), Chance is Ended * Share, enters(Next, Target) )).
+     ( given(origin(Index, Mode, Combo)), early_step(Mode, From, To, Fills), given(spec_early_end_share(Mode, Share, Next)),
+       ended_between(Mode, From, To, Ended), Chance is Ended * Share, carries(Mode, Combo, Next, Target) )).
 rule(made_miss, made(Index, outcome(Risk, 0, 0, Target, 0, Fills)),
-     ( given(origin(Index, Mode, _)), ran_out(Mode, Risk), Risk > 0, given(spec_on_miss(Mode, Next)), enters(Next, Target), made_fills(Index, Fills) )).
+     ( given(origin(Index, Mode, Combo)), ran_out(Mode, Risk), Risk > 0, given(spec_on_miss(Mode, Next)), carries(Mode, Combo, Next, Target),
+       made_fills(Index, Fills) )).
 rule(enters_regular, enters(regular, end), true).
 rule(enters_mode, enters(mode(Mode), state(Index)), given(origin(Index, Mode, 1))).
-rule(leaves_mode, lands(Mode, _, Next, Target), ( Next \== mode(Mode), enters(Next, Target) )).
-rule(repeats_mode, lands(Mode, _, mode(Mode), Target), ( \+ given(spec_lucky_trigger(Mode, _, _)), enters(mode(Mode), Target) )).
-rule(adds_to_combo, lands(Mode, Combo, mode(Mode), state(Index)),
-     ( given(spec_lucky_trigger(Mode, At, _)), Combo + 1 < At, Then is Combo + 1, given(origin(Index, Mode, Then)) )).
-rule(lucky_trigger, lands(Mode, Combo, mode(Mode), Target),
-     ( given(spec_lucky_trigger(Mode, At, To)), Combo + 1 >= At, enters(mode(To), Target) )).
+% A mode's combo is counted as part of the mode it says, or its own. Play
+% going from a mode into one of the same count with a lucky trigger is
+% counted by that trigger: a jackpot adds to the combo, the one that makes
+% the trigger's moves play on, and no jackpot carries the combo as it
+% stands. Anywhere else play enters at the first combo.
+rule(head_said, head(Mode, Head), given(spec_combo_of(Mode, Head))).
+rule(head_itself, head(Mode, Mode), \+ given(spec_combo_of(Mode, _))).
+rule(counting, counting(Mode, mode(Other), Other, At, To),
+     ( head(Mode, Head), head(Other, Head), given(spec_lucky_trigger(Head, At, To)) )).
+rule(leaves_count, lands(Mode, _, Next, Target), ( \+ counting(Mode, Next, _, _, _), enters(Next, Target) )).
+rule(adds_to_combo, lands(Mode, Combo, Next, state(Index)),
+     ( counting(Mode, Next, Other, At, _), Combo + 1 < At, Then is Combo + 1, given(origin(Index, Other, Then)) )).
+rule(lucky_trigger, lands(Mode, Combo, Next, Target),
+     ( counting(Mode, Next, _, At, To), Combo + 1 >= At, enters(mode(To), Target) )).
+rule(carries_on, carries(Mode, Combo, Next, state(Index)), ( counting(Mode, Next, Other, _, _), given(origin(Index, Other, Combo)) )).
+rule(carries_out, carries(Mode, _, Next, Target), ( \+ counting(Mode, Next, _, _, _), enters(Next, Target) )).
 % A state is shot at the heso, paying for its spins, where its mode is said
-% to be played without the 電サポ and its spins run out: an ST at its own
-% chance, a 時短 at the regular game's. A leftover queue's are held already.
-rule(made_heso_special_time, made_heso(Index, Spins, Hit),
-     ( given(origin(Index, Mode, _)), given(spec_without_support(Mode)), given(spec_mode(Mode, special_time(Spins, Hit))) )).
-rule(made_heso_rapid, made_heso(Index, Spins, Hit),
-     ( given(origin(Index, Mode, _)), given(spec_without_support(Mode)), given(spec_mode(Mode, rapid(Spins))), \+ given(spec_early_end(Mode, _)),
-       given(spec_regular(Hit)) )).
+% to be played without the 電サポ and its spins run out, at its chance. Queued
+% spins are never said to be so.
+rule(made_heso_runs, made_heso(Index, Spins, Hit),
+     ( given(origin(Index, Mode, _)), given(spec_without_support(Mode)), runs(Mode, Spins, Hit), \+ given(spec_early_end(Mode, _)) )).
 rule(made_heso_early_end, made_heso(Index, Spins, Stop),
      ( given(origin(Index, Mode, _)), given(spec_without_support(Mode)), race(Mode, Hit, End, Spins), Stop is Hit + End )).
-rule(made_heso_rapid_at, made_heso(Index, Spins, Hit),
-     ( given(origin(Index, Mode, _)), given(spec_without_support(Mode)), given(spec_mode(Mode, rapid_at(Spins, Hit))),
-       \+ given(spec_early_end(Mode, _)) )).
-rule(made_fills_rapid, made_fills(Index, Spins), ( given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid(Spins))) )).
-rule(made_fills_rapid_at, made_fills(Index, Spins), ( given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid_at(Spins, _))) )).
-rule(made_fills_leftover_queue, made_fills(Index, Draws), ( given(origin(Index, Mode, _)), given(spec_mode(Mode, leftover_queue(Draws))) )).
-rule(made_fills_none, made_fills(Index, 0),
-     ( given(origin(Index, Mode, _)), \+ given(spec_mode(Mode, rapid(_))), \+ given(spec_mode(Mode, rapid_at(_, _))),
-       \+ given(spec_mode(Mode, leftover_queue(_))) )).
-% A state is played without the 電サポ where its mode is a leftover queue or
-% says so, and on it otherwise.
-rule(made_leftover_queue_without_support, made_support(Index, without), ( given(origin(Index, Mode, _)), given(spec_mode(Mode, leftover_queue(_))) )).
+rule(made_fills_counted, made_fills(Index, Spins), ( given(origin(Index, Mode, _)), counted(Mode), runs(Mode, Spins, _) )).
+rule(made_fills_none, made_fills(Index, 0), ( given(origin(Index, Mode, _)), \+ counted(Mode) )).
+% A state is played without the 電サポ where its spins are queued or it says
+% so, and on it otherwise.
+rule(made_queued_without_support, made_support(Index, without), ( given(origin(Index, Mode, _)), queued(Mode) )).
 rule(made_said_without_support, made_support(Index, without),
-     ( given(origin(Index, Mode, _)), \+ given(spec_mode(Mode, leftover_queue(_))), given(spec_without_support(Mode)) )).
+     ( given(origin(Index, Mode, _)), \+ queued(Mode), given(spec_without_support(Mode)) )).
 rule(made_on_support, made_support(Index, on),
-     ( given(origin(Index, Mode, _)), \+ given(spec_mode(Mode, leftover_queue(_))), \+ given(spec_without_support(Mode)) )).
+     ( given(origin(Index, Mode, _)), \+ queued(Mode), \+ given(spec_without_support(Mode)) )).
 rule(stored_without_support, stored_support(Index, without), given(without_support(Index))).
 rule(stored_on_support, stored_support(Index, on), \+ given(without_support(Index))).
 % The spins a state on the 電サポ plays there, made again from the sheet: an
@@ -217,13 +230,8 @@ rule(stored_on_support, stored_support(Index, on), \+ given(without_support(Inde
 % chance of either — a RUSH's within its 電サポ回数 at the one chance a spin
 % that wins its rate within them, and a 確変 loop's until a jackpot at the
 % chance it says. A RUSH saying no 電サポ回数, or a loop no chance, tells none.
-rule(made_support_special_time, made_support_spins(Index, Spins, Hit),
-     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, special_time(Spins, Hit))) )).
-rule(made_support_rapid, made_support_spins(Index, Spins, Hit),
-     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid(Spins))), \+ given(spec_early_end(Mode, _)),
-       given(spec_regular(Hit)) )).
-rule(made_support_rapid_at, made_support_spins(Index, Spins, Hit),
-     ( made_support(Index, on), given(origin(Index, Mode, _)), given(spec_mode(Mode, rapid_at(Spins, Hit))), \+ given(spec_early_end(Mode, _)) )).
+rule(made_support_runs, made_support_spins(Index, Spins, Hit),
+     ( made_support(Index, on), given(origin(Index, Mode, _)), runs(Mode, Spins, Hit), \+ given(spec_early_end(Mode, _)) )).
 rule(made_support_early_end, made_support_spins(Index, Spins, Stop),
      ( made_support(Index, on), given(origin(Index, Mode, _)), race(Mode, Hit, End, Spins), Stop is Hit + End )).
 rule(made_support_rushing, made_support_spins(Index, Spins, Hit),

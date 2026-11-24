@@ -89,6 +89,9 @@ pub enum Unsupported {
     /// A lucky trigger at the first combo: the jackpot that entered the mode,
     /// which cannot also be one won in it.
     LuckyTriggerOnEntry,
+    /// A mode's combo counted as part of a mode that is itself counted as
+    /// part of another, or of itself: a count has one mode it is part of.
+    ComboOfPart,
 }
 
 /// What can stop a normalised spec being solved. Normalisation rules these

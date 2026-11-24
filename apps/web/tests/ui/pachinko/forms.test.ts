@@ -102,6 +102,46 @@ describe("the basis form", () => {
     expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).modes[0]?.withoutSupport).toBe(true)
   })
 
+  test("a mode's spins counted toward the 遊タイム otherwise than its kind are kept, and said only where they differ from it", () => {
+    const st = { ...STARTING_BASIS.modes[0]!, kind: "special-time" as const, spins: "100", chance: "50" }
+    const counted = readBasisForm({ ...STARTING_BASIS, modes: [{ ...st, reliefCounted: true }] })
+    expect(counted.ok && counted.value.spec.components.reliefCounted).toEqual({ m1: true })
+    expect(counted.ok && basisFormOf(counted.value.spec, counted.value.conditions, undefined).modes[0]?.reliefCounted).toBe(true)
+    const asKind = readBasisForm({ ...STARTING_BASIS, modes: [{ ...st, reliefCounted: false }] })
+    expect(asKind.ok && asKind.value.spec.components.reliefCounted).toBeUndefined()
+    const rapid = readBasisForm({ ...STARTING_BASIS, modes: [{ ...st, kind: "rapid", reliefCounted: false }] })
+    expect(rapid.ok && rapid.value.spec.components.reliefCounted).toEqual({ m1: false })
+  })
+
+  test("an ST or a 時短 said to be queued is kept so, a leftover queue queued by kind says nothing, and queued spins shot at the heso are refused", () => {
+    const rapid = { ...STARTING_BASIS.modes[0]!, kind: "rapid" as const, spins: "4", chance: "7" }
+    const queued = readBasisForm({ ...STARTING_BASIS, modes: [{ ...rapid, queued: true }] })
+    expect(queued.ok && queued.value.spec.components.queued).toEqual(["m1"])
+    expect(queued.ok && basisFormOf(queued.value.spec, queued.value.conditions, undefined).modes[0]?.queued).toBe(true)
+    const queue = readBasisForm({ ...STARTING_BASIS, modes: [{ ...rapid, kind: "leftover-queue", draws: "4", queued: true }] })
+    expect(queue.ok && queue.value.spec.components.queued).toBeUndefined()
+    const both = readBasisForm({ ...STARTING_BASIS, modes: [{ ...rapid, queued: true, withoutSupport: true }] })
+    expect(!both.ok && both.error.some((problem) => problem.reason === "queued-at-heso")).toBe(true)
+  })
+
+  test("a c時短 is kept on an ST and on a leftover queue, as on a 時短", () => {
+    const st = { ...STARTING_BASIS.modes[0]!, kind: "special-time" as const, spins: "100", chance: "50", earlyEndChance: "100", earlyEndTo: [{ share: "100", next: "regular" }] }
+    const read = readBasisForm({ ...STARTING_BASIS, modes: [st] })
+    expect(read.ok && read.value.spec.components.earlyEnd?.["m1"]?.chance).toEqual({ type: "ratio", numerator: 1, denominatorHundredths: 10000 })
+  })
+
+  test("the mode a mode's combo is counted as part of is kept, and a lucky trigger on such a part is refused", () => {
+    const rush = STARTING_BASIS.modes[0]!
+    const rest = { ...rush, key: "m2", label: "RUSH残り" }
+    const read = readBasisForm({ ...STARTING_BASIS, modes: [{ ...rush, comboOf: "m2" }, rest] })
+    expect(read.ok && read.value.spec.components.comboOf).toEqual({ m1: "m2" })
+    expect(read.ok && basisFormOf(read.value.spec, read.value.conditions, undefined).modes[0]?.comboOf).toBe("m2")
+    const none = readBasisForm(STARTING_BASIS)
+    expect(none.ok && none.value.spec.components.comboOf).toBeUndefined()
+    const triggered = readBasisForm({ ...STARTING_BASIS, modes: [{ ...rush, comboOf: "m2", triggerTo: "m2", triggerCombo: "3" }, rest] })
+    expect(!triggered.ok && triggered.error.some((problem) => problem.reason === "trigger-on-part")).toBe(true)
+  })
+
   test("the setting level a formula was read at is kept through a remaking", () => {
     const read = readBasisForm({ ...STARTING_BASIS, assumedSettingLevel: 1 })
     expect(read.ok && read.value.spec.components.assumedSettingLevel).toEqual({ regular: 1 })

@@ -209,6 +209,15 @@ fn rushing(dto: &RushingDto, at: &str) -> Result<Rushing, ErrorDto> {
     })
 }
 
+/// A component that is a set of entities, each read as a mode's id.
+fn entity_set(entities: &[String], field: &str) -> Result<BTreeSet<ModeId>, ErrorDto> {
+    entities
+        .iter()
+        .enumerate()
+        .map(|(index, entity)| mode_id(entity, &format!("{field}[{index}]")))
+        .collect()
+}
+
 fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
     const AT: &str = "spec.components";
     if let Some(name) = dto.unsupported.keys().next() {
@@ -262,12 +271,7 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
             },
         )?,
         rushing: table(&dto.rushing, &format!("{AT}.rushing"), rushing)?,
-        until_hit: dto
-            .until_hit
-            .iter()
-            .enumerate()
-            .map(|(index, entity)| mode_id(entity, &format!("{AT}.untilHit[{index}]")))
-            .collect::<Result<BTreeSet<_>, _>>()?,
+        until_hit: entity_set(&dto.until_hit, &format!("{AT}.untilHit"))?,
         until_hit_chance: table(
             &dto.until_hit_chance,
             &format!("{AT}.untilHitChance"),
@@ -286,14 +290,18 @@ fn components(dto: &ComponentsDto) -> Result<Components, ErrorDto> {
                 })
             },
         )?,
-        without_support: dto
-            .without_support
-            .iter()
-            .enumerate()
-            .map(|(index, entity)| mode_id(entity, &format!("{AT}.withoutSupport[{index}]")))
-            .collect::<Result<BTreeSet<_>, _>>()?,
+        without_support: entity_set(&dto.without_support, &format!("{AT}.withoutSupport"))?,
         early_end: table(&dto.early_end, &format!("{AT}.earlyEnd"), early_end)?,
         assumed_setting_level: assumed_setting_levels(dto)?,
+        queued: entity_set(&dto.queued, &format!("{AT}.queued"))?,
+        combo_of: table(&dto.combo_of, &format!("{AT}.comboOf"), |head, at| {
+            mode_id(head, at)
+        })?,
+        relief_counted: table(
+            &dto.relief_counted,
+            &format!("{AT}.reliefCounted"),
+            |counted, _| Ok(*counted),
+        )?,
         relief_drive: table(
             &dto.relief_drive,
             &format!("{AT}.reliefDrive"),
@@ -772,6 +780,9 @@ fn component_name(component: Component) -> String {
         Component::WithoutSupport => "withoutSupport",
         Component::EarlyEnd => "earlyEnd",
         Component::AssumedSettingLevel => "assumedSettingLevel",
+        Component::ReliefCounted => "reliefCounted",
+        Component::Queued => "queued",
+        Component::ComboOf => "comboOf",
     }
     .to_owned()
 }
@@ -846,6 +857,7 @@ pub fn spec_error_dto(error: &SpecError) -> ErrorDto {
                 }
                 Unsupported::LuckyTriggerToItself => UnsupportedDto::LuckyTriggerToItself,
                 Unsupported::LuckyTriggerOnEntry => UnsupportedDto::LuckyTriggerOnEntry,
+                Unsupported::ComboOfPart => UnsupportedDto::ComboOfPart,
             },
         },
     }

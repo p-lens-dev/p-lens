@@ -191,6 +191,24 @@ describe("a formula's grounds, reasoned", () => {
     expect(lines).toContain("検算：RUSH（2連目）の振分と行き先は期待値基礎値どおり")
   })
 
+  test("a RUSH split into its first spin and the rest, its combo counted as one, is the engine's chain, the combo carried across the split", async () => {
+    const mode = STARTING_BASIS.modes[0]!
+    const share = mode.allotment[0]!
+    const machine = {
+      ...STARTING_BASIS,
+      firstHit: [{ ...share, share: "100", next: "m1" }],
+      modes: [
+        { ...mode, key: "m1", label: "RUSH1", kind: "special-time" as const, spins: "1", chance: "50", allotment: [{ ...share, next: "m1" }], onMiss: "m2", comboOf: "m2" },
+        { ...mode, key: "m2", label: "RUSH", kind: "special-time" as const, spins: "99", chance: "50", allotment: [{ ...share, next: "m1" }], triggerCombo: "3", triggerTo: "m3" },
+        { ...mode, key: "m3", label: "LT", kind: "rushing" as const, continuationRate: "90", allotment: [{ ...share, next: "m3" }] },
+      ],
+    }
+    const { proof, basis } = await reasoned(specOf(machine))
+    expect(basis.normalized.states).toHaveLength(5)
+    expect(amiss(proof)).toEqual([])
+    expect(findingsIn(proof).filter((finding) => finding.rule === "check_made")).toHaveLength(6)
+  })
+
   test("the 遊タイム's long run is put into its own equations: each way of starting weighed by what flows into it, each point of a combo by where its outcomes lead", async () => {
     const drive = { ...STARTING_BASIS.modes[0]!, key: "m2", label: "遊タイム", kind: "rapid" as const, spins: "379" }
     const rapid = { ...STARTING_BASIS.modes[0]!, key: "m3", label: "時短", kind: "rapid" as const, spins: "100" }

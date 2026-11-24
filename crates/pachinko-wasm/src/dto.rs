@@ -189,6 +189,12 @@ pub struct ComponentsDto {
     pub early_end: BTreeMap<String, EarlyEndDto>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub assumed_setting_level: BTreeMap<String, u32>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub relief_counted: BTreeMap<String, bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub queued: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub combo_of: BTreeMap<String, String>,
     #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     pub unsupported: BTreeMap<String, serde_json::Value>,
 }
@@ -809,6 +815,7 @@ pub enum UnsupportedDto {
     TooManyStates { states: usize, limit: usize },
     LuckyTriggerToItself,
     LuckyTriggerOnEntry,
+    ComboOfPart,
 }
 
 /// Why a call produced no answer, as a case and its particulars.

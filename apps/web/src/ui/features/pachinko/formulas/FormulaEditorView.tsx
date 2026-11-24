@@ -68,6 +68,8 @@ const REASONS: Readonly<Record<FormProblem["reason"], string>> = {
   "not-whole": "整数で入れてください",
   "out-of-range": "範囲外です",
   "no-attacker": "0Rには付けられません",
+  "queued-at-heso": "電サポなし・ヘソで打つとは同時に選べません",
+  "trigger-on-part": "連を別のモードで数えるモードには付けられません（数える側のモードに付けてください）",
 }
 
 /** The machine and the formula each sit behind a bar of their own, so it is plain which fields are which without saying so. */

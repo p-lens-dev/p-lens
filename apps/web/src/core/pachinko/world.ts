@@ -19,8 +19,14 @@ export interface ModeView {
   readonly luckyTrigger: LuckyTriggerDto | undefined
   /** Whether the mode is said to be played without the 電サポ — a 潜確 at the heso — so that the support drift does not touch its spins; a leftover queue is so whether it says so or not. */
   readonly withoutSupport: boolean
-  /** How a 時短 may end early, a c時短: its chance on each spin and where play goes then; none for every other mode. */
+  /** How a mode whose spins run out may end early, a c時短: its chance on each spin and where play goes then. */
   readonly earlyEnd: EarlyEndDto | undefined
+  /** Whether its spins count toward the 遊タイム, where it says so rather than leaving it to its kind. */
+  readonly reliefCounted: boolean | undefined
+  /** Whether its spins are said to be queued already, drawn off the 電サポ at no cost as a leftover queue's are. */
+  readonly queued: boolean
+  /** The mode its combo is counted as part of, where it says one. */
+  readonly comboOf: string | undefined
 }
 
 /** The regular game as a query assembles it from its entity. */
@@ -78,7 +84,7 @@ export const modesOf = (spec: SpecDto): readonly ModeView[] => {
     const onMiss = components.onMiss?.[id]
     return kind === undefined || allotment === undefined || onMiss === undefined
       ? []
-      : [{ id, label: components.label?.[id] ?? id, kind, allotment, onMiss, luckyTrigger: components.luckyTrigger?.[id], withoutSupport: components.withoutSupport?.includes(id) === true, earlyEnd: components.earlyEnd?.[id] }]
+      : [{ id, label: components.label?.[id] ?? id, kind, allotment, onMiss, luckyTrigger: components.luckyTrigger?.[id], withoutSupport: components.withoutSupport?.includes(id) === true, earlyEnd: components.earlyEnd?.[id], reliefCounted: components.reliefCounted?.[id], queued: components.queued?.includes(id) === true, comboOf: components.comboOf?.[id] }]
   })
 }
 
@@ -106,6 +112,9 @@ export const assembleWorld = (
   const loopChances = modes.flatMap((mode) => (mode.kind.type === "until-hit" && mode.kind.chance !== undefined ? [[mode.id, mode.kind.chance] as const] : []))
   const triggers = modes.flatMap((mode) => (mode.luckyTrigger === undefined ? [] : [[mode.id, mode.luckyTrigger] as const]))
   const unsupported = modes.filter((mode) => mode.withoutSupport).map((mode) => mode.id)
+  const counted = modes.flatMap((mode) => (mode.reliefCounted === undefined ? [] : [[mode.id, mode.reliefCounted] as const]))
+  const queued = modes.filter((mode) => mode.queued).map((mode) => mode.id)
+  const parts = modes.flatMap((mode) => (mode.comboOf === undefined ? [] : [[mode.id, mode.comboOf] as const]))
   const earlyEnds = [
     ...(regular.earlyEnd === undefined ? [] : [[REGULAR_ENTITY, regular.earlyEnd] as const]),
     ...modes.flatMap((mode) => (mode.earlyEnd === undefined ? [] : [[mode.id, mode.earlyEnd] as const])),
@@ -129,6 +138,9 @@ export const assembleWorld = (
       ...(unsupported.length === 0 ? {} : { withoutSupport: unsupported }),
       ...(earlyEnds.length === 0 ? {} : { earlyEnd: record(earlyEnds) }),
       ...(regular.assumedSettingLevel === undefined ? {} : { assumedSettingLevel: record([[REGULAR_ENTITY, regular.assumedSettingLevel]]) }),
+      ...(counted.length === 0 ? {} : { reliefCounted: record(counted) }),
+      ...(queued.length === 0 ? {} : { queued }),
+      ...(parts.length === 0 ? {} : { comboOf: record(parts) }),
     },
     resources: { payout },
   }

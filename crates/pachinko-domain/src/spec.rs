@@ -95,6 +95,24 @@ pub struct Components {
     /// machine with setting levels this world does not otherwise tell apart.
     /// It says what the figures are; nothing is worked out from it.
     pub assumed_setting_level: BTreeMap<ModeId, NonZeroU32>,
+    /// Whether a mode's spins fill the relief gauge, where the machine counts
+    /// them otherwise than its kind does: an ST's spins, which count for none
+    /// by kind, on a machine counting every spin; a 時短's, which count by
+    /// kind, on one counting only the spins off the 電サポ. Only a mode whose
+    /// spins run out has it.
+    pub relief_counted: BTreeMap<ModeId, bool>,
+    /// Modes whose spins are queued already — drawn off the 電サポ at no cost,
+    /// as a leftover queue's are — whatever their kind: a 時短 of a
+    /// 一種二種混合機's leftover queue, drawn at the 電チュー's chance. Only a
+    /// mode whose spins run out has it, and never with `without_support`,
+    /// whose spins are shot and paid for.
+    pub queued: BTreeSet<ModeId>,
+    /// The mode a mode's combo is counted as part of: a jackpot or a miss
+    /// that keeps play among the modes of one such count carries the combo
+    /// on, and the lucky trigger of the mode they are part of works from any
+    /// of them — a RUSH split into its first spin at the heso and the rest,
+    /// or one a chance zone leaves and comes back to with the combo kept.
+    pub combo_of: BTreeMap<ModeId, ModeId>,
 }
 
 /// A 時短 ended early: on each spin, at `chance`, without a jackpot, play
@@ -168,6 +186,9 @@ pub enum Component {
     WithoutSupport,
     EarlyEnd,
     AssumedSettingLevel,
+    ReliefCounted,
+    Queued,
+    ComboOf,
 }
 
 /// The regular game as the engine queries it from its entity: how often it
@@ -183,7 +204,7 @@ pub struct RegularPlay {
 /// A 遊タイム: after so many spins at the regular game's chance without a
 /// jackpot, play moves to a mode, usually a long 時短. Those spins fill the
 /// relief gauge — the regular game's, a 時短's, a leftover queue's; an
-/// ST's do not. The gauge empties at every jackpot, and the 遊タイム comes
+/// ST's do not — unless a mode says otherwise (`relief_counted`). The gauge empties at every jackpot, and the 遊タイム comes
 /// once between jackpots: missed, it does not come again until the next one.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ReliefDrive {
@@ -277,19 +298,22 @@ pub struct Mode {
     pub supported: bool,
     /// Whether the mode is shot at the heso, as the regular game is, its
     /// spins costing balls: a mode said to be played without the 電サポ. A
-    /// leftover queue is off the 電サポ too, but its spins are held already
-    /// and cost nothing.
+    /// leftover queue, or a mode said to be queued, is off the 電サポ too, but
+    /// its spins are queued already and cost nothing.
     pub at_heso: bool,
-    /// How a 時短 may end early, before its spins run out, without a jackpot.
+    /// How a mode whose spins run out may end early, before they do, without
+    /// a jackpot: a c時短.
     pub early_end: Option<EarlyEnd>,
+    /// The mode whose combo this one's is counted as part of, where it says.
+    pub combo_of: Option<ModeId>,
 }
 
 /// How a mode ends, as the engine derives it from its entity's kind component.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ModeKind {
     /// When its spins run out without a jackpot: an ST, a 時短, a leftover
-    /// queue. `fills_gauge` when they are played at the regular game's chance
-    /// and so count toward the 遊タイム: a 時短's and a leftover queue's.
+    /// queue. `fills_gauge` when they count toward the 遊タイム: a 時短's
+    /// and a leftover queue's, or as the mode's `relief_counted` says.
     Runout {
         spins: SpinCount,
         chance: ProbabilitySource,
