@@ -128,19 +128,20 @@ const hoursOf = (start: number | undefined, end: number | undefined, kept: numbe
   return hundredths > 0 ? decimal(BigInt(hundredths), 2) : undefined
 }
 
-/** A sum of yen a tally keeps: whole and not below nothing, one it leaves out none at all where it may. */
-const yenAt = (stored: StoredMap, key: string, required: boolean): Decimal | undefined => ((value) => (value === undefined ? (required ? undefined : decimal(0n, 0)) : value < 0 ? undefined : decimal(BigInt(value), 0)))(wholeAt(stored, key))
+/** A sum of yen a tally keeps: whole and not below nothing, one ぱち簿 left blank none at all. */
+const yenAt = (stored: StoredMap, key: string): Decimal | undefined => ((value) => (value === undefined ? decimal(0n, 0) : value < 0 ? undefined : decimal(BigInt(value), 0)))(wholeAt(stored, key))
 
 /**
  * One tally of ぱち簿's, by its day and its place among the day's: what went
  * in as savings drawn and as cash, what came back into savings and as
  * cash — each pair summed, as ぱち簿 sums them for the day's result — with
  * its parlor, its machine and their codes, its cabinet, its hours, its
- * labels and its memo. None where it lacks what a tally needs.
+ * labels and its memo, a sum left blank none at all. None where a sum is
+ * below nothing.
  */
 const tallyAt = (stored: StoredMap, date: IsoDate, index: number): SourceTally | undefined => {
   const at = (field: string): string => `item${date.replaceAll("-", "")}_${String(index)}_${field}`
-  const [drawn, cash, saved, cashBack] = [yenAt(stored, at("invest"), true), yenAt(stored, at("invest2"), false), yenAt(stored, at("recovery"), true), yenAt(stored, at("recovery2"), false)]
+  const [drawn, cash, saved, cashBack] = [yenAt(stored, at("invest")), yenAt(stored, at("invest2")), yenAt(stored, at("recovery")), yenAt(stored, at("recovery2"))]
   if (drawn === undefined || cash === undefined || saved === undefined || cashBack === undefined) return undefined
   const [parlorCode, machineCode, cabinet] = [wholeAt(stored, at("hall_id")), wholeAt(stored, at("machine_id")), wholeAt(stored, at("number"))]
   return {

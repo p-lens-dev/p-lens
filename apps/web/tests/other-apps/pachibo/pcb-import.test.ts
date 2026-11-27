@@ -129,10 +129,19 @@ describe("a ぱち簿 file", () => {
     expect(read.ok && read.value[0]?.memo).toBe("勝ち😀,やった")
   })
 
-  test("is refused where it is no file ぱち簿 wrote, holds no tally, or has a tally lacking what one needs", () => {
+  test("reads a sum left blank as none at all, a tally of cash alone or of nothing typed in", () => {
+    const read = readPachibo(pcbOf([whole("item20261106_count", 3), whole("item20261106_0_invest2", 10000), whole("item20261106_0_recovery2", 3000), whole("item20261106_1_invest", 1000)]), utf8)
+    expect(read.ok && read.value.map((tally) => [tally.outlay, tally.takings])).toEqual([
+      [dec("10000"), dec("3000")],
+      [dec("1000"), dec("0")],
+      [dec("0"), dec("0")],
+    ])
+  })
+
+  test("is refused where it is no file ぱち簿 wrote, holds no tally, or has a tally below nothing", () => {
     expect(readPachibo(new TextEncoder().encode("日付,投資\n2026/11/08,100\n"), utf8)).toEqual({ ok: false, error: { type: "not-pachibo" } })
     expect(readPachibo(pcbOf([["Boolean", "graph", "true"]]), utf8)).toEqual({ ok: false, error: { type: "empty" } })
-    expect(readPachibo(pcbOf([whole("item20261106_count", 2), whole("item20261106_0_invest", 0), whole("item20261106_0_recovery", 0), whole("item20261106_1_invest", -5)]), utf8)).toEqual({
+    expect(readPachibo(pcbOf([whole("item20261106_count", 2), whole("item20261106_0_invest", 0), whole("item20261106_0_recovery", 0), whole("item20261106_1_recovery", -5)]), utf8)).toEqual({
       ok: false,
       error: { type: "entries-unreadable", entries: [{ date: "2026-11-06" as never, index: 1 }] },
     })
