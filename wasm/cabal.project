@@ -1,8 +1,10 @@
 -- Build configuration for hledger-bindings, the module P-Lens ships.
 --
 -- Everything needed to make hledger-lib build for wasm lives here rather than
--- in vendor/. Upstream sources stay untouched so that a newer hledger release
--- can be dropped in without carrying a fork.
+-- in vendor/. Upstream sources are patched only as a last resort, by the files
+-- under patches/ that scripts/setup.sh applies (each written up in README.md,
+-- with when it goes), so that a newer hledger release can be dropped in
+-- without carrying a fork.
 
 packages:
   hledger-bindings

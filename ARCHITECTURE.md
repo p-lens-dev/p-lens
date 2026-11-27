@@ -25,8 +25,12 @@ fixes.
    hledger, with `--strict` checks, before it is stored. A refusal leaves the
    book exactly as it was.
 3. **What hledger can express is not reimplemented.** Periods are query dates,
-   valuation is `--value`, sums are balance reports. No figure a book comes
-   to is worked out here.
+   valuation is `--value`, sums are balance reports. No account's amount is
+   summed here: hledger sums every one. What the app does with the figures
+   hledger gives is arithmetic over answers — counting entries, dividing one
+   figure by another, adding books together for a consolidation, adding the
+   prize lines into one, rounding for the screen, taking one report from
+   another — never a total of postings worked out again.
 4. **Each parlor's tokens at each rental rate are their own commodity.**
    `玉(4円・マレハン東京皇国第8支店)`, `玉(1円・マレハン東京皇国第8支店)` and `玉(4円・723豚の帽子亭店)`
    cannot be exchanged for each other, so they are different commodities,
@@ -743,8 +747,10 @@ rest of the table, including that `solid-gathering-shell` mentions no domain.
 
 ## hledger in the browser
 
-`wasm/hledger-bindings` is hledger-lib behind two exports, `hledgerLoad` and
-`hledgerQuery`, derived from choai's bindings. P-Lens adds `valuation`
+`wasm/hledger-bindings` is hledger-lib behind three exports, `hledgerLoad`
+(parse a journal and keep it under a key), `hledgerSelect` (make a kept
+journal the one asked, with no parse) and `hledgerQuery`, derived from
+choai's bindings. P-Lens adds `valuation`
 (`--value=then|end,COMMODITY`) to balance reports, a `prices` report and a
 `revaluation` report (two balance reports, one taken from the other), and
 reads journals with hledger's strict checks.
@@ -1068,7 +1074,11 @@ walking down the trail and back keeps the work in hand.
   chance and `queued`; a machine counting every spin toward its 遊タイム has
   `reliefCounted: true` on its ST. A component an engine does not know is
   refused by its name, never read past, which is why each is a table of its
-  own rather than a field added to one.
+  own rather than a field added to one. A field an engine does not know
+  inside a table it does know is read past (no `deny_unknown_fields`), and
+  that is deliberate: since no field is ever added to a table, an engine
+  never meets one a newer engine wrote, and the rule, not the reader, is
+  what keeps a spec from being misread.
   A share of an allotment pays its rounds by that rule unless it names its
   own `prizeBalls` or `count` — a 4R through a ten-ball attacker beside a
   10R through a fifteen-ball one — and where one jackpot opens more than one

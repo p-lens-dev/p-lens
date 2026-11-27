@@ -49,7 +49,9 @@ pub enum SpecError {
     MissingKind {
         entity: ModeId,
     },
-    /// An entity with two components that cannot go together: two kinds of mode.
+    /// An entity with two components that cannot go together: two kinds of
+    /// mode, spins queued at no cost on a mode without support, or a lucky
+    /// trigger on a mode whose combo is part of another's.
     ConflictingComponents {
         entity: ModeId,
         first: Component,

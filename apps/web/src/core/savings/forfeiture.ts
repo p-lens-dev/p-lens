@@ -15,8 +15,8 @@ import { SAVINGS_TAG } from "./balance"
  * one word for it: 失効, on screen and on the entry, written to 失効損,
  * the loss it is, named as a book names a loss. It is a loss,
  * as large as the tokens were worth, and no tally's: nothing was played
- * for it, so it stands under no machine and is counted in the results of
- * its day like any other expense.
+ * for it, so it stands under no machine and is never part of 収支: it is
+ * a line of その他損益 instead, beside it.
  */
 export interface Forfeiture {
   readonly parlor: Parlor

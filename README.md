@@ -68,13 +68,16 @@ Three things make the model what it is.
 
 On a day when 4,800 saved balls at an exchange rate of 3.5 yen are exchanged
 for special prizes worth 16,500 yen and odd prizes, for example, the entry is
-this. Cash does not move.
+this. The special prizes count out 4,715 of the balls; the 85 left go as odd
+prizes at the rental price of 4 yen, and hledger balances the translation
+adjustment between. Cash does not move.
 
 ```journal
-2026-10-04 景品交換 マレハン東京皇国第8支店  ; parlor-id: malehan-tokyokoukoku, savings: prize-exchange
-    資産:貯玉:マレハン東京皇国第8支店:4円        -4800 "玉(4円・マレハン東京皇国第8支店)" @ 3.5 JPY
+2026-10-04 マレハン東京皇国第8支店 | 景品交換  ; parlor-id: malehan-tokyokoukoku, savings: prize-exchange
+    資産:貯玉:マレハン東京皇国第8支店:4円  -4800 "玉(4円・マレハン東京皇国第8支店)" @ 3.5 JPY
     純資産:特殊景品                     16500 JPY
-    純資産:端玉景品等                   300 JPY
+    純資産:端玉景品等                   340 JPY
+    純資産:換算調整勘定
 ```
 
 The balls and medals were already counted in the revenue and expenses of the

@@ -69,8 +69,8 @@ rewritten against the new version or dropped, never forced.
   `hledger-lib/Hledger/Read/JournalReader.hs`) that scans the commonest shapes
   of entry directly and declines anything else to the general parser. It
   declined every quoted commodity symbol, and every token commodity a book
-  holds is quoted (`"玉(4円・店)"`, `"枚(20円・店)"`: digits and brackets
-  are not allowed unquoted). So the fast path took none of a book's entries
+  holds is quoted (`"玉(4円・店)"`, `"枚(20円・店)"`: digits are not
+  allowed unquoted). So the fast path took none of a book's entries
   or prices (`--debug=1`: "fast path was used for 0% … declined: quoted
   commodity symbol"). Renaming the commodities would have been a change to
   every book already written, for the same gain.
@@ -87,3 +87,6 @@ rewritten against the new version or dropped, never forced.
   instance) parses each fast-path entry with the general parser too and fails
   on any difference: none on the 10,000 entries, nor on `tests/hledger`.
 - **When it goes.** When upstream hledger's fast path takes quoted symbols.
+  It does on master since `8bcebb6339` (2026-11-02, "perf:journal: the
+  parser's fast path now handles quoted commodity symbols"), after 1.99.6:
+  the patch goes with the first release that carries that commit.
