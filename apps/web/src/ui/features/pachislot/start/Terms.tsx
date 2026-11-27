@@ -147,7 +147,7 @@ export function Terms(props: {
     <div class="grid grid-cols-1 gap-x-2 @roomy:grid-cols-2">
       <div class="flex flex-col gap-2">
         <div class="grid grid-cols-2 items-end gap-x-1.5">
-          <div class="grid grid-cols-2 gap-x-1.5">
+          <div class="grid grid-cols-[minmax(0,9fr)_minmax(0,11fr)] gap-x-1.5">
             <TermField label="貸枚(千円)" field="rentalTokens" suffix="枚" form={props.form} invalid={props.invalid} onChange={change} onFocus={props.onFocus} />
             <TermField label="交換(100円)" field="exchange" suffix="枚" inputMode="decimal" form={props.form} invalid={props.invalid} onChange={change} onFocus={props.onFocus} />
           </div>
