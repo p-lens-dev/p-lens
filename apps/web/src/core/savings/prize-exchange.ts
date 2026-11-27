@@ -6,7 +6,7 @@ import { describedBy, type Entry, type StatedPosting } from "../journal/entry"
 import { identityTags, type Parlor, type SavingsPool } from "../parlor/parlor"
 import { rentalPriceOfTier } from "../parlor/terms"
 import { Err, Ok, type Result } from "../result/result"
-import { rateOn, type PricePoint } from "../valuation/valuation"
+import { rateOn, type PricePoint, type WrittenRate } from "../valuation/valuation"
 import { SAVINGS_TAG, withEquityDeclared } from "./balance"
 
 /**
@@ -74,23 +74,27 @@ const simplestWithin = (low: Ratio, high: Ratio): Ratio => {
 }
 
 /** The fewest places a rate is taken to be rounded to: a book's rates are written to two places at least. */
-const RATE_PLACES = 2
+const FEWEST_PLACES = 2
 
 /**
  * The exchange a rate was rounded from: the simplest ratio of yen to
- * tokens that rounds to it. A counter's board is 28 balls or 5.6 medals to
- * ¥100, and the book keeps 3.57 or 17.86 — the one rounded down, the other
- * up — or the same to six places; each is 25/7 or 125/7 again.
+ * tokens that rounds to it at the places it is written to. A counter's
+ * board is 28 balls or 5.6 medals to ¥100, and a hand keeps 3.57 or 17.86
+ * — the one rounded down, the other up — and the app 3.571429 or
+ * 17.857143; each is 25/7 or 125/7 again. A rate the app writes is written
+ * to six places, so that 3.920000, 25 balls to ¥98, is never taken for a
+ * 3.92 rounded from 12 balls to ¥47.
  */
-const exchangeOf = (rate: Decimal): Ratio => {
-  const places = BigInt(Math.max(rate.places, RATE_PLACES))
+const exchangeOf = (written: WrittenRate): Ratio => {
+  const { rate } = written
+  const places = BigInt(Math.max(rate.places, written.places, FEWEST_PLACES))
   const scaled = rate.mantissa * 10n ** (places - BigInt(rate.places))
   const unit = 2n * 10n ** places
   return simplestWithin({ numerator: 2n * scaled - 1n, denominator: unit }, { numerator: 2n * scaled + 1n, denominator: unit })
 }
 
-/** The fewest whole tokens special prizes are exchanged from at a rate, as a counter counts them out. */
-const specialTokensAt = (rate: Decimal, specialPrizes: Decimal): Decimal => {
+/** The fewest whole tokens special prizes are exchanged from at a rate, as a counter counts them out by the board the rate was rounded from. */
+export const specialTokensAt = (rate: WrittenRate, specialPrizes: Decimal): Decimal => {
   const exchange = exchangeOf(rate)
   const scaled = specialPrizes.mantissa * exchange.denominator
   const over = exchange.numerator * 10n ** BigInt(specialPrizes.places)
@@ -110,10 +114,10 @@ const specialTokensAt = (rate: Decimal, specialPrizes: Decimal): Decimal => {
  * the odd tokens go at the rate; a rate of nothing or below, which only a
  * hand can write, counts no tokens out and gives what lies between.
  */
-export const exchangedOddPrizes = (tokens: Decimal, rate: Decimal, specialPrizes: Decimal, rentalPrice: Decimal | undefined): Decimal =>
-  isZero(rate) || isNegative(rate)
-    ? betweenInWholeYen(tokens, rate, specialPrizes)
-    : rounded(multiply(subtract(tokens, specialTokensAt(rate, specialPrizes)), rentalPrice ?? rate), 0)
+export const exchangedOddPrizes = (tokens: Decimal, written: WrittenRate, specialPrizes: Decimal, rentalPrice: Decimal | undefined): Decimal =>
+  isZero(written.rate) || isNegative(written.rate)
+    ? betweenInWholeYen(tokens, written.rate, specialPrizes)
+    : rounded(multiply(subtract(tokens, specialTokensAt(written, specialPrizes)), rentalPrice ?? written.rate), 0)
 
 /** The accounts an exchange is written to, as a book declares them, under the equity savings are set against. */
 const PRIZE_ACCOUNTS = [ACCOUNTS.specialPrizes, ACCOUNTS.oddPrizes, ACCOUNTS.translationAdjustment] as const
@@ -147,7 +151,7 @@ export const prizeExchangeEntry = (exchange: PrizeExchange, prices: readonly Pri
   const commodity = tokenCommodity(exchange.pool.kind, exchange.parlor.name, exchange.pool.tier)
   const point = rateOn(prices, commodity, exchange.date)
   if (point === undefined) return Err({ type: "no-exchange-rate", commodity, date: exchange.date })
-  const odd = exchangedOddPrizes(exchange.tokens, point.rate, exchange.specialPrizes, rentalPriceOfTier(exchange.pool.tier))
+  const odd = exchangedOddPrizes(exchange.tokens, point, exchange.specialPrizes, rentalPriceOfTier(exchange.pool.tier))
   return Ok({
     date: exchange.date,
     description: describedBy(exchange.parlor.name, "景品交換"),

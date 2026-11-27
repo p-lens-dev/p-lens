@@ -1,5 +1,6 @@
 import { rentalOfCorner, type ReportedRate } from "../../../core/parlor/reported-rates"
-import { exchangeOfStated, statedExchangeOf, type PlayTerms } from "../../../core/parlor/terms"
+import { compare, decimal, parseDecimal, type Decimal } from "../../../core/decimal/decimal"
+import { exchangeLessFee, exchangeOfStated, statedExchangeOf, type PlayTerms } from "../../../core/parlor/terms"
 import type { PlayGameKind } from "../../../core/play/play"
 import { Err, Ok, type Result } from "../../../core/result/result"
 import { tidyTyped } from "../../../core/text/tidy"
@@ -90,4 +91,36 @@ export const readTerms = (form: TermsForm, gameKind: PlayGameKind): Result<PlayT
 export const replayPaysMoreThanItTakes = (form: TermsForm): boolean => {
   const [paidOut, deducted] = [countOf(form.replayPaidOut), countOf(form.replayDeducted)]
   return paidOut !== undefined && deducted !== undefined && paidOut > deducted
+}
+
+/** The exchange fee calculator as typed: the exchange a board states, and the fee its broker takes, in percent. */
+export interface FeeForm {
+  readonly exchange: string
+  readonly fee: string
+}
+
+export type FeeField = keyof FeeForm
+
+/** The fee the calculator opens on, in percent: what Osaka's brokers take from December 2026. */
+export const USUAL_EXCHANGE_FEE = "2"
+
+const FEE_TYPED = /^\d+(\.\d{1,2})?$/
+
+const HUNDRED = decimal(100n, 0)
+
+/** A fee as typed, in percent: to two places at most, and below 100. */
+const feeOf = (text: string): Decimal | undefined => {
+  const typed = tidyTyped(text)
+  const parsed = FEE_TYPED.test(typed) ? parseDecimal(typed) : undefined
+  return parsed?.ok === true && compare(parsed.value, HUNDRED) < 0 ? parsed.value : undefined
+}
+
+/** The exchange the fee calculator comes to, as the game states one, for the terms; or the fields that do not read: an exchange not one as the game states it, a fee not one to two places below 100. */
+export const exchangeLessFeeTyped = (form: FeeForm, gameKind: PlayGameKind): Result<string, readonly FeeField[]> => {
+  const exchange = exchangeOfStated(gameKind, tidyTyped(form.exchange).replaceAll(",", ""))
+  const fee = feeOf(form.fee)
+  const less = exchange === undefined || fee === undefined ? undefined : exchangeLessFee(exchange, fee)
+  if (less !== undefined) return Ok(statedExchangeOf(gameKind, less))
+  const unread: readonly (FeeField | false)[] = [exchange === undefined && "exchange", fee === undefined && "fee"]
+  return Err(unread.filter((field) => field !== false))
 }

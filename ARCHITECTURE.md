@@ -333,7 +333,13 @@ out. From them:
   rounded up to an advertised rate (4・2・1・0.5・0.25・0.2 yen a ball,
   20・10・5・2・1・0.5 yen a medal), `レート不明` when they disagree;
 - the **exchange rate**, the ratio itself to six places (3.571429), since that
-  is what is paid; screens show it to two places, rounded half up;
+  is what is paid; screens show it to two places, rounded half up. A `P`
+  line the app writes keeps all six, zeros at its end included (3.920000),
+  so that a rate read back is known as exact; one a hand wrote short (3.57)
+  is taken as rounded. The exchange is typed as tokens for ¥100, to the
+  places a board says it (28玉, 5.15枚) or to as many as six where a
+  broker's fee leaves no shorter one (28玉 less 2% is 28.57143), and is set
+  out as briefly as reads back as the same rate;
 - the tokens an outlay rents (rounded down) and the savings a replay takes
   (rounded up).
 
@@ -2733,7 +2739,8 @@ back are worth, and the day.
   figure moves. They are declared in a book the first time they are needed.
 - **Prizes in whole yen.** A prize is worth whole yen; a token's rate is
   not. The special prizes count out the fewest whole tokens by the board
-  the book's rate was rounded from (28 balls to ¥100 for 3.57), the odd
+  the book's rate was rounded from, at the places it is written to (28
+  balls to ¥100 for 3.57 or 3.571429, 25 to ¥98 for 3.920000), the odd
   tokens beside them are the odd prizes at the pool's rental price (the
   rate where its tier names none), to the nearest yen, and what is left
   is written to `純資産:換算調整勘定`, the translation adjustment
@@ -3280,7 +3287,7 @@ cash it took and what came back.
   the reading says that its pace was assumed.
 - **The terms are typed as a corner states them** (`WeighingTerms`,
   `readWeighingTerms`): the balls ¥1,000 rents (貸玉(千円), whole) and the
-  balls ¥100 of prizes takes (交換(100円), to two places: 27.5), as
+  balls ¥100 of prizes takes (交換(100円), to six places at most: 27.5, or 28.57143 where a broker's fee leaves no shorter), as
   pachislot's medals are (貸枚(千円), 交換(100円)); a figure that is not
   more than none does not read, and a press shows it in red. They are
   ¥4 a ball, 250 to ¥1,000, exchanged at 28 until a person or the book says

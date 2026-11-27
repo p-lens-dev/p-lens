@@ -117,9 +117,6 @@ export const passbookOf = (transactions: readonly Transaction[], account: string
   return [...ascending].reverse()
 }
 
-/** The rate a pool was last set to, where it was ever set, however far back. */
-export const rateLastSet = (prices: readonly PricePoint[], commodity: string): Decimal | undefined => [...ratesSetOf(prices, commodity).values()].at(-1)?.rate
-
 /**
  * A passbook as it reads without its tallies, newest day first: each day
  * only what moved its savings otherwise, its balance still what the pool

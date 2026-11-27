@@ -61,7 +61,7 @@ describe("a recorded tally set right at another parlor", () => {
   })
 
   test("goes by the rate that parlor's pool has, where it has one", () => {
-    const own = [...PRICES, { date: RENTED_PLAY.date, commodity: `玉(4円・${ELSEWHERE.name})`, rate: dec("2.50") }]
+    const own = [...PRICES, { date: RENTED_PLAY.date, commodity: `玉(4円・${ELSEWHERE.name})`, rate: dec("2.50"), places: 2 }]
     expect(playedAsRecordedAt(RENTED_PLAY, ELSEWHERE, own).exchangeRateOn(RENTED_PLAY.date)).toEqual(dec("2.50"))
   })
 

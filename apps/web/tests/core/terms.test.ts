@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
-import { cornerOf, exchangeRateOf, poolOf, poolOfExchange, savingsDeductedFor, tierOf, tokensRentedFor, UNKNOWN_TIER, type PlayTerms } from "../../src/core/parlor/terms"
+import { cornerOf, exchangeLessFee, exchangeRateOf, poolOf, poolOfExchange, savingsDeductedFor, tierOf, tokensRentedFor, UNKNOWN_TIER, type PlayTerms } from "../../src/core/parlor/terms"
 import { dec } from "../support/values"
 
 const terms = (rental: [number, number], exchange: [number, number], replay: [number, number] = [250, 275]): PlayTerms => ({
@@ -81,5 +81,19 @@ describe("a pool named by its exchange alone", () => {
 
   test("is a rate unknown where the exchange is dearer than every advertised rate", () => {
     expect(poolOfExchange("pachinko", { yen: 1000, tokens: 200 }).tier).toBe(UNKNOWN_TIER)
+  })
+})
+
+describe("an exchange less a broker's fee", () => {
+  test("keeps the board's tokens and what is left of its yen, in the smallest whole counts", () => {
+    expect(exchangeLessFee({ yen: 1000, tokens: 280 }, dec("2"))).toEqual({ yen: 7, tokens: 2 })
+    expect(exchangeLessFee({ yen: 1000, tokens: 250 }, dec("2"))).toEqual({ yen: 98, tokens: 25 })
+    expect(exchangeLessFee({ yen: 1000, tokens: 280 }, dec("0"))).toEqual({ yen: 25, tokens: 7 })
+    expect(exchangeLessFee({ yen: 10_000, tokens: 560 }, dec("1.5"))).toEqual({ yen: 985, tokens: 56 })
+  })
+
+  test("is none for a fee below nothing or of a hundred or more", () => {
+    expect(exchangeLessFee({ yen: 1000, tokens: 280 }, dec("100"))).toBeUndefined()
+    expect(exchangeLessFee({ yen: 1000, tokens: 280 }, dec("-1"))).toBeUndefined()
   })
 })

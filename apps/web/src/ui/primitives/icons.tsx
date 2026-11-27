@@ -100,14 +100,6 @@ export const CloudOffIcon = () => (
   </Icon>
 )
 
-/** Copy: two sheets, one over the other. */
-export const CopyIcon = () => (
-  <Icon>
-    <rect x="9" y="9" width="11" height="11" rx="2" />
-    <path d="M5 15V6a2 2 0 0 1 2-2h9" />
-  </Icon>
-)
-
 /** Something set right where it stands: a pencil over the sheet it writes on. */
 export const EditIcon = (props: { readonly label: string }) => (
   <Icon label={props.label}>
@@ -266,9 +258,10 @@ export const PlusIcon = () => (
   </Icon>
 )
 
+/** Something added to a list: a plus in a ring, drawn as the question mark's ring is, so the two stand alike side by side. */
 export const CirclePlusIcon = () => (
   <Icon>
-    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="9" />
     <path d="M12 8v8M8 12h8" />
   </Icon>
 )

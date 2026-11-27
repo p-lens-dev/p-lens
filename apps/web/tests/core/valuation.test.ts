@@ -9,6 +9,7 @@ const point = (date: string, commodity: string, cents: bigint): PricePoint => ({
   date: date as IsoDate,
   commodity,
   rate: decimal(cents, 2),
+  places: 2,
 })
 
 const POINTS = [

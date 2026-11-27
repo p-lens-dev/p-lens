@@ -7,6 +7,7 @@ const BALLS_28 = { yen: 1000, tokens: 280 }
 const BALLS_27_5 = { yen: 1000, tokens: 275 }
 const MEDALS_5_15 = { yen: 10_000, tokens: 515 }
 const MEDALS_5_1 = { yen: 10_000, tokens: 510 }
+const BALLS_28_LESS_2 = { yen: 10_000_000, tokens: 2_857_143 }
 
 /** Each stage as the tokens kept, the special prizes and the tokens to play first. */
 const stages = (tokens: number, exchange: { readonly yen: number; readonly tokens: number }, step: StageStep) =>
@@ -58,6 +59,11 @@ describe("the odd-prize reckoning", () => {
     expect(stages(523, MEDALS_5_15, 500).at(-1)).toEqual([26, "500", 497])
     expect(stages(300, BALLS_27_5, 100)[0]).toEqual([275, "1000", 25])
     expect(stages(300, BALLS_27_5, 100)[1]).toEqual([248, "900", 52])
+  })
+
+  test("counts by the board an exchange typed to six places was rounded from: 28.57143玉 is 140 balls to ¥490", () => {
+    expect(stages(2800, BALLS_28_LESS_2, 100)[0]).toEqual([2800, "9800", 0])
+    expect(stages(2800, BALLS_28_LESS_2, 100)[1]).toEqual([2772, "9700", 28])
   })
 
   test("steps by whole medals where they are", () => {

@@ -21,9 +21,8 @@ import { useApp } from "../../../context"
 import { useMoves } from "../../../navigation/moves"
 import type { Place } from "../../../navigation/place"
 import { Button } from "../../../primitives/button"
-import { copyText } from "../../../primitives/clipboard"
 import { Combobox, holdsTypedOnly } from "../../../primitives/combobox"
-import { CopyIcon, QuestionIcon } from "../../../primitives/icons"
+import { QuestionIcon } from "../../../primitives/icons"
 import { createNudge } from "../../../primitives/nudge"
 import { HintedIconButton } from "../../../primitives/popover"
 import { Select } from "../../../primitives/select"
@@ -32,7 +31,7 @@ import { toast } from "../../../primitives/toast"
 import { InlineNumberInput } from "../../../primitives/inline-number-input"
 import { describeError } from "../../../wording/errors"
 import { UNWRITABLE_TEXT } from "../../../wording/fields"
-import { formulaBorderText, formulaHandle, formulaNameAmong } from "../../../wording/pachinko/formula"
+import { formulaBorderText, formulaNameAmong } from "../../../wording/pachinko/formula"
 import { useBookFavorites } from "../../live/book-favorites"
 import { useStartForm, type CabinetChoice } from "../../live/start-form"
 import { ViewHeader } from "../../shell/ViewHeader"
@@ -61,7 +60,7 @@ type Saving = { readonly type: "typing" } | { readonly type: "keeping" } | { rea
  * already read untold, since the bonus each named was the other
  * machine's; each is said again by setting its reading right. It is laid
  * out as the start screen's machine is — the machine, its formula beside
- * it with the buttons that copy it and open its grounds — with the
+ * it with the button that opens its grounds — with the
  * cabinet's number across from the heading, a small field left open, since
  * the number is what the screen is most often come to for. What is
  * chosen is kept with the start form, so a look at a formula's grounds and
@@ -124,14 +123,6 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachinko
   }
   /** A machine chosen whose formula is not yet known: its formulas are still being read, or it has none to weigh a play by. */
   const waitingOnFormula = (): boolean => machineId() !== undefined && selection() === undefined
-  /** The chosen formula's name and id, put on the clipboard for passing on. */
-  const copySelected = async (): Promise<void> => {
-    const formula = selection()?.listing.formula
-    if (formula === undefined) return
-    const handle = formulaHandle(formula)
-    const copied = await copyText(handle)
-    toast(copied.ok ? { title: "算出条件の名前とIDをコピーしました", description: handle } : { title: "コピーできませんでした", tone: "error" })
-  }
   const openSelected = (): void => {
     const formula = selection()?.listing.formula
     if (formula !== undefined) moves.go({ kind: "pachinko-formula", machineId: formula.machineId, formulaId: formula.id })
@@ -212,9 +203,6 @@ export function Cabinet(props: { readonly place: Place; readonly draft: Pachinko
                     )}
                   />
                 </div>
-                <HintedIconButton label="算出条件の名前とIDをコピー" hint="算出条件の名前とIDをコピーできます" ready={selection() !== undefined} onPress={() => void copySelected()}>
-                  <CopyIcon />
-                </HintedIconButton>
                 <HintedIconButton label="算出条件を見る" hint="算出条件の根拠が見れます" ready={selection() !== undefined} onPress={openSelected} semipro>
                   <QuestionIcon />
                 </HintedIconButton>

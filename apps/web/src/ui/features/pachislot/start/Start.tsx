@@ -22,7 +22,7 @@ import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
 import { Combobox, holdsTypedOnly } from "../../../primitives/combobox"
 import { DetailButton } from "../../../primitives/detail-button"
-import { PlusIcon } from "../../../primitives/icons"
+import { CirclePlusIcon, PlusIcon } from "../../../primitives/icons"
 import { createNudge, redRing } from "../../../primitives/nudge"
 import { settleTyping, TextField } from "../../../primitives/text-field"
 import { toast } from "../../../primitives/toast"
@@ -60,7 +60,7 @@ function MachineField(props: {
 }): JSX.Element {
   const app = useApp()
   return (
-    <div class="flex min-w-0 items-end gap-2">
+    <div class="flex min-w-0 items-end gap-1">
       <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <span class="text-xs font-bold uppercase tracking-wide text-text-secondary" id="pachislot-machine-field-label">
           機種
@@ -87,9 +87,9 @@ function MachineField(props: {
         aria-label={REGISTER_MACHINE}
         title={REGISTER_MACHINE}
         onClick={() => props.onRegister()}
-        class="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-nerdpro-ink text-nerdpro-ink hover:border-nerdpro-ink-hover hover:text-nerdpro-ink-hover [&_svg]:size-4"
+        class="flex size-10 shrink-0 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
       >
-        <PlusIcon />
+        <CirclePlusIcon />
       </button>
     </div>
   )
@@ -223,7 +223,7 @@ export function ParlorField(props: {
           tabIndex={-1}
           onMouseDown={(event) => event.preventDefault()}
           onClick={submit}
-          class="flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+          class="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-4"
         >
           <PlusIcon />
         </button>

@@ -25,7 +25,7 @@ describe("opening a pool in a book", () => {
   test("writes no rate for a later day whose rate in force is already that, set on an earlier day", () => {
     const malehan: PoolOpening = { identity: MALEHAN.identity, parlorName: MALEHAN.name, pool: { kind: "ball", tier: "4円" }, rate: dec("3.57"), date: "2026-09-10" as IsoDate }
     expect(openingText(malehan, [MALEHAN], PRICES)).toEqual({ declarations: undefined, price: undefined })
-    expect(openingText({ ...malehan, date: "2026-10-12" as IsoDate }, [MALEHAN], PRICES).price).toBe('P 2026-10-12 "玉(4円・マレハン東京皇国第8支店)" 3.57 JPY\n')
+    expect(openingText({ ...malehan, date: "2026-10-12" as IsoDate }, [MALEHAN], PRICES).price).toBe('P 2026-10-12 "玉(4円・マレハン東京皇国第8支店)" 3.570000 JPY\n')
   })
 
   test("declares a submitted parlor's pool by its submission while it waits on the list", () => {

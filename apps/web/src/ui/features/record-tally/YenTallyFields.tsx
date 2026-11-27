@@ -32,7 +32,7 @@ import { JournalText } from "../mummer/JournalText"
 
 const SUBMIT_PARLOR = "一覧にない店舗を申請する"
 
-const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+const ROUND_BUTTON = "mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-4"
 
 /** What a form's rows are kept to on a screen with room: half the form's width, as a play started live gives its parlor — a name, or a pair of sums with what they come to under them, being read better short of a whole row. */
 const HALF_ON_A_WIDE_SCREEN = "@roomy:w-[calc(50%-0.25rem)]"

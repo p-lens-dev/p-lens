@@ -23,8 +23,8 @@ export const MALEHAN: Parlor = {
 }
 
 export const PRICES: readonly PricePoint[] = [
-  { date: "2026-09-01" as IsoDate, commodity: "玉(4円・マレハン東京皇国第8支店)", rate: dec("3.57") },
-  { date: "2026-09-25" as IsoDate, commodity: "玉(4円・マレハン東京皇国第8支店)", rate: dec("3.50") },
+  { date: "2026-09-01" as IsoDate, commodity: "玉(4円・マレハン東京皇国第8支店)", rate: dec("3.57"), places: 2 },
+  { date: "2026-09-25" as IsoDate, commodity: "玉(4円・マレハン東京皇国第8支店)", rate: dec("3.50"), places: 2 },
 ]
 
 export const RENTED_PLAY: TokenTally = {

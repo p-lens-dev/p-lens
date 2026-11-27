@@ -25,7 +25,7 @@ const entry = (date: string, tags: readonly (readonly [string, string])[], ...qu
   tpostings: [...quantities.map((quantity) => posting(ACCOUNT, quantity)), posting("収益:遊技", "0")],
 })
 
-const price = (date: string, rate: string): PricePoint => ({ date: date as never, commodity: COMMODITY, rate: dec(rate) })
+const price = (date: string, rate: string): PricePoint => ({ date: date as never, commodity: COMMODITY, rate: dec(rate), places: 2 })
 
 const shown = (days: readonly PassbookDay[]) =>
   days.map((day) => ({
@@ -82,7 +82,7 @@ describe("setting a pool's rate", () => {
   const change = { parlorName: "東京皇国第8支店", pool: { kind: "ball" as const, tier: "4円" }, date: "2026-10-10" as never, rate: dec("3.5") }
 
   test("writes the price line for the day, and nothing where the day already has that rate", () => {
-    expect(rateChangeLine(change, [price("2026-10-01", "3.571429")])).toEqual({ ok: true, value: `P 2026-10-10 "${COMMODITY}" 3.5 JPY\n` })
+    expect(rateChangeLine(change, [price("2026-10-01", "3.571429")])).toEqual({ ok: true, value: `P 2026-10-10 "${COMMODITY}" 3.500000 JPY\n` })
     expect(rateChangeLine(change, [price("2026-10-10", "3.5")])).toEqual({ ok: true, value: undefined })
     expect(rateChangeLine(change, [price("2026-10-01", "3.5")])).toEqual({ ok: true, value: undefined })
     expect(rateChangeLine({ ...change, rate: dec("0") }, [])).toEqual({ ok: false, error: { type: "rate-not-positive" } })

@@ -73,9 +73,9 @@ const COLUMNS = [
 ]
 
 const PRICES: readonly PricePoint[] = [
-  { date: "2026-09-01" as IsoDate, commodity: "枚(20円・723豚の帽子亭店)", rate: decimal(1786n, 2) },
-  { date: "2026-10-01" as IsoDate, commodity: "枚(20円・723豚の帽子亭店)", rate: decimal(1961n, 2) },
-  { date: "2026-10-01" as IsoDate, commodity: "玉(4円・ジーステーション第3新東京市店)", rate: decimal(357n, 2) },
+  { date: "2026-09-01" as IsoDate, commodity: "枚(20円・723豚の帽子亭店)", rate: decimal(1786n, 2), places: 2 },
+  { date: "2026-10-01" as IsoDate, commodity: "枚(20円・723豚の帽子亭店)", rate: decimal(1961n, 2), places: 2 },
+  { date: "2026-10-01" as IsoDate, commodity: "玉(4円・ジーステーション第3新東京市店)", rate: decimal(357n, 2), places: 2 },
 ]
 
 /** A play's log whose head states its corner's terms. */

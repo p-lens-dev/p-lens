@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { BORDER_GRADES } from "../../../src/core/pachinko/border-standing"
 import type { ModeView } from "../../../src/core/pachinko/world"
 import { kindText, nextText, probabilitiesText, probabilityText, roundPayoutText, shareText } from "../../../src/ui/features/pachinko/formulas/spec-text"
-import { borderText, formulaBorderLines, formulaBorderText, kindName, formulaHandle, formulaText, formulaNameAmong, oneInText, payoutText } from "../../../src/ui/wording/pachinko/formula"
+import { borderText, formulaBorderLines, formulaBorderText, kindName, formulaText, formulaNameAmong, oneInText, payoutText } from "../../../src/ui/wording/pachinko/formula"
 import { bonusRoundsText } from "../../../src/ui/wording/pachinko/machine"
 import { gradeFloorText } from "../../../src/ui/wording/pachinko/play"
 
@@ -49,7 +49,6 @@ describe("a formula's figures as they read", () => {
     expect(formulaNameAmong(other, [first, twin, other])).toBe("1RT 1/7.50・1RB 132.4玉")
     expect(formulaNameAmong(first, [first, twin, other])).toBe("1RT 1/16.2・1RB 140.0玉（ID:01a11b2f）")
     expect(formulaNameAmong(twin, [first, twin, other])).toBe("1RT 1/16.2・1RB 140.0玉（ID:01a11b36）")
-    expect(formulaHandle(first)).toBe("1RT 1/16.2・1RB 140.0玉・ID:01a11b2f")
   })
 
   test("rates as one-in, with more precision where it matters", () => {

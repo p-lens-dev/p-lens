@@ -8,7 +8,7 @@ import type { NumericField, TokenTally } from "../../../core/tally/tally"
 import type { PlayGameKind, PlayId } from "../../../core/play/play"
 import { Err, Ok, type Result } from "../../../core/result/result"
 import { tidyTyped } from "../../../core/text/tidy"
-import { rateOn, rateReachingBack, type PricePoint } from "../../../core/valuation/valuation"
+import { rateOn, rateReachingBack, workedOut, type PricePoint } from "../../../core/valuation/valuation"
 import type { ComboboxOption } from "../../primitives/combobox"
 import { USER_MEMO_MOST, userMemoLength, userMemoOf } from "../../../core/tally/user-memo"
 import { userTagsOf } from "../../../core/tally/user-tags"
@@ -131,7 +131,7 @@ export const playedAsRecordedAt = (tally: TokenTally, parlor: Parlor, prices: re
  */
 export const pricesPlayedAt = (at: PlayedAt, date: IsoDate, prices: readonly PricePoint[]): readonly PricePoint[] => {
   const rate = at.exchangeRateOn(date)
-  return rate === undefined ? prices : [...prices, { date, commodity: tokenCommodity(at.pool.kind, at.parlor.name, at.pool.tier), rate }]
+  return rate === undefined ? prices : [...prices, { date, commodity: tokenCommodity(at.pool.kind, at.parlor.name, at.pool.tier), ...workedOut(rate) }]
 }
 
 type Read<T> = Result<T, FieldProblem>

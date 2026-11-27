@@ -11,6 +11,7 @@ import { tidyTyped } from "../../../core/text/tidy"
 import { handedTyped, problemOf, readHanded, readOptionalYen, type FieldProblem, type Handing, type PlayedSoFar, type Read } from "./finish-tally-reading"
 import { USER_MEMO_MOST, userMemoLength, userMemoOf } from "../../../core/tally/user-memo"
 import { userTagsOf } from "../../../core/tally/user-tags"
+import { workedOut } from "../../../core/valuation/valuation"
 
 /**
  * The form a play followed live at no parlor is recorded with, as typed:
@@ -65,7 +66,7 @@ const readSpecialPrizes = (text: string): Read<Decimal> => {
 }
 
 /** The odd prizes of tokens exchanged at a play's terms for special prizes, as a prize exchange counts them, at the rental price. */
-const exchangedOddPrizesOn = (held: Decimal, terms: PlayTerms, special: Decimal): Decimal => exchangedOddPrizes(held, exchangeRateOf(terms), special, rentalPriceOf(terms))
+const exchangedOddPrizesOn = (held: Decimal, terms: PlayTerms, special: Decimal): Decimal => exchangedOddPrizes(held, workedOut(exchangeRateOf(terms)), special, rentalPriceOf(terms))
 
 /**
  * The odd prizes the tokens in hand came to beside the special ones: the

@@ -27,10 +27,9 @@ import { shownNameOf, type MachineBonus, type PachinkoMachineDetail } from "../.
 import type { Submission } from "../../../../parlors/port/submission-store"
 import { useApp } from "../../../context"
 import { Button } from "../../../primitives/button"
-import { copyText } from "../../../primitives/clipboard"
 import { Combobox, holdsTypedOnly } from "../../../primitives/combobox"
 import { DetailButton } from "../../../primitives/detail-button"
-import { CopyIcon, PlusIcon, QuestionIcon } from "../../../primitives/icons"
+import { CirclePlusIcon, PlusIcon, QuestionIcon } from "../../../primitives/icons"
 import { HintedIconButton } from "../../../primitives/popover"
 import { createNudge, redRing } from "../../../primitives/nudge"
 import { Loaded } from "../../../primitives/states"
@@ -40,7 +39,7 @@ import { useMoves } from "../../../navigation/moves"
 import { describeError } from "../../../wording/errors"
 import { FIELD_PROBLEM_TEXT, UNWRITABLE_TEXT } from "../../../wording/fields"
 import { chosenParlorText, LOCATE_REQUEST, parlorChoiceText, parlorNote, typedParlorRefused } from "../../../wording/parlor"
-import { formulaBorderText, formulaHandle, formulaNameAmong } from "../../../wording/pachinko/formula"
+import { formulaBorderText, formulaNameAmong } from "../../../wording/pachinko/formula"
 import { KindMark } from "../formulas/KindMark"
 import { HyenaHuntByRate } from "../formulas/HyenaHuntByRate"
 import { HyenaHuntRun } from "../formulas/HyenaHuntRun"
@@ -76,7 +75,7 @@ function MachineField(props: {
 }): JSX.Element {
   const app = useApp()
   return (
-    <div class="flex min-w-0 items-end gap-2">
+    <div class="flex min-w-0 items-end gap-1">
       <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <span class="text-xs font-bold uppercase tracking-wide text-text-secondary" id="machine-field-label">
           機種
@@ -103,9 +102,9 @@ function MachineField(props: {
         aria-label={REGISTER_MACHINE}
         title={REGISTER_MACHINE}
         onClick={() => props.onRegister()}
-        class="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-nerdpro-ink text-nerdpro-ink hover:border-nerdpro-ink-hover hover:text-nerdpro-ink-hover [&_svg]:size-4"
+        class="flex size-10 shrink-0 items-center justify-center rounded text-nerdpro-ink hover:bg-surface-3 hover:text-nerdpro-ink-hover [&_svg]:size-5"
       >
-        <PlusIcon />
+        <CirclePlusIcon />
       </button>
     </div>
   )
@@ -120,9 +119,8 @@ const REGISTER_MACHINE = "一覧にない機種を登録する"
  * or chosen by hand on the machine's page, which pressing it opens: the
  * machine's formulas side by side, each with what people have done with
  * it, one of them taken with 「これを使う」. The question mark opens the one
- * chosen, and the copy button puts its name and id on the clipboard for passing
- * on. Before a machine is chosen it is there, waiting: pressing it nudges
- * the machine, and the two buttons each say what they are for.
+ * chosen. Before a machine is chosen it is there, waiting: pressing it
+ * nudges the machine, and the button says what it is for.
  */
 function FormulaField(props: {
   readonly detail: PachinkoMachineDetail | undefined
@@ -146,15 +144,6 @@ function FormulaField(props: {
     )
   const open = (formulaId: FormulaId): void => {
     if (props.detail !== undefined) moves.go({ kind: "pachinko-formula", machineId: props.detail.machine.id, formulaId })
-  }
-  /** The chosen formula's name and id, put on the clipboard for passing on — "pick this one" — to whoever plays beside you. */
-  const copyChosen = async (chosen: Selection<Formula>): Promise<void> => {
-    const handle = formulaHandle(chosen.listing.formula)
-    const copied = await copyText(handle)
-    toast(copied.ok ? { title: "算出条件の名前とIDをコピーしました", description: handle } : { title: "コピーできませんでした", tone: "error" })
-  }
-  const copySelected = async (): Promise<void> => {
-    if (props.selection !== undefined) await copyChosen(props.selection)
   }
   const openSelected = (): void => {
     if (props.selection !== undefined) open(props.selection.listing.formula.id)
@@ -192,9 +181,6 @@ function FormulaField(props: {
             </span>
           </button>
         </div>
-        <HintedIconButton label="算出条件の名前とIDをコピー" hint="算出条件の名前とIDをコピーできます" ready={props.selection !== undefined} onPress={() => void copySelected()}>
-          <CopyIcon />
-        </HintedIconButton>
         <HintedIconButton label="算出条件を見る" hint="算出条件の根拠が見れます" ready={props.selection !== undefined} onPress={openSelected} semipro>
           <QuestionIcon />
         </HintedIconButton>
@@ -395,7 +381,7 @@ export function ParlorField(props: {
           tabIndex={-1}
           onMouseDown={(event) => event.preventDefault()}
           onClick={submit}
-          class="flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+          class="mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-4"
         >
           <PlusIcon />
         </button>

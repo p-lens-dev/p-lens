@@ -3,7 +3,7 @@ import { tokenCommodity } from "../commodity/commodity"
 import { compare, isNegative, isZero, type Decimal } from "../decimal/decimal"
 import type { SavingsPool } from "../parlor/parlor"
 import { Err, Ok, type Result } from "../result/result"
-import { rateOn, renderPricePoint, type PricePoint } from "../valuation/valuation"
+import { rateOn, renderPricePoint, workedOut, type PricePoint } from "../valuation/valuation"
 
 /** A pool's exchange rate set from a day: yen for a token, as the book's prices say a rate. */
 export interface RateChange {
@@ -26,5 +26,5 @@ export const rateChangeLine = (change: RateChange, prices: readonly PricePoint[]
   if (isZero(change.rate) || isNegative(change.rate)) return Err({ type: "rate-not-positive" })
   const commodity = tokenCommodity(change.pool.kind, change.parlorName, change.pool.tier)
   const current = rateOn(prices, commodity, change.date)
-  return Ok(current !== undefined && compare(current.rate, change.rate) === 0 ? undefined : renderPricePoint({ date: change.date, commodity, rate: change.rate }))
+  return Ok(current !== undefined && compare(current.rate, change.rate) === 0 ? undefined : renderPricePoint({ date: change.date, commodity, ...workedOut(change.rate) }))
 }

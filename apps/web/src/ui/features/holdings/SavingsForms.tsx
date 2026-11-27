@@ -10,7 +10,7 @@ import { identityKey, type Parlor, type SavingsPool } from "../../../core/parlor
 import { rentalPriceOfTier } from "../../../core/parlor/terms"
 import { exchangedOddPrizes } from "../../../core/savings/prize-exchange"
 import type { ParlorList } from "../../../core/parlor/shared"
-import { exchangeOfStated, exchangeRateOf, poolOfExchange, statedExchangeOfRate, type PlayTerms } from "../../../core/parlor/terms"
+import { exchangeOfStated, exchangeRateOf, poolOfExchange, statedExchangeOf, statedExchangeOfRate, type PlayTerms } from "../../../core/parlor/terms"
 import type { PlayGameKind } from "../../../core/play/play"
 import { tidyTyped } from "../../../core/text/tidy"
 import type { Submission } from "../../../parlors/port/submission-store"
@@ -27,13 +27,14 @@ import { describeError } from "../../wording/errors"
 import { amountText, formatRate, formatYen, signedAmountText } from "../../wording/numbers"
 import { chosenParlorText, locateFailedText, parlorChoiceText, parlorNameText, SURVEY_OFFLINE, typedParlorRefused } from "../../wording/parlor"
 import { submitAddress } from "../live/submission-return"
+import type { WrittenRate } from "../../../core/valuation/valuation"
 import { offersByKey, parlorOffers } from "../parlor-offers/parlor-offers"
 import { seal } from "../../../mummer"
 import { Withheld } from "../mummer/Withheld"
 
 const SUBMIT_PARLOR = "一覧にない店舗を申請する"
 
-const ROUND_BUTTON = "flex size-10 shrink-0 items-center justify-center rounded-full border-[1.667px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-5"
+const ROUND_BUTTON = "mb-1 flex size-8 shrink-0 items-center justify-center rounded-full border-[1.333px] border-current text-text-secondary hover:text-text-primary [&_svg]:size-4"
 
 /** Where a form's saving is: being typed, being written, or failed. */
 type Saving = { readonly type: "typing" } | { readonly type: "saving" } | { readonly type: "failed"; readonly error: ApplicationError }
@@ -325,8 +326,8 @@ export function PrizeExchangeForm(props: {
     const [count, special, found] = [exchanged(), countOf(prizes()), rate()]
     if (count === undefined || special === undefined || found?.ok !== true || found.value === undefined) return undefined
     const odd = exchangedOddPrizes(whole(count), found.value, whole(special), rentalPriceOfTier(props.pool.tier))
-    const worth = multiply(whole(count), found.value)
-    return isNegative(odd) ? { rate: found.value, worth, by: subtract(whole(special), worth), odd } : undefined
+    const worth = multiply(whole(count), found.value.rate)
+    return isNegative(odd) ? { rate: found.value.rate, worth, by: subtract(whole(special), worth), odd } : undefined
   }
   /** Whether the odd prizes come to more than ¥1,000, the largest step special prizes come in: the book's rate is then likely off the parlor's. Not where there are no special prizes, the tokens going for odd and general prizes alone, as they may. */
   const oddOverStep = (): boolean => {
@@ -481,7 +482,7 @@ export function RateChangeForm(props: {
   readonly parlorName: string
   readonly pool: SavingsPool
   readonly unit: string
-  readonly current: Decimal | undefined
+  readonly current: WrittenRate | undefined
   readonly onDone: () => void
 }): JSX.Element {
   const app = useApp()
@@ -505,7 +506,7 @@ export function RateChangeForm(props: {
       setSaving({ type: "failed", error: changed.error })
       return
     }
-    toast({ title: "交換率を変更しました", description: `${parlorNameText(seal.parlor(props.parlorName))} ${props.pool.tier} 100円あたり${statedExchangeOfRate(game(), exchangeRateOf({ exchange: typed }))}${props.unit}` })
+    toast({ title: "交換率を変更しました", description: `${parlorNameText(seal.parlor(props.parlorName))} ${props.pool.tier} 100円あたり${statedExchangeOf(game(), typed)}${props.unit}` })
     app.wrote()
     props.onDone()
   }

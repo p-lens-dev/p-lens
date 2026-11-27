@@ -50,8 +50,5 @@ export const formulaNameAmong = (formula: Said, among: readonly Said[]): string 
   return twins.length > 1 ? `${marked}（${formulaIdLabel(formula.id)}）` : marked
 }
 
-/** A formula as it is passed on — "use this one": its figures, marked as a box to choose one shows them, then its id, which finds it: `1RT 1/8.98・1RB 140.0玉・ID:01a18b48`. */
-export const formulaHandle = (formula: Said): string => `${markedFormulaText(formula.figures)}・${formulaIdLabel(formula.id)}`
-
 /** A mode as a list of destinations names it: by its name, or — until it is given one — by where it stands among the modes, モード2. */
 export const modeTitle = (label: string, position: number): string => (label.trim() === "" ? `モード${position}` : label.trim())

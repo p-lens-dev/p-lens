@@ -1,14 +1,17 @@
-import { createSignal, Show, type JSX } from "solid-js"
+import { createSignal, Show, untrack, type JSX } from "solid-js"
 
+import { REPORTED_TIER } from "../../../../core/parlor/reported-rates"
 import { tierOf, UNKNOWN_TIER } from "../../../../core/parlor/terms"
+import { Button } from "../../../primitives/button"
 import { CloseIcon } from "../../../primitives/icons"
 import { ChangeMenuButton, type MenuChoice } from "../../../primitives/menu-button"
-import { CautionNote } from "../../../primitives/popover"
+import { createNudge } from "../../../primitives/nudge"
+import { CautionNote, ChipPopover } from "../../../primitives/popover"
 import { TextField } from "../../../primitives/text-field"
 import { ToggleGroup, ToggleGroupItem } from "../../../primitives/toggle-group"
 import { stayWhileOffline } from "../../../primitives/leaving"
 import { RATE_REQUEST, SURVEY_OFFLINE } from "../../../wording/parlor"
-import { readTerms, replayFeeOf, replayPaysMoreThanItTakes, type TermsField, type TermsForm } from "../../live/start-terms"
+import { exchangeLessFeeTyped, readTerms, USUAL_EXCHANGE_FEE, replayFeeOf, replayPaysMoreThanItTakes, type FeeForm, type TermsField, type TermsForm } from "../../live/start-terms"
 
 /** How a name over one of the terms is written: a size under the app's small one and never broken, so that six characters stay on one line over a cell a quarter of the narrowest phone wide. */
 const TERM_NAME = "whitespace-nowrap text-[11px] font-bold leading-4 tracking-wide text-text-secondary"
@@ -45,6 +48,53 @@ function TermField(props: {
   )
 }
 
+/**
+ * The exchange fee calculator: the exchange a board states and the fee its
+ * broker takes, and the exchange they come to, put into the terms on its
+ * button. It opens on the exchange the terms hold and the usual fee.
+ */
+function ExchangeFeeCalculator(props: { readonly exchange: string; readonly onEnter: (exchange: string) => void }): JSX.Element {
+  return (
+    <ChipPopover label="交換手数料電卓">
+      {(close) => {
+        const [form, setForm] = createSignal<FeeForm>({ exchange: untrack(() => props.exchange), fee: USUAL_EXCHANGE_FEE })
+        const less = (): ReturnType<typeof exchangeLessFeeTyped> => exchangeLessFeeTyped(form(), "pachislot")
+        const [exchangeNudge, feeNudge] = [createNudge(), createNudge()]
+        const enter = (): void => {
+          const found = less()
+          if (found.ok) {
+            props.onEnter(found.value)
+            close()
+            return
+          }
+          if (found.error.includes("exchange")) exchangeNudge.nudge()
+          if (found.error.includes("fee")) feeNudge.nudge()
+        }
+        return (
+          <div class="flex flex-col gap-3">
+            <div class="grid grid-cols-2 gap-x-1.5">
+              <TextField label="交換(100円)" value={form().exchange} onChange={(exchange) => setForm({ ...form(), exchange })} inputMode="decimal" suffix="枚" invalid={exchangeNudge.red()} onFocus={exchangeNudge.settle} compact />
+              <TextField label="手数料" value={form().fee} onChange={(fee) => setForm({ ...form(), fee })} inputMode="decimal" suffix="%" invalid={feeNudge.red()} onFocus={feeNudge.settle} compact />
+            </div>
+            <div class="flex items-center gap-2">
+              <p class="flex-1 tabular-nums text-text-primary">手数料込み {((found) => (found.ok ? found.value : "--"))(less())}枚</p>
+              <Button size="small" onClick={enter}>
+                上書き入力
+              </Button>
+            </div>
+          </div>
+        )
+      }}
+    </ChipPopover>
+  )
+}
+
+/** What is said under the terms where they point to no rate. */
+const RATE_UNKNOWN = "レート不明です。ご確認ください。"
+
+/** What is said under the terms where they point to a rate: `4円コーナーとして記録します。`. */
+const recordedAs = (tier: string): string => `${tier}コーナーとして記録します。`
+
 /** What a corner that takes a fee on a replay usually takes, to start from: 23 paid out for 25 off the savings. */
 const USUAL_FEE = { replayPaidOut: "23", replayDeducted: "25" } as const
 
@@ -65,7 +115,8 @@ const withReplayFee = (form: TermsForm, fee: "none" | "charged"): TermsForm => {
  * one, the question gives its place to the replay's two counts and a cross,
  * which says none again and brings the question back. The rental and the
  * exchange keep one half of the width and the replay the other, whichever
- * of the two it shows.
+ * of the two it shows. Under them, beside the rate they come to, is the
+ * exchange fee calculator, for a broker that pays less than the board.
  */
 export function Terms(props: {
   readonly form: TermsForm
@@ -127,24 +178,39 @@ export function Terms(props: {
             </div>
           </Show>
         </div>
-        <div class="flex min-h-4 flex-col items-start gap-1">
+        <div class="flex min-h-4 flex-col items-start gap-2">
           <Show when={replayPaysMoreThanItTakes(props.form)}>
             <CautionNote hint="再プレイは、払い出す枚数と同じか、それより多い数を貯枚から引くのがふつうです。払出と減数が逆になっていないか確かめてください。このままでも記録できます。">再プレイ払出が減数より多くなっています。ご確認ください。</CautionNote>
           </Show>
-          <Show when={tier() !== undefined || props.corners.length > 0}>
-            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Show when={tier()} keyed>
-                {(found) => (
-                  <Show when={found === UNKNOWN_TIER} fallback={<p class="text-xs text-text-muted">{found}コーナーとして記録します。</p>}>
-                    <CautionNote hint="貸枚は1,000円あたり、交換は100円あたりの枚数に換算して入力してください。このままでも記録できます。">レート不明です。ご確認ください。</CautionNote>
-                  </Show>
-                )}
-              </Show>
-              <Show when={props.corners.length > 0}>
-                <ChangeMenuButton label="変更" choices={props.corners} />
-              </Show>
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div class="grid items-center [&>*]:col-start-1 [&>*]:row-start-1">
+              <div aria-hidden="true" class="invisible flex items-center gap-x-2">
+                <span class="text-xs font-semibold">{RATE_UNKNOWN}</span>
+                <Show when={props.corners.length > 0}>
+                  <ChangeMenuButton label="変更" choices={props.corners} />
+                </Show>
+              </div>
+              <div aria-hidden="true" class="invisible flex items-center gap-x-2">
+                <span class="text-xs">{recordedAs(REPORTED_TIER.pachislot)}</span>
+                <Show when={props.corners.length > 0}>
+                  <ChangeMenuButton label="変更" choices={props.corners} />
+                </Show>
+              </div>
+              <div class="flex items-center gap-x-2">
+                <Show when={tier()} keyed>
+                  {(found) => (
+                    <Show when={found === UNKNOWN_TIER} fallback={<p class="text-xs text-text-muted">{recordedAs(found)}</p>}>
+                      <CautionNote hint="貸枚は1,000円あたり、交換は100円あたりの枚数に換算して入力してください。このままでも記録できます。">{RATE_UNKNOWN}</CautionNote>
+                    </Show>
+                  )}
+                </Show>
+                <Show when={props.corners.length > 0}>
+                  <ChangeMenuButton label="変更" choices={props.corners} />
+                </Show>
+              </div>
             </div>
-          </Show>
+            <ExchangeFeeCalculator exchange={props.form.exchange} onEnter={(exchange) => change("exchange", exchange)} />
+          </div>
           <Show when={props.asking} keyed>
             {(address) => (
               <a href={address} onClick={(event) => stayWhileOffline(event, SURVEY_OFFLINE)} class="animate-[emerge_1.6s_ease-out] text-xs text-text-secondary underline underline-offset-2 hover:text-text-primary">

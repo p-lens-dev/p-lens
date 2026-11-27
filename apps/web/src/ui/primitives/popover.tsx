@@ -45,6 +45,32 @@ export function HelpPopover(props: { readonly label: string; readonly title: str
 }
 
 /**
+ * A chip that opens a small tool beside what it works on, under its title:
+ * closed by its cross, by a press outside it, or by the tool itself when it
+ * is done, which is handed the way to close it. It keeps to the one bubble
+ * open on screen, as every bubble here does.
+ */
+export function ChipPopover(props: { readonly label: string; readonly children: (close: () => void) => JSX.Element }): JSX.Element {
+  const [open, setOpen, Inside] = createBubble()
+  return (
+    <PopoverPrimitive.Root gutter={6} placement="bottom-start" open={open()} onOpenChange={setOpen}>
+      <PopoverPrimitive.Trigger class="inline-flex h-6 shrink-0 items-center rounded-full border border-border px-2.5 text-xs text-text-secondary hover:border-text-secondary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-focus-ring">{props.label}</PopoverPrimitive.Trigger>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content class="z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 rounded-md border border-border bg-surface-1 p-4 text-sm text-text-secondary shadow-lg outline-none">
+          <div class="flex items-start gap-2">
+            <PopoverPrimitive.Title class="flex-1 font-semibold text-text-primary">{props.label}</PopoverPrimitive.Title>
+            <PopoverPrimitive.CloseButton aria-label="閉じる" class="-mr-1 -mt-1 flex size-6 items-center justify-center rounded text-text-muted hover:bg-surface-3 hover:text-text-primary [&_svg]:size-4">
+              <CloseIcon label="閉じる" />
+            </PopoverPrimitive.CloseButton>
+          </div>
+          <Inside>{props.children(() => setOpen(false))}</Inside>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
+  )
+}
+
+/**
  * An icon button that says what it is for while it has nothing to act on:
  * pressed when not `ready`, a speech bubble opens beside it with the hint,
  * closed by its cross, by a tap anywhere on the bubble or outside it. Once

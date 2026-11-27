@@ -8,7 +8,7 @@ import type { NumericField, TokenTally } from "../../../core/tally/tally"
 import type { PlayGameKind, PlayId } from "../../../core/play/play"
 import { Err, Ok, type Result } from "../../../core/result/result"
 import { tidyTyped } from "../../../core/text/tidy"
-import type { PricePoint } from "../../../core/valuation/valuation"
+import { workedOut, type PricePoint } from "../../../core/valuation/valuation"
 import { handedTyped, problemOf, readHanded, readOptionalYen, type FieldProblem, type Handing, type PlayedSoFar, type Read } from "./finish-tally-reading"
 import { USER_MEMO_MOST, userMemoLength, userMemoOf } from "../../../core/tally/user-memo"
 import { userTagsOf } from "../../../core/tally/user-tags"
@@ -74,7 +74,7 @@ export const playedOnTerms = (parlor: Parlor, terms: PlayTerms, gameKind: PlayGa
  */
 export const pricesPlayedOn = (at: PlayedOnTerms, date: IsoDate, prices: readonly PricePoint[]): readonly PricePoint[] => [
   ...prices,
-  { date, commodity: tokenCommodity(at.pool.kind, at.parlor.name, at.pool.tier), rate: at.exchangeRate },
+  { date, commodity: tokenCommodity(at.pool.kind, at.parlor.name, at.pool.tier), ...workedOut(at.exchangeRate) },
 ]
 
 /** A count as a plain number, for the terms' arithmetic; a fraction is the core's to refuse, so it passes through. */

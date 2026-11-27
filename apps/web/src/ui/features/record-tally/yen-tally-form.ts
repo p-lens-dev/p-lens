@@ -11,6 +11,7 @@ import type { InferredWorth, Settlement, TallyTold, YenTally } from "../../../co
 import type { PlayGameKind, PlayId } from "../../../core/play/play"
 import { Err, Ok, type Result } from "../../../core/result/result"
 import { tidyTyped } from "../../../core/text/tidy"
+import { RATE_PLACES } from "../../../core/valuation/valuation"
 import { readOptionalYen, type FieldProblem } from "./form"
 import { USER_MEMO_MOST, userMemoLength, userMemoOf } from "../../../core/tally/user-memo"
 import { userTagsOf } from "../../../core/tally/user-tags"
@@ -188,13 +189,13 @@ interface WeighingTermsForm {
 /** The terms as the form opens on them, the exchange as players say it: 28, 27.5. */
 export const weighingTermsFormOf = (terms: Pachinko.WeighingTerms): WeighingTermsForm => ({ rentedPerThousand: String(terms.rentedPerThousand), exchangedPerHundred: String(terms.exchangedPerHundred) })
 
-const TO_TWO_PLACES = /^\d+(\.\d{1,2})?$/
+const TO_RATE_PLACES = new RegExp(`^\\d+(\\.\\d{1,${String(RATE_PLACES)}})?$`)
 
-/** A pachinko play's terms as typed, where both read: a whole number of balls rented, and a number exchanged to two places at most, each more than none. */
+/** A pachinko play's terms as typed, where both read: a whole number of balls rented, and a number exchanged to six places at most — 28.57143 where a broker's fee leaves no shorter — each more than none. */
 export const readWeighingTerms = (form: WeighingTermsForm): Pachinko.WeighingTerms | undefined => {
   const rented = tidyTyped(form.rentedPerThousand).replaceAll(",", "")
   const exchanged = tidyTyped(form.exchangedPerHundred)
-  return WHOLE_COUNT.test(rented) && Number(rented) > 0 && TO_TWO_PLACES.test(exchanged) && Number(exchanged) > 0 ? { rentedPerThousand: Number(rented), exchangedPerHundred: Number(exchanged) } : undefined
+  return WHOLE_COUNT.test(rented) && Number(rented) > 0 && TO_RATE_PLACES.test(exchanged) && Number(exchanged) > 0 ? { rentedPerThousand: Number(rented), exchangedPerHundred: Number(exchanged) } : undefined
 }
 
 /** A game's terms as the form holds them, with the parlor's 4-yen or 20-yen corner put over them where any of it was reported: its rental, or the one the rate names, and its exchange only where one was seen. */
@@ -224,8 +225,8 @@ interface MedalTermsForm {
   readonly exchangedPerHundred: string
 }
 
-/** The terms as the form opens on them, the exchange to the places it needs and no more: 5.1, 5.15. */
-export const medalTermsFormOf = (terms: Pachislot.MedalTerms): MedalTermsForm => ({ rentedPerThousand: String(terms.rentedPerThousand), exchangedPerHundred: String(Math.round(terms.exchangedPerHundred * 100) / 100) })
+/** The terms as the form opens on them, the exchange to the places it needs and no more, six at most: 5.1, 5.15, 5.714286. */
+export const medalTermsFormOf = (terms: Pachislot.MedalTerms): MedalTermsForm => ({ rentedPerThousand: String(terms.rentedPerThousand), exchangedPerHundred: String(Math.round(terms.exchangedPerHundred * 10 ** RATE_PLACES) / 10 ** RATE_PLACES) })
 
 const WHOLE_COUNT = /^\d+$/
 

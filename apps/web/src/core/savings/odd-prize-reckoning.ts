@@ -1,5 +1,7 @@
 import { decimal, floored, multiply, type Decimal } from "../decimal/decimal"
 import { exchangeRateOf, type PlayTerms } from "../parlor/terms"
+import { workedOut } from "../valuation/valuation"
+import { specialTokensAt } from "./prize-exchange"
 
 /** The special prizes the stages may step down by, in yen: a counter's smallest special prize is one of them. */
 export const STAGE_STEPS = [100, 500, 1000] as const
@@ -29,11 +31,8 @@ export interface Stage {
 
 const whole = (value: number | bigint): Decimal => decimal(BigInt(value), 0)
 
-/** The fewest whole tokens a sum of yen is exchanged from: at 5.15枚 for ¥100, ¥9,500 is 489.25 medals, so 490. */
-const tokensFor = (yen: bigint, exchange: PlayTerms["exchange"]): bigint => {
-  const [rate, tokens] = [BigInt(exchange.yen), BigInt(exchange.tokens)]
-  return (yen * tokens + rate - 1n) / rate
-}
+/** The fewest whole tokens a sum of yen is exchanged from, as a prize exchange counts them: at 5.15枚 for ¥100, ¥9,500 is 489.25 medals, so 490; at 28.57143玉, ¥9,800 is 2,800 balls. */
+const tokensFor = (yen: bigint, exchange: PlayTerms["exchange"]): bigint => specialTokensAt(workedOut(exchangeRateOf({ exchange })), whole(yen)).mantissa
 
 /**
  * The counts below so many whole tokens to stop at, a special prize of the
@@ -41,7 +40,7 @@ const tokensFor = (yen: bigint, exchange: PlayTerms["exchange"]): bigint => {
  * first twenty: for one who would rather play on than stop at the odd few.
  */
 export const stagesOf = (tokens: number, exchange: PlayTerms["exchange"], step: StageStep): readonly Stage[] => {
-  const most = (BigInt(tokens) * BigInt(exchange.yen)) / (BigInt(step) * BigInt(exchange.tokens))
+  const most = exchangedWorthOf(tokens, exchange).mantissa / BigInt(step)
   return Array.from({ length: Math.min(Number(most) + 1, MOST_STAGES) }, (_, below) => (most - BigInt(below)) * BigInt(step)).map((yen) => {
     const kept = tokensFor(yen, exchange)
     return { kept: Number(kept), specialPrizes: whole(yen), toPlay: tokens - Number(kept) }

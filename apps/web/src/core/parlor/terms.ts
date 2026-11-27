@@ -1,5 +1,6 @@
-import { decimal, isNegative, isZero, parseDecimal, quotient, toPlainString, type Decimal } from "../decimal/decimal"
+import { compare, decimal, isNegative, isZero, parseDecimal, quotient, rounded, toPlainString, type Decimal } from "../decimal/decimal"
 import { tokenKindOf, type PlayGameKind } from "../play/play"
+import { RATE_PLACES, type WrittenRate } from "../valuation/valuation"
 import type { SavingsPool } from "./parlor"
 
 /**
@@ -18,48 +19,72 @@ export interface PlayTerms {
 
 /**
  * How a corner's exchange is stated for each game, as a board and a player
- * say it: the tokens ¥100 takes, to the places each game says it to —
- * pachinko's 28玉 or 27.5玉, pachislot's 5.1枚 or 5.15枚.
+ * say it: the tokens ¥100 takes, to the places each game says it to at the
+ * fewest — pachinko's 28玉 or 27.5玉, pachislot's 5.1枚 or 5.15枚 — and to
+ * as many as `RATE_PLACES` where a broker's fee leaves no shorter one:
+ * 28玉 less 2% is 28.57143玉.
  */
 const EXCHANGE_STATED: Readonly<Record<PlayGameKind, { readonly yen: number; readonly places: number }>> = {
   pachinko: { yen: 100, places: 1 },
   pachislot: { yen: 100, places: 2 },
 }
 
-const statedNumber = (places: number): RegExp => new RegExp(`^\\d+(\\.\\d{1,${String(places)}})?$`)
+const STATED_NUMBER = new RegExp(`^\\d+(\\.\\d{1,${String(RATE_PLACES)}})?$`)
 
 /**
  * An exchange as stated for a game, read from its text — commas and wide
  * digits tidied before — as whole tokens for a sum: 5.15枚 for ¥100 is 515
- * for ¥10,000, and 27.5玉 is 275 for ¥1,000. None where it is not a number above zero to the places the
- * game states it to.
+ * for ¥10,000, 27.5玉 is 275 for ¥1,000, and 28.57143玉 2,857,143 for
+ * ¥10,000,000. None where it is not a number above zero to at most
+ * `RATE_PLACES` places.
  */
 export const exchangeOfStated = (gameKind: PlayGameKind, typed: string): PlayTerms["exchange"] | undefined => {
   const { yen, places } = EXCHANGE_STATED[gameKind]
-  if (!statedNumber(places).test(typed)) return undefined
+  if (!STATED_NUMBER.test(typed)) return undefined
   const [units = "", fraction = ""] = typed.split(".")
-  const scale = 10 ** places
-  const tokens = Number(units) * scale + Number(fraction.padEnd(places, "0") || "0")
+  const kept = Math.max(places, fraction.length)
+  const scale = 10 ** kept
+  const tokens = Number(units) * scale + Number(fraction.padEnd(kept, "0") || "0")
   return tokens > 0 ? { yen: yen * scale, tokens } : undefined
 }
 
-/** A number to the places a game states an exchange to, without the zeros a board leaves off: 28.0 is 28, 5.10 is 5.1. */
-const asStated = (value: number, places: number): string => value.toFixed(places).replace(/\.?0+$/, "")
-
-/** A rate in yen for a token as a game states an exchange, tokens for ¥100, to the places it is said to: 3.571429 yen is 28 balls. */
-export const statedExchangeOfRate = (gameKind: PlayGameKind, rate: Decimal): string => {
-  const { yen, places } = EXCHANGE_STATED[gameKind]
-  return asStated(yen / Number(toPlainString(rate)), places)
+/**
+ * The shortest statement of an exchange that reads back as a rate `holds`
+ * takes for it: to the places the game states one to at the fewest, and
+ * further only as far as it must, up to `RATE_PLACES` — 28 for 3.571429,
+ * 28.57143 for 3.5 — or to them all where none does.
+ */
+const shortestStated = (gameKind: PlayGameKind, perStated: (places: number) => Decimal, holds: (rate: Decimal) => boolean): string => {
+  const { places } = EXCHANGE_STATED[gameKind]
+  const tried = Array.from({ length: RATE_PLACES - places + 1 }, (_, more) => toPlainString(perStated(places + more)))
+  return tried.find((stated) => ((read) => read !== undefined && holds(exchangeRateOf({ exchange: read })))(exchangeOfStated(gameKind, stated))) ?? tried.at(-1) ?? ""
 }
 
-/** An exchange as stated for a game, however it is kept: 510 for ¥10,000 and 52 for ¥1,000 at pachislot are 5.1 and 5.2, 280 for ¥1,000 at pachinko 28, 275 27.5. */
-export const statedExchangeOf = (gameKind: PlayGameKind, exchange: PlayTerms["exchange"]): string => {
-  const { yen, places } = EXCHANGE_STATED[gameKind]
-  return asStated((exchange.tokens * yen) / exchange.yen, places)
-}
+/** A rate as a game states an exchange, tokens for ¥100, as briefly as reads back as the rate to the places it is written to: 3.571429 is 28, 3.57 a hand wrote is 28 too, and 3.920000 is 25.510204. */
+export const statedExchangeOfRate = (gameKind: PlayGameKind, written: WrittenRate): string =>
+  shortestStated(gameKind, (places) => quotient(whole(EXCHANGE_STATED[gameKind].yen), written.rate, places), (rate) => compare(rounded(rate, Math.max(written.places, written.rate.places)), written.rate) === 0)
 
-/** How many places an exchange rate is kept to; 1000 yen for 280 balls is 3.571429. */
-const RATE_PLACES = 6
+/** An exchange as stated for a game, however it is kept, as briefly as reads back as the same rate: 510 for ¥10,000 and 52 for ¥1,000 at pachislot are 5.1 and 5.2, 280 for ¥1,000 at pachinko 28, 275 27.5, and 140 for ¥490 28.57143. */
+export const statedExchangeOf = (gameKind: PlayGameKind, exchange: PlayTerms["exchange"]): string =>
+  shortestStated(gameKind, (places) => quotient(whole(exchange.tokens * EXCHANGE_STATED[gameKind].yen), whole(exchange.yen), places), (rate) => compare(rate, exchangeRateOf({ exchange })) === 0)
+
+const greatestDivisor = (left: bigint, right: bigint): bigint => (right === 0n ? left : greatestDivisor(right, left % right))
+
+/**
+ * An exchange with a broker's fee taken off what it pays, a percentage
+ * from nothing to below a hundred: the tokens stay what the board says and
+ * the yen are what is left of them — 28玉 less 2% is 28 balls for ¥98,
+ * kept as the smallest whole counts that say it. None for a fee below
+ * nothing or of a hundred or more.
+ */
+export const exchangeLessFee = (exchange: PlayTerms["exchange"], feePercent: Decimal): PlayTerms["exchange"] | undefined => {
+  const hundred = 100n * 10n ** BigInt(feePercent.places)
+  const kept = hundred - feePercent.mantissa
+  if (isNegative(feePercent) || kept <= 0n) return undefined
+  const [yen, tokens] = [BigInt(exchange.yen) * kept, BigInt(exchange.tokens) * hundred]
+  const divisor = greatestDivisor(yen, tokens)
+  return { yen: Number(yen / divisor), tokens: Number(tokens / divisor) }
+}
 
 const whole = (value: number): Decimal => decimal(BigInt(value), 0)
 

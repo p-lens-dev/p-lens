@@ -98,14 +98,15 @@ describe("the tally form", () => {
     expect(history({ sinceAt: "", afterReset: true, ats: [{ games: "300", misses: "x" }], since: "" })).toBeUndefined()
     expect(history({ sinceAt: "", afterReset: true, ats: [], since: "250" })?.since).toBe(250)
   })
-  test("reads a pachinko play's terms as typed: whole balls rented, an exchange to two places, each more than none", () => {
+  test("reads a pachinko play's terms as typed: whole balls rented, an exchange to six places, each more than none", () => {
     expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "28" })).toEqual({ rentedPerThousand: 250, exchangedPerHundred: 28 })
     expect(readWeighingTerms({ rentedPerThousand: "１,０００", exchangedPerHundred: "27.5" })).toEqual({ rentedPerThousand: 1000, exchangedPerHundred: 27.5 })
     expect(readWeighingTerms({ rentedPerThousand: "240", exchangedPerHundred: "27.75" })).toEqual({ rentedPerThousand: 240, exchangedPerHundred: 27.75 })
     expect(readWeighingTerms({ rentedPerThousand: "250.5", exchangedPerHundred: "28" })).toBeUndefined()
     expect(readWeighingTerms({ rentedPerThousand: "0", exchangedPerHundred: "28" })).toBeUndefined()
     expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "0" })).toBeUndefined()
-    expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "27.125" })).toBeUndefined()
+    expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "28.57143" })).toEqual({ rentedPerThousand: 250, exchangedPerHundred: 28.57143 })
+    expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "28.5714286" })).toBeUndefined()
     expect(readWeighingTerms({ rentedPerThousand: "", exchangedPerHundred: "28" })).toBeUndefined()
     expect(readWeighingTerms({ rentedPerThousand: "250", exchangedPerHundred: "-28" })).toBeUndefined()
   })

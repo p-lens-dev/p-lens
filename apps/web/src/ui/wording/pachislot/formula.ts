@@ -35,8 +35,6 @@ const payoutRangeText = (figures: readonly SettingLevelFigures[]): string => {
   return lowest === highest ? payoutRateText(lowest) : `${payoutRateText(lowest)}〜${payoutRateText(highest)}`
 }
 
-type Said = { readonly id: string; readonly figures: readonly SettingLevelFigures[] }
-
 /** A pachislot formula as a box to choose one shows it: what its counter tells first, then its 機械割 — `判別力S・機械割97.8%〜114.3%`. */
 export const formulaChoiceText = (formula: Formula): string => `判別力${gradeOf(formula)}・機械割${payoutRangeText(formula.figures)}`
 
@@ -45,9 +43,6 @@ export const formulaChoiceAmong = (formula: Formula, among: readonly Formula[]):
   const shown = formulaChoiceText(formula)
   return among.filter((other) => formulaChoiceText(other) === shown).length > 1 ? `${shown}（${formulaIdLabel(formula.id)}）` : shown
 }
-
-/** A pachislot formula as it is passed on — "use this one": its 機械割, which says what it is, then its id, which finds it. */
-export const formulaHandle = (formula: Said): string => `${formulaText(formula.figures)}・${formulaIdLabel(formula.id)}`
 
 /** A 設定配分's shares, the levels it gives any: `設定1 60%・設定6 10%`. */
 export const sharesText = (shares: readonly SettingLevelShare[]): string =>

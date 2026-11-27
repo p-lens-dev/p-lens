@@ -7,7 +7,7 @@ import { playLogPath } from "../../core/play-log/checkpoint"
 import type { PlayGameKind, PlayId } from "../../core/play/play"
 import type { TallyLine } from "../../core/report/tally-line"
 import { clockText } from "../../core/tally/clock"
-import { rateOn, rateReachingBack, type PricePoint } from "../../core/valuation/valuation"
+import { rateOn, rateReachingBack, type PricePoint, type WrittenRate } from "../../core/valuation/valuation"
 
 /**
  * The table's columns, as its first row names them. They are the file's
@@ -89,8 +89,8 @@ const termsOf = (files: BookFiles, line: TallyLine): PlayTerms | undefined => {
 }
 
 /** The rate the book sets a commodity at on a day, reaching back to the first it was given for a day before it had one. */
-const bookRateOf = (prices: readonly PricePoint[], commodity: string, line: TallyLine): Decimal | undefined =>
-  (rateOn(prices, commodity, line.tally.date) ?? rateReachingBack(prices, commodity, line.tally.date))?.rate
+const bookRateOf = (prices: readonly PricePoint[], commodity: string, line: TallyLine): WrittenRate | undefined =>
+  rateOn(prices, commodity, line.tally.date) ?? rateReachingBack(prices, commodity, line.tally.date)
 
 /**
  * A tally's rate in three cells: the rate its tokens are named by, `4円`;

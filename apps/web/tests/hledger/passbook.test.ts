@@ -74,7 +74,7 @@ describe("a passbook shown from a day", () => {
     const rows = (days: readonly { readonly date: string; readonly balance: Decimal }[]) => days.map((day) => [day.date, toPlainString(day.balance)])
     expect(shown.ok && rows(shown.value.days)).toEqual(every.ok ? rows(every.value.days.filter((day) => day.date >= FROM)) : [])
     expect(shown.ok && shown.value.before && [shown.value.before.through, toPlainString(shown.value.before.balance), shown.value.before.lastMoved]).toEqual(["2026-09-14", every.ok ? toPlainString(every.value.days.find((day) => day.date < FROM)?.balance ?? dec("0")) : "", "2026-09-05"])
-    expect(shown.ok && shown.value.rate && toPlainString(shown.value.rate)).toBe("3.5")
+    expect(shown.ok && shown.value.rate && toPlainString(shown.value.rate.rate)).toBe("3.5")
   })
 
   test("from before anything moved, has nothing held before it", async () => {

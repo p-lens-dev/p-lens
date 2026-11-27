@@ -4,14 +4,12 @@ import { ranked, type Selection } from "../../../../core/formula/standing"
 import type { Formula, FormulaId, SettingDistributionId } from "../../../../core/pachislot/formula"
 import { STOCK_SPREADS, type ChosenPrior, type PriorSelection, type StockSpreadKey } from "../../../../core/pachislot/prior"
 import type { PachislotMachineDetail } from "../../../../core/catalog/catalog"
-import { copyText } from "../../../primitives/clipboard"
-import { CopyIcon, HeartIcon, MedalIcon, PointerIcon, QuestionIcon } from "../../../primitives/icons"
+import { HeartIcon, MedalIcon, PointerIcon, QuestionIcon } from "../../../primitives/icons"
 import { createNudge, redRing } from "../../../primitives/nudge"
 import { HintedIconButton } from "../../../primitives/popover"
 import { Select, type SelectOption } from "../../../primitives/select"
-import { toast } from "../../../primitives/toast"
 import { useMoves } from "../../../navigation/moves"
-import { EVEN_PRIOR_NAME, formulaChoiceAmong, formulaHandle, STOCK_SPREAD_NAMES } from "../../../wording/pachislot/formula"
+import { EVEN_PRIOR_NAME, formulaChoiceAmong, STOCK_SPREAD_NAMES } from "../../../wording/pachislot/formula"
 import { KindMark } from "../formulas/KindMark"
 import { distributionMeasureOf } from "../../../../core/pachislot/measure"
 import { useApp } from "../../../context"
@@ -47,11 +45,10 @@ export function ChoiceReason(props: { readonly by: Reason }): JSX.Element {
  * chosen for you — your favourite, or else the best ranked — with an icon
  * saying which, or chosen by hand on the machine's page, which pressing it
  * opens: the machine's formulas side by side, one of them taken with
- * 「これを使う」. The question mark opens the one chosen, and the copy button
- * puts its name and id on the clipboard for passing on. Before a machine is chosen
- * it is there, waiting: pressing it nudges the machine — or the field
- * itself, while the machine chosen is still being read — and the two
- * buttons each say what they are for.
+ * 「これを使う」. The question mark opens the one chosen. Before a machine
+ * is chosen it is there, waiting: pressing it nudges the machine — or the
+ * field itself, while the machine chosen is still being read — and the
+ * button says what it is for.
  */
 export function FormulaPicker(props: {
   readonly detail: PachislotMachineDetail | undefined
@@ -76,15 +73,6 @@ export function FormulaPicker(props: {
     )
   const open = (formulaId: FormulaId): void => {
     if (props.detail !== undefined) moves.go({ kind: "pachislot-formula", machineId: props.detail.machine.id, formulaId })
-  }
-  /** The chosen formula's name and id, put on the clipboard for passing on — "pick this one" — to whoever plays beside you. */
-  const copyChosen = async (chosen: Selection<Formula>): Promise<void> => {
-    const handle = formulaHandle(chosen.listing.formula)
-    const copied = await copyText(handle)
-    toast(copied.ok ? { title: "算出条件の名前とIDをコピーしました", description: handle } : { title: "コピーできませんでした", tone: "error" })
-  }
-  const copySelected = async (): Promise<void> => {
-    if (props.selection !== undefined) await copyChosen(props.selection)
   }
   const openSelected = (): void => {
     if (props.selection !== undefined) open(props.selection.listing.formula.id)
@@ -120,9 +108,6 @@ export function FormulaPicker(props: {
           </span>
         </button>
       </div>
-      <HintedIconButton label="算出条件の名前とIDをコピー" hint="算出条件の名前とIDをコピーできます" ready={props.selection !== undefined} onPress={() => void copySelected()}>
-        <CopyIcon />
-      </HintedIconButton>
       <HintedIconButton label="算出条件を見る" hint="算出条件の根拠が見れます" ready={props.selection !== undefined} onPress={openSelected} semipro>
         <QuestionIcon />
       </HintedIconButton>

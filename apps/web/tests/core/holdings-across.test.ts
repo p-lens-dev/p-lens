@@ -9,7 +9,7 @@ import { dec } from "../support/values"
 const parlor = (id: string, name: string, quantity: string, rate: string, value: string): ParlorHolding => ({
   parlorName: name,
   parlor: { identity: { type: "listed", id: id as ParlorId }, name, pools: [{ kind: "ball", tier: "4円" }] },
-  tokens: [{ kind: "ball", tier: "4円", commodity: `玉(4円・${name})`, quantity: dec(quantity), value: dec(value), rate: { date: "2026-10-01" as IsoDate, commodity: `玉(4円・${name})`, rate: dec(rate) } }],
+  tokens: [{ kind: "ball", tier: "4円", commodity: `玉(4円・${name})`, quantity: dec(quantity), value: dec(value), rate: { date: "2026-10-01" as IsoDate, commodity: `玉(4円・${name})`, rate: dec(rate), places: 2 } }],
   value: dec(value),
 })
 

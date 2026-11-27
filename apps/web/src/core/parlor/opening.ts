@@ -3,7 +3,7 @@ import { renderCommodity, tokenCommodity } from "../commodity/commodity"
 import { compare, isNegative, isZero, type Decimal } from "../decimal/decimal"
 import { savingsAccount } from "../journal/accounts"
 import { Err, Ok, type Result } from "../result/result"
-import { rateOn, renderPricePoint, type PricePoint } from "../valuation/valuation"
+import { rateOn, renderPricePoint, workedOut, type PricePoint } from "../valuation/valuation"
 import { identityTags, sameIdentity, samePool, type Parlor, type ParlorIdentity, type SavingsPool } from "./parlor"
 import { sameParlorName } from "./search"
 import { isWritableParlorName } from "./shared"
@@ -64,7 +64,7 @@ export const openingText = (opening: PoolOpening, parlors: readonly Parlor[], pr
     price:
       current !== undefined && compare(current.rate, opening.rate) === 0
         ? undefined
-        : renderPricePoint({ date: opening.date, commodity, rate: opening.rate }),
+        : renderPricePoint({ date: opening.date, commodity, ...workedOut(opening.rate) }),
   }
 }
 

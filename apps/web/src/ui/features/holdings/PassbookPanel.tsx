@@ -200,7 +200,7 @@ export function PassbookPanel(props: { readonly place: Place; readonly bookId: B
               <div class="flex flex-col gap-3 p-4">
                 <div class="flex items-baseline gap-3">
                   <span class="text-lg font-bold tabular-nums text-text-primary">{formatTokens(seal.savings(heldNow(passbook)), found.kind)}</span>
-                  <span class="flex-1 text-sm text-text-muted">{((rate) => (rate === undefined ? "交換率なし" : `@ ${formatRate(rate)}`))(passbook.rate)}</span>
+                  <span class="flex-1 text-sm text-text-muted">{((written) => (written === undefined ? "交換率なし" : `@ ${formatRate(written.rate)}`))(passbook.rate)}</span>
                   <Show when={writable() && !changing()}>
                     <button type="button" class={ROW_BUTTON} onClick={() => setChanging(true)}>
                       交換率を変更

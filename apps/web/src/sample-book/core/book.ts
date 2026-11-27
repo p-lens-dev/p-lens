@@ -3,7 +3,7 @@ import { tokenCommodity } from "../../core/commodity/commodity"
 import { openingText } from "../../core/parlor/opening"
 import type { PlayGameKind, PlayId } from "../../core/play/play"
 import { Ok, mapOk, type Result } from "../../core/result/result"
-import { renderPricePoint, type PricePoint } from "../../core/valuation/valuation"
+import { renderPricePoint, workedOut, type PricePoint } from "../../core/valuation/valuation"
 import { dayOf, type DayPlayed, type DayProblem, type Lineup, type Playing, type Savings } from "./day"
 import { drawsFrom, type Draws } from "./draws"
 import { cornerRateOn, type SampleParlor } from "./parlors"
@@ -41,7 +41,7 @@ const pricesOf = (parlors: readonly SampleParlor[]): readonly PricePoint[] =>
       return corner.rates.map((rate) => ({
         date: rate.from,
         commodity: tokenCommodity(corner.pool.kind, sample.parlor.name, corner.pool.tier),
-        rate: rate.rate,
+        ...workedOut(rate.rate),
       }))
     }),
   )

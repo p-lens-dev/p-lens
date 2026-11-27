@@ -57,13 +57,19 @@ describe("a prize exchange as an entry", () => {
 })
 
 describe("the odd prizes of an exchange", () => {
-  const odd = (tokens: string, rate: string, specialPrizes: string, tier: string): string => toPlainString(exchangedOddPrizes(dec(tokens), dec(rate), dec(specialPrizes), rentalPriceOfTier(tier)))
+  const odd = (tokens: string, rate: string, specialPrizes: string, tier: string): string => toPlainString(exchangedOddPrizes(dec(tokens), { rate: dec(rate), places: rate.split(".")[1]?.length ?? 0 }, dec(specialPrizes), rentalPriceOfTier(tier)))
 
   test("count the special prizes' tokens by the board the rate was rounded from, down or up, to two places or six", () => {
     expect(odd("1455", "3.57", "5000", "4円")).toBe("220")
     expect(odd("1455", "3.571429", "5000", "4円")).toBe("220")
     expect(odd("300", "17.86", "5000", "20円")).toBe("400")
     expect(odd("300", "17.857143", "5000", "20円")).toBe("400")
+  })
+
+  test("take a rate written to six places as it is, and one a hand wrote short as rounded: 3.920000 is 25 balls to ¥98, 3.92 12 to ¥47", () => {
+    expect(odd("2500", "3.920000", "9800", "4円")).toBe("0")
+    expect(odd("2500", "3.92", "9800", "4円")).toBe("-12")
+    expect(odd("2800", "3.500000", "9800", "4円")).toBe("0")
   })
 
   test("count the fewest whole tokens a special prize is exchanged from", () => {

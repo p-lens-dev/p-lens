@@ -12,6 +12,22 @@ import { toPlainString, type Decimal } from "../decimal/decimal"
  */
 export type Valuation = { readonly at: "posting-date" } | { readonly at: "period-end" }
 
+/** How many places the app works an exchange rate out to, and writes one with: 1000 yen for 280 balls is 3.571429, and 980 for 250 is 3.920000. */
+export const RATE_PLACES = 6
+
+/**
+ * A rate as a book writes it: its value, and the places it is written to —
+ * `RATE_PLACES` for every rate the app writes, so that 3.920000 is 3.92
+ * exactly, and as few as a hand wrote, so that 3.57 is 3.57 rounded.
+ */
+export interface WrittenRate {
+  readonly rate: Decimal
+  readonly places: number
+}
+
+/** A rate the app worked out, written to the places it works rates out to. */
+export const workedOut = (rate: Decimal): WrittenRate => ({ rate, places: RATE_PLACES })
+
 /**
  * One exchange rate, as a `P` directive states it: from this day on, one unit
  * of the commodity is worth `rate` yen at its parlor.
@@ -19,10 +35,9 @@ export type Valuation = { readonly at: "posting-date" } | { readonly at: "period
  * Rates are only ever added. A changed rate is a new point on a later day, so
  * every past day keeps the rate it had.
  */
-export interface PricePoint {
+export interface PricePoint extends WrittenRate {
   readonly date: IsoDate
   readonly commodity: string
-  readonly rate: Decimal
 }
 
 /** Of points on the same day, the one written later wins, as in hledger. */
@@ -55,5 +70,11 @@ export const rateReachingBack = (points: readonly PricePoint[], commodity: strin
   return opened === undefined ? undefined : { ...opened, date }
 }
 
-/** A rate as the `P` directive that states it, on a line of its own. */
-export const renderPricePoint = (point: PricePoint): string => `P ${point.date} ${renderCommodity(point.commodity)} ${toPlainString(point.rate)} ${YEN}\n`
+/** A rate to the places it is written to, the zeros at its end kept: 3.920000. */
+const writtenText = (written: WrittenRate): string => {
+  const places = Math.max(written.places, written.rate.places)
+  return toPlainString({ mantissa: written.rate.mantissa * 10n ** BigInt(places - written.rate.places), places })
+}
+
+/** A rate as the `P` directive that states it, on a line of its own, to the places it is written to. */
+export const renderPricePoint = (point: PricePoint): string => `P ${point.date} ${renderCommodity(point.commodity)} ${writtenText(point)} ${YEN}\n`

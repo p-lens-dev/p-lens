@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import { tokenValueOf } from "../../src/core/parlor/terms"
-import { readTerms, replayFeeOf, replayPaysMoreThanItTakes, termsAsOpened, termsFormOf, withCorner } from "../../src/ui/features/live/start-terms"
+import { exchangeLessFeeTyped, readTerms, replayFeeOf, replayPaysMoreThanItTakes, termsAsOpened, termsFormOf, withCorner } from "../../src/ui/features/live/start-terms"
 
 const OPENED = termsAsOpened({ rentalTokens: "250", exchange: "28", replayTokens: "125" })
 
@@ -64,11 +64,17 @@ describe("a pachislot corner's exchange, stated for ¥100", () => {
     expect(termsFormOf({ rental: { yen: 1000, tokens: 46 }, exchange: { yen: 1000, tokens: 52 }, replay: { paidOut: 23, deducted: 23 } }, "pachislot").exchange).toBe("5.2")
   })
 
-  test("refuses more than two places, none, and nothing; pachinko's is said to one", () => {
-    expect(readTerms({ ...SLOT, exchange: "5.155" }, "pachislot")).toEqual({ ok: false, error: ["exchange"] })
+  test("refuses more than six places, none, and nothing", () => {
+    expect(readTerms({ ...SLOT, exchange: "5.1234567" }, "pachislot")).toEqual({ ok: false, error: ["exchange"] })
     expect(readTerms({ ...SLOT, exchange: "0.00" }, "pachislot")).toEqual({ ok: false, error: ["exchange"] })
     expect(readTerms({ ...SLOT, exchange: "5." }, "pachislot")).toEqual({ ok: false, error: ["exchange"] })
-    expect(readTerms({ ...FILLED, exchange: "27.55" }, "pachinko")).toEqual({ ok: false, error: ["exchange"] })
+    expect(readTerms({ ...FILLED, exchange: "27.1234567" }, "pachinko")).toEqual({ ok: false, error: ["exchange"] })
+  })
+
+  test("reads further places where a broker's fee leaves no shorter exchange, and sets them out as briefly as reads back as the same rate", () => {
+    const fee = readTerms({ ...SLOT, exchange: "5.714286" }, "pachislot")
+    expect(fee).toMatchObject({ ok: true, value: { exchange: { yen: 100_000_000, tokens: 5_714_286 } } })
+    expect(termsFormOf({ rental: { yen: 1000, tokens: 46 }, exchange: { yen: 980, tokens: 56 }, replay: { paidOut: 23, deducted: 23 } }, "pachislot").exchange).toBe("5.714286")
   })
 })
 
@@ -77,6 +83,11 @@ describe("a pachinko corner's exchange, stated for ¥100", () => {
     const read = readTerms({ ...FILLED, exchange: "27.5" }, "pachinko")
     expect(read).toMatchObject({ ok: true, value: { exchange: { yen: 1000, tokens: 275 } } })
     expect(read.ok && termsFormOf(read.value, "pachinko").exchange).toBe("27.5")
+  })
+
+  test("sets out an exchange a broker's fee leaves no shorter, as briefly as reads back as its rate: 28玉 less 2% is 28.57143, and 25玉 less 2% 25.510204", () => {
+    expect(termsFormOf({ rental: { yen: 1000, tokens: 250 }, exchange: { yen: 490, tokens: 140 }, replay: { paidOut: 250, deducted: 250 } }, "pachinko").exchange).toBe("28.57143")
+    expect(termsFormOf({ rental: { yen: 1000, tokens: 250 }, exchange: { yen: 4900, tokens: 1250 }, replay: { paidOut: 250, deducted: 250 } }, "pachinko").exchange).toBe("25.510204")
   })
 })
 
@@ -97,5 +108,24 @@ describe("the start form's terms filled from a parlor's corner", () => {
 
   test("rent what the corner's rate names where no rental was reported, and never guess at an exchange or a replay", () => {
     expect(withCorner({ ...OPENED, exchange: "27.5" }, { rentalTokens: undefined, exchange: undefined, replay: undefined }, "pachinko", "1円")).toEqual({ ...OPENED, rentalTokens: "1000", exchange: "27.5" })
+  })
+})
+
+describe("the exchange fee calculator", () => {
+  test("takes the fee off what the board's exchange pays, stated as the game states an exchange", () => {
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "2" }, "pachinko")).toEqual({ ok: true, value: "28.57143" })
+    expect(exchangeLessFeeTyped({ exchange: "25", fee: "2" }, "pachinko")).toEqual({ ok: true, value: "25.510204" })
+    expect(exchangeLessFeeTyped({ exchange: "5.6", fee: "2" }, "pachislot")).toEqual({ ok: true, value: "5.714286" })
+    expect(exchangeLessFeeTyped({ exchange: "２８", fee: "１.５" }, "pachinko")).toEqual({ ok: true, value: "28.4264" })
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "0" }, "pachinko")).toEqual({ ok: true, value: "28" })
+  })
+
+  test("says which field does not read: the exchange, or a fee not to two places below 100", () => {
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "" }, "pachinko")).toEqual({ ok: false, error: ["fee"] })
+    expect(exchangeLessFeeTyped({ exchange: "", fee: "2" }, "pachinko")).toEqual({ ok: false, error: ["exchange"] })
+    expect(exchangeLessFeeTyped({ exchange: "", fee: "" }, "pachinko")).toEqual({ ok: false, error: ["exchange", "fee"] })
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "100" }, "pachinko")).toEqual({ ok: false, error: ["fee"] })
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "-2" }, "pachinko")).toEqual({ ok: false, error: ["fee"] })
+    expect(exchangeLessFeeTyped({ exchange: "28", fee: "2.125" }, "pachinko")).toEqual({ ok: false, error: ["fee"] })
   })
 })

@@ -35,12 +35,12 @@ export interface Holdings {
   readonly valuedOn: IsoDate | undefined
 }
 
-/** Price directives as price points; a directive with an unreadable day is dropped. */
+/** Price directives as price points, each with the places its rate is written to; a directive with an unreadable day is dropped. */
 export const pricePointsOf = (directives: readonly PriceDirective[]): readonly PricePoint[] =>
   directives.flatMap((directive) => {
     const date = parseIsoDate(directive.pddate)
     return date.ok
-      ? [{ date: date.value, commodity: directive.pdcommodity, rate: decimalOfQuantity(directive.pdamount.aquantity) }]
+      ? [{ date: date.value, commodity: directive.pdcommodity, rate: decimalOfQuantity(directive.pdamount.aquantity), places: directive.pdamount.aquantity.decimalPlaces }]
       : []
   })
 

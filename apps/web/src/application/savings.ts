@@ -14,7 +14,7 @@ import { balanceAdjustmentEntry, openingBalanceEntry, withEquityDeclared } from 
 import { forfeitureEntry, withForfeitureDeclared, type Forfeiture } from "../core/savings/forfeiture"
 import { prizeExchangeEntry, withPrizesDeclared, type PrizeExchange } from "../core/savings/prize-exchange"
 import { rateChangeLine, type RateChange } from "../core/savings/rate-change"
-import { passbookOf, passbookWithoutTallies, rateLastSet, type PassbookDay } from "../core/report/passbook"
+import { passbookOf, passbookWithoutTallies, type PassbookDay } from "../core/report/passbook"
 import { parlorDaysOf, parlorPassbookOf, type ParlorPassbookDay, type PoolPassbook } from "../core/report/parlor-passbook"
 import { byColumn } from "../core/report/breakdown"
 import { quantityIn, rowTotalOf, yenByDayOf } from "../core/report/figures"
@@ -27,7 +27,7 @@ import { savingsAccount } from "../core/journal/accounts"
 import { accountTerm, combine, parlorSavingsTerm, rangeTerm, untaggedTerm, untilTerm } from "../hledger/query/terms"
 import { TALLY_TAGS } from "../core/tally/tally"
 import type { JournalAccess } from "../hledger/client/client"
-import { rateOn } from "../core/valuation/valuation"
+import { latestRate, rateOn, type WrittenRate } from "../core/valuation/valuation"
 import type { BookSession } from "./book-session"
 import type { Outcome } from "./errors"
 import { loadHoldings } from "./holdings"
@@ -100,9 +100,9 @@ export const adjustBalance = async (session: BookSession, bookId: BookId, parlor
   )
 }
 
-/** The book's exchange rate for a pool on a day, or none where it has none by then: what a prize exchange on that day takes the tokens at. */
-export const exchangeRateOn = (session: BookSession, bookId: BookId, parlor: Parlor, pool: SavingsPool, date: IsoDate): Promise<Outcome<Decimal | undefined>> =>
-  session.read(bookId, async (journal) => mapOk(fromHledger(await journal.ask(pricesRequest(""))), (directives) => rateOn(pricePointsOf(directives), tokenCommodity(pool.kind, parlor.name, pool.tier), date)?.rate))
+/** The book's exchange rate for a pool on a day, as it is written, or none where it has none by then: what a prize exchange on that day takes the tokens at. */
+export const exchangeRateOn = (session: BookSession, bookId: BookId, parlor: Parlor, pool: SavingsPool, date: IsoDate): Promise<Outcome<WrittenRate | undefined>> =>
+  session.read(bookId, async (journal) => mapOk(fromHledger(await journal.ask(pricesRequest(""))), (directives) => rateOn(pricePointsOf(directives), tokenCommodity(pool.kind, parlor.name, pool.tier), date)))
 
 /**
  * Record savings exchanged for prizes, as one entry and one commit. The
@@ -220,9 +220,9 @@ export interface PassbookFrom<D, B> {
   readonly before: HeldBefore<B> | undefined
 }
 
-/** A pool's passbook from a day, and the rate the pool was last set to, however far back. */
+/** A pool's passbook from a day, and the rate the pool was last set to, however far back, as it is written. */
 export interface PoolPassbookFrom extends PassbookFrom<PassbookDay, Decimal> {
-  readonly rate: Decimal | undefined
+  readonly rate: WrittenRate | undefined
 }
 
 /** The day before the one a passbook is shown from, and the newest entry before it of those `query` matches, where there is one. */
@@ -256,7 +256,7 @@ export const loadPassbook = (session: BookSession, bookId: BookId, parlorName: s
     return andThen(fromHledger(entries), (page) =>
       mapOk(fromHledger(prices), (directives) => {
         const points = pricePointsOf(directives)
-        return { days: passbookOf(page.items, account, commodity, points, from === undefined ? undefined : { from, held: before?.balance ?? ZERO }), before, rate: rateLastSet(points, commodity) }
+        return { days: passbookOf(page.items, account, commodity, points, from === undefined ? undefined : { from, held: before?.balance ?? ZERO }), before, rate: latestRate(points, commodity) }
       }),
     )
   })
